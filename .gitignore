@@ -4,8 +4,10 @@ docs/
 # ── Python virtual environment ──
 .venv/
 
-# ── Data (downloaded CIFAR-100 + generated split indices) ──
-data/
+# ── Data (downloaded CIFAR-100 archive, extracted files, and generated split indices) ──
+/data/cifar-100-python/
+/data/cifar-100-python.tar.gz
+/data/processed/
 
 # ── Python bytecode ──
 __pycache__/
