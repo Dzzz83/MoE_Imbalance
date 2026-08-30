@@ -27,6 +27,7 @@ from torch.utils.data import DataLoader
 from models.resnet32 import PaCoResNet32
 from losses.paco_loss import PaCoLoss
 from scripts.base_trainer import BaseTrainer, balanced_accuracy, group_accuracies
+from data.cifar_lt import LongTailCIFAR100
 
 
 class PaCoTrainer(BaseTrainer):
@@ -177,8 +178,6 @@ def main():
     # ── data ──
     base_idx = np.load(f'{args.data_root}/processed/base_train_indices.npy')
     val_idx = np.load(f'{args.data_root}/processed/balanced_val_indices.npy')
-
-    from data.cifar_lt import LongTailCIFAR100
 
     # Training set: two augmented views (for MoCo contrastive learning)
     train_set = LongTailCIFAR100(

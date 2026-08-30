@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 from models.resnet32 import ResNet32
 from losses.ce_loss import CELoss
 from scripts.base_trainer import BaseTrainer
+from data.cifar_lt import LongTailCIFAR100
 
 
 class CETrainer(BaseTrainer):
@@ -58,8 +59,6 @@ def main():
     # ── prepare data ──────────────────────────────────────────────────
     base_idx = np.load(f'{args.data_root}/processed/base_train_indices.npy')
     val_idx = np.load(f'{args.data_root}/processed/balanced_val_indices.npy')
-
-    from data.cifar_lt import LongTailCIFAR100
 
     train_set = LongTailCIFAR100(
         root=args.data_root,
