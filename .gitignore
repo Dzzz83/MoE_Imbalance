@@ -1,0 +1,25 @@
+# ── Project docs (planning notes, literature survey) ──
+docs/
+
+# ── Python virtual environment ──
+.venv/
+
+# ── Data (downloaded CIFAR-100 + generated split indices) ──
+data/
+
+# ── Python bytecode ──
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# ── macOS ──
+.DS_Store
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
