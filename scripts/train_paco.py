@@ -12,6 +12,13 @@ References:
     Learning", CVPR 2020.
 """
 
+import os
+import sys
+
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,7 +26,7 @@ from torch.utils.data import DataLoader
 
 from models.resnet32 import PaCoResNet32
 from losses.paco_loss import PaCoLoss
-from .base_trainer import BaseTrainer, balanced_accuracy, group_accuracies
+from scripts.base_trainer import BaseTrainer, balanced_accuracy, group_accuracies
 
 
 class PaCoTrainer(BaseTrainer):

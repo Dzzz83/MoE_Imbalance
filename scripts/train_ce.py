@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """Train the Cross-Entropy expert."""
 
+import os
+import sys
+
+# Ensure the project root is on sys.path (works for both `python -m` and `python path/to/script.py`)
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 from models.resnet32 import ResNet32
 from losses.ce_loss import CELoss
-from .base_trainer import BaseTrainer
+from scripts.base_trainer import BaseTrainer
 
 
 class CETrainer(BaseTrainer):

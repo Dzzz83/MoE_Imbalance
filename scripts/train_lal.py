@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """Train the Logit-Adjusted Loss (LAL) expert."""
 
+import os
+import sys
+
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 from models.resnet32 import ResNet32
 from losses.lal_loss import LALLoss
-from .base_trainer import BaseTrainer
+from scripts.base_trainer import BaseTrainer
 
 
 class LALTrainer(BaseTrainer):
