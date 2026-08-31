@@ -30,7 +30,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import (
     AutoAugment, AutoAugmentPolicy, Compose, RandomCrop, RandomHorizontalFlip,
     RandomResizedCrop, RandomApply, ColorJitter, RandomGrayscale, ToTensor,
-    Normalize, RandomErasing, Resize, CenterCrop,
+    Normalize, RandomErasing, ToPILImage,
 )
 
 from models.resnet32 import PaCoResNet32
@@ -48,6 +48,7 @@ CIFAR10_STD = (0.2023, 0.1994, 0.2010)
 
 # View 1: regular augmentation with AutoAugment + Cutout
 _augmentation_regular = Compose([
+    ToPILImage(),
     RandomCrop(32, padding=4),
     RandomHorizontalFlip(),
     AutoAugment(AutoAugmentPolicy.CIFAR10),
@@ -58,6 +59,7 @@ _augmentation_regular = Compose([
 
 # View 2: MoCo v2-style augmentation
 _augmentation_sim_cifar = Compose([
+    ToPILImage(),
     RandomResizedCrop(size=32, scale=(0.2, 1.0)),
     RandomHorizontalFlip(),
     RandomApply([ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
@@ -67,6 +69,7 @@ _augmentation_sim_cifar = Compose([
 ])
 
 _val_transform = Compose([
+    ToPILImage(),
     ToTensor(),
     Normalize(CIFAR10_MEAN, CIFAR10_STD),
 ])
