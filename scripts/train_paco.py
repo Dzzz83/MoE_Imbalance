@@ -43,8 +43,8 @@ from data.cifar_lt import LongTailCIFAR100
 # Augmentations matching official PaCo --aug cifar100
 # ---------------------------------------------------------------------------
 
-CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
-CIFAR10_STD = (0.2023, 0.1994, 0.2010)
+CIFAR100_MEAN = (0.5071, 0.4867, 0.4408)
+CIFAR100_STD = (0.2675, 0.2565, 0.2761)
 
 # View 1: regular augmentation with AutoAugment + Cutout
 _augmentation_regular = Compose([
@@ -54,7 +54,7 @@ _augmentation_regular = Compose([
     AutoAugment(AutoAugmentPolicy.CIFAR10),
     ToTensor(),
     RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0),
-    Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    Normalize(CIFAR100_MEAN, CIFAR100_STD),
 ])
 
 # View 2: MoCo v2-style augmentation
@@ -65,13 +65,13 @@ _augmentation_sim_cifar = Compose([
     RandomApply([ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8),
     RandomGrayscale(p=0.2),
     ToTensor(),
-    Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    Normalize(CIFAR100_MEAN, CIFAR100_STD),
 ])
 
 _val_transform = Compose([
     ToPILImage(),
     ToTensor(),
-    Normalize(CIFAR10_MEAN, CIFAR10_STD),
+    Normalize(CIFAR100_MEAN, CIFAR100_STD),
 ])
 
 
