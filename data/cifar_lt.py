@@ -180,9 +180,14 @@ class LongTailCIFAR100(Dataset):
         img = self.sample_images[idx]
         label = int(self.sample_targets[idx].item())
         if self.two_view:
-            view1 = self.transform(img)
-            view2 = self.transform(img)
+            # Support both single-transform (applied twice) and per-view transforms (list of 2)
+            if isinstance(self.transform, (list, tuple)):
+                view1 = self.transform[0](img)
+                view2 = self.transform[1](img)
+            else:
+                view1 = self.transform(img)
+                view2 = self.transform(img)
             return [view1, view2], label
         else:
-            img_tensor = self.transform(img)
+            img_tensor = self.transform(img) if not isinstance(self.transform, (list, tuple)) else self.transform[0](img)
             return img_tensor, label

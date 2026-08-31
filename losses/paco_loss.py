@@ -37,12 +37,12 @@ class PaCoLoss(nn.Module):
 
     def __init__(
         self,
-        alpha: float = 0.5,
+        alpha: float = 0.01,          # Official PaCo CIFAR-100-LT IR=0.01
         beta: float = 1.0,
         gamma: float = 1.0,
         supt: float = 1.0,
-        temperature: float = 0.07,
-        K: int = 4096,
+        temperature: float = 0.05,    # Official: --moco-t 0.05
+        K: int = 1024,                # Official: --moco-k 1024
         num_classes: int = 100,
     ):
         super().__init__()

@@ -164,8 +164,8 @@ class PaCoResNet32(nn.Module):
     def __init__(
         self,
         num_classes: int = 100,
-        dim: int = 128,
-        K: int = 4096,
+        dim: int = 32,
+        K: int = 1024,
         m: float = 0.999,
         mlp: bool = True,
     ):
