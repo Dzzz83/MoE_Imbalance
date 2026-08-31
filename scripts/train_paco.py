@@ -302,15 +302,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-root', default='./data')
     parser.add_argument('--checkpoint-dir', default='./checkpoints')
-    parser.add_argument('--batch-size', type=int, default=128)
+    parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--lr', type=float, default=0.05)
     parser.add_argument('--alpha', type=float, default=0.01,
                         help='Weight for sample-sample contrastive positives')
     parser.add_argument('--temperature', type=float, default=0.05,
                         help='Contrastive temperature')
-    parser.add_argument('--K', type=int, default=1024,
-                        help='Queue size for MoCo memory bank')
+    parser.add_argument('--K', type=int, default=2048,
+                        help='Queue size for MoCo memory bank (K = 8 * batch_size recommended)')
+    parser.add_argument('--workers', type=int, default=4,
+                        help='DataLoader workers')
+    parser.add_argument('--amp', action='store_true', default=True,
+                        help='Use automatic mixed precision')
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
@@ -342,12 +346,13 @@ def main():
 
     train_loader = DataLoader(
         train_set, batch_size=args.batch_size,
-        shuffle=True, num_workers=2, pin_memory=True,
-        drop_last=True,
+        shuffle=True, num_workers=4, pin_memory=True,
+        drop_last=True, prefetch_factor=2,
     )
     val_loader = DataLoader(
         val_set, batch_size=args.batch_size,
-        shuffle=False, num_workers=2, pin_memory=True,
+        shuffle=False, num_workers=4, pin_memory=True,
+        prefetch_factor=2,
     )
 
     class_counts = train_set.get_class_counts()
