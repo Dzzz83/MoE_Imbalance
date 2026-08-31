@@ -91,7 +91,7 @@ class BaseTrainer:
         checkpoint_dir: str = './checkpoints',
     ):
         self.model = model.to(device)
-        self.loss_fn = loss_fn
+        self.loss_fn = loss_fn.to(device) if loss_fn is not None else None
         self.expert_name = expert_name
         self.device = device
         self.lr = lr

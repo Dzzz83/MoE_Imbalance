@@ -70,7 +70,7 @@ class PaCoLoss(nn.Module):
         if cls_num_list.dim() == 1:
             cls_num_list = cls_num_list.unsqueeze(0)  # (1, C)
         weight = cls_num_list / cls_num_list.sum()
-        self.weight = weight.to(self.weight.device)
+        self.weight.data = weight.to(self.weight.device)
 
     def forward(
         self,
