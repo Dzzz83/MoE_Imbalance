@@ -162,14 +162,14 @@ def main():
     print(f"PyTorch {torch.__version__}, "
           f"device={'cuda' if torch.cuda.is_available() else 'cpu'}")
 
-    from scripts.train_ce import CETrainer
+    from scripts.train_mixup import MixupTrainer
     from scripts.train_lal import LALTrainer
     from scripts.train_paco import PaCoTrainer
 
     results = {}
 
-    # ── CE expert (standard, single view) ──
-    results['CE'] = test_expert(CETrainer, 'CE')
+    # ── Mixup+CE expert (standard, single view + Mixup augmentation) ──
+    results['Mixup'] = test_expert(MixupTrainer, 'Mixup')
 
     # ── LAL expert (standard, single view) ──
     results['LAL'] = test_expert(LALTrainer, 'LAL')

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Train the Cross-Entropy expert."""
+"""Train the Mixup + Cross-Entropy expert."""
 
 import os
 import sys
 
-# Ensure the project root is on sys.path (works for both `python -m` and `python path/to/script.py`)
 _proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from models.resnet32 import ResNet32
@@ -19,25 +19,77 @@ from scripts.base_trainer import BaseTrainer
 from data.cifar_lt import LongTailCIFAR100
 
 
-class CETrainer(BaseTrainer):
-    """Trainer for the standard Cross-Entropy expert."""
+# ---------------------------------------------------------------------------
+# Mixup helpers
+# ---------------------------------------------------------------------------
 
-    def __init__(self, **kwargs):
+def mixup_data(
+    images: torch.Tensor, targets: torch.Tensor, alpha: float = 1.0
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, float]:
+    """
+    Apply Mixup augmentation to a batch.
+
+    Returns:
+        mixed_images:   linearly interpolated images
+        targets_a:      original labels
+        targets_b:      permuted labels
+        lam:            mixing coefficient (from Beta(alpha, alpha))
+    """
+    lam = np.random.beta(alpha, alpha)
+    batch_size = images.size(0)
+    index = torch.randperm(batch_size, device=images.device)
+
+    mixed_images = lam * images + (1.0 - lam) * images[index]
+    targets_a = targets
+    targets_b = targets[index]
+    return mixed_images, targets_a, targets_b, lam
+
+
+def mixup_criterion(
+    criterion: torch.nn.Module,
+    pred: torch.Tensor,
+    targets_a: torch.Tensor,
+    targets_b: torch.Tensor,
+    lam: float,
+) -> torch.Tensor:
+    """Compute the Mixup loss as a convex combination of two CE losses."""
+    return lam * criterion(pred, targets_a) + (1.0 - lam) * criterion(pred, targets_b)
+
+
+# ---------------------------------------------------------------------------
+# MixupTrainer
+# ---------------------------------------------------------------------------
+
+class MixupTrainer(BaseTrainer):
+    """
+    Trainer for the Mixup + Cross-Entropy expert.
+
+    Uses standard CE loss but applies Mixup augmentation (Zhang et al., ICLR 2018)
+    at the batch level during training.  Validation uses plain forward pass.
+    """
+
+    def __init__(self, mixup_alpha: float = 1.0, **kwargs):
         model = ResNet32(num_classes=100)
         loss_fn = CELoss()
         super().__init__(
             model=model,
             loss_fn=loss_fn,
-            expert_name='CE',
+            expert_name='Mixup',
             **kwargs,
         )
+        self.mixup_alpha = mixup_alpha
 
     def _compute_loss(self, images, targets):
-        logits = self.model(images)
-        loss = self.loss_fn(logits, targets)
+        # Apply Mixup
+        mixed_images, targets_a, targets_b, lam = mixup_data(
+            images, targets, alpha=self.mixup_alpha,
+        )
+        logits = self.model(mixed_images)
+        loss = mixup_criterion(self.loss_fn, logits, targets_a, targets_b, lam)
         return loss, {}
 
     def _forward_for_eval(self, images):
+        # No Mixup at validation / test time
         return self.model(images)
 
 
@@ -53,6 +105,8 @@ def main():
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--lr', type=float, default=0.1)
+    parser.add_argument('--mixup-alpha', type=float, default=1.0,
+                        help='Alpha parameter for Beta distribution in Mixup')
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
@@ -84,7 +138,8 @@ def main():
     class_counts = train_set.get_class_counts()
 
     # ── train ─────────────────────────────────────────────────────────
-    trainer = CETrainer(
+    trainer = MixupTrainer(
+        mixup_alpha=args.mixup_alpha,
         device=args.device,
         lr=args.lr,
         batch_size=args.batch_size,
