@@ -12,13 +12,13 @@ GPU: Tesla T4
 Train: 3000, Val: 5000
 
 Processing LAL...
-  Done in 2s
-
-Processing PaCo...
   Done in 3s
 
-Processing Mixup...
+Processing PaCo...
   Done in 4s
+
+Processing Mixup...
+  Done in 5s
 
 Building combined matrices...
 Train: (3000, 192), Val: (5000, 192)
@@ -31,13 +31,13 @@ COMPUTING METRICS
    Irrecoverable samples:                37.1%
 3. Oracle-weighted (perfect soft):       63.04%
    Gain over uniform:                    +11.92%
-4. Loss-based oracle (perfect hard):     2.04%
+4. Loss-based oracle (perfect hard):     62.40%
 5. Calibrated confidence:                51.44%
    Temps: LAL=1.853, PaCo=1.333, Mixup=1.257
    Selection: LAL=34.7% PaCo=47.6% Mixup=17.8%
 
 6. Learned soft gate (training)...
-   BA: 48.96%  avg_weights=[0.448,0.552,0.000]
+   BA: 49.32%  avg_weights=[0.396,0.604,0.000]
 
 7. Routing opportunity:
    Uniform wrong:         2444 / 5000 (48.9%)
@@ -50,17 +50,17 @@ ROOT CAUSE GAPS
 
   Oracle (upper bound):                 62.90%
   Uniform averaging:                    51.12%
-  Loss-based oracle (best possible):    2.04%
+  Loss-based oracle (best possible):    62.40%
   Oracle-weighted (perfect soft):       63.04%
   Calibrated confidence:               51.44%
-  Learned soft gate:                    48.96%
+  Learned soft gate:                    49.32%
   Best possible (perfect on savable):   63.04%
 
   Gaps:
-    Miscalibration:          -49.40%
-    Hard vs soft routing:    -61.00%
-    Feature learning:        14.08%  ← MAIN BOTTLENECK
-    Total routing headroom:  -49.08%
+    Miscalibration:          10.96%
+    Hard vs soft routing:    -0.64%
+    Feature learning:        13.72%  ← MAIN BOTTLENECK
+    Total routing headroom:  11.28%
 
 Results saved to ./root_cause_results.json
 
@@ -69,18 +69,18 @@ Results saved to ./root_cause_results.json
   "oracle": 0.629,
   "uniform_ba": 0.5112000000000001,
   "oracle_weighted_ba": 0.6304,
-  "loss_oracle_ba": 0.0204,
+  "loss_oracle_ba": 0.6240000000000001,
   "calibrated_conf_ba": 0.5144,
-  "learned_gate_ba": 0.4895999999999999,
+  "learned_gate_ba": 0.4932,
   "best_possible_ba": 0.6304,
   "irrecoverable_pct": 37.1,
   "savable_count": 596,
-  "model_gap_calibration": -0.494,
-  "model_gap_soft_vs_hard": -0.61,
-  "model_gap_feature_learning": 0.14080000000000004,
+  "model_gap_calibration": 0.10960000000000014,
+  "model_gap_soft_vs_hard": -0.00639999999999985,
+  "model_gap_feature_learning": 0.13719999999999993,
   "model_gap_uniform_to_best": 0.11919999999999986,
   "times": {
-    "extraction_mins": 0.3013414422671
+    "extraction_mins": 0.1326214591662089
   },
   "selection_rates": {
     "LAL": 0.3466,
@@ -93,11 +93,11 @@ Results saved to ./root_cause_results.json
     "Mixup": 1.257417585036501
   },
   "learned_gate_weights": [
-    0.4482874870300293,
-    0.5517125129699707,
-    4.759024544478659e-15
+    0.3958657681941986,
+    0.604134202003479,
+    9.06184053169794e-15
   ]
 }
 --- end gaps json ---
 
-Done in 0.3 minutes.
+Done in 0.1 minutes.
