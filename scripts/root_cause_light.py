@@ -143,7 +143,7 @@ print(f'3. Oracle-weighted (perfect soft):       {OBA*100:.2f}%')
 print(f'   Gain over uniform:                    +{(OBA-UBA)*100:.2f}%')
 
 # 4. Loss-based oracle (perfect hard routing)
-losses = np.stack([-np.log(P_va[:,i,y_va]+1e-12) for i in range(3)], axis=1)
+losses = np.stack([-np.log(P_va[np.arange(N_val), i, y_va]+1e-12) for i in range(3)], axis=1)
 LBA, _ = balanced_accuracy(y_va, P_va[np.arange(N_val), losses.argmin(1)].argmax(1))
 print(f'4. Loss-based oracle (perfect hard):     {LBA*100:.2f}%')
 print(f'   Hard vs soft gap:                     +{(LBA-OBA)*100:.2f}%')
@@ -185,7 +185,7 @@ print(f'   Gap to oracle-weighted:               +{(OBA-GBA)*100:.2f}%')
 # That's the loss-based oracle. The gap to the learned gate = signal lost.
 
 print(f'\n6. What if we use TRUE CLASS probability as routing signal:')
-true_prob = np.stack([P_va[:,i,y_va] for i in range(3)], axis=1)  # (N, 3)
+true_prob = np.stack([P_va[np.arange(N_val), i, y_va] for i in range(3)], axis=1)  # (N, 3)
 best_tp = true_prob.argmax(1)
 TPBA, _ = balanced_accuracy(y_va, P_va[np.arange(N_val), best_tp].argmax(1))
 print(f'   Route by true-class confidence:       {TPBA*100:.2f}%')

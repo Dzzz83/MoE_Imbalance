@@ -196,7 +196,7 @@ print(f'3. Oracle-weighted (perfect soft):       {OBA*100:.2f}%')
 print(f'   Gain over uniform:                    +{(OBA-UBA)*100:.2f}%')
 
 # 4. Loss-based oracle (perfect hard routing)
-losses = np.stack([-np.log(P_va[:,i,y_va]+1e-12) for i in range(3)], axis=1)
+losses = np.stack([-np.log(P_va[np.arange(N_val), i, y_va]+1e-12) for i in range(3)], axis=1)
 LBA, _ = balanced_accuracy(y_va, P_va[np.arange(N_val), losses.argmin(1)].argmax(1))
 print(f'4. Loss-based oracle (perfect hard):     {LBA*100:.2f}%')
 
