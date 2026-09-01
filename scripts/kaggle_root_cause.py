@@ -17,20 +17,25 @@ CKPT_DIR = './checkpoints'  # Path to checkpoints/
 RESULTS_FILE = './root_cause_results.json'
 LOG_FILE = './root_cause_output.log'  # Full console output saved here
 
-# Tee: duplicate all print output to the log file
+# Tee: duplicate all print output and error output to the log file
 class _Tee:
     def __init__(self, path):
         self.file = open(path, 'w', buffering=1)
         self.stdout = sys.stdout
+        self.stderr = sys.stderr
         sys.stdout = self
+        sys.stderr = self
     def write(self, data):
         self.stdout.write(data)
+        self.stderr.write(data)
         self.file.write(data)
     def flush(self):
         self.stdout.flush()
+        self.stderr.flush()
         self.file.flush()
     def close(self):
         sys.stdout = self.stdout
+        sys.stderr = self.stderr
         self.file.close()
 
 _tee = _Tee(LOG_FILE)
@@ -44,8 +49,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-# Add project root if needed
-_proj_root = os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else '.'
+# Add project root to path (two levels up from scripts/ to project root)
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) if '__file__' in dir() else '.'
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
 
