@@ -9,10 +9,6 @@ docs/
 /data/cifar-100-python.tar.gz
 /data/processed/
 
-# ── Generated output files (logs, results) ──
-root_cause_output.log
-root_cause_results.json
-
 # ── Python bytecode ──
 __pycache__/
 *.pyc
