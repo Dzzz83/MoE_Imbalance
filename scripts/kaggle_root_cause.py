@@ -12,9 +12,29 @@ import os, sys, warnings, json, time, gc
 warnings.filterwarnings('ignore')
 
 # ── CONFIG ───────────────────────────────────────────────────────
-DATA_DIR = './data'       # Path to data/ folder (contains cifar-100-python/, processed/)
+DATA_DIR = './data'         # Path to data/ folder (contains cifar-100-python/, processed/)
 CKPT_DIR = './checkpoints'  # Path to checkpoints/
-OUTPUT_FILE = './root_cause_results.json'
+RESULTS_FILE = './root_cause_results.json'
+LOG_FILE = './root_cause_output.log'  # Full console output saved here
+
+# Tee: duplicate all print output to the log file
+class _Tee:
+    def __init__(self, path):
+        self.file = open(path, 'w', buffering=1)
+        self.stdout = sys.stdout
+        sys.stdout = self
+    def write(self, data):
+        self.stdout.write(data)
+        self.file.write(data)
+    def flush(self):
+        self.stdout.flush()
+        self.file.flush()
+    def close(self):
+        sys.stdout = self.stdout
+        self.file.close()
+
+_tee = _Tee(LOG_FILE)
+print(f'Console output logged to: {LOG_FILE}')
 # ─────────────────────────────────────────────────────────────────
 
 import numpy as np
@@ -286,7 +306,13 @@ print(f'    Feature learning:        {gaps["model_gap_feature_learning"]*100:.2f
 print(f'    Total routing headroom:  {(LBA-UBA)*100:.2f}%')
 
 # ── SAVE RESULTS ──────────────────────────────────────────────────
-with open(OUTPUT_FILE, 'w') as f:
+with open(RESULTS_FILE, 'w') as f:
     json.dump(gaps, f, indent=2)
-print(f'\nResults saved to {OUTPUT_FILE}')
+print(f'\nResults saved to {RESULTS_FILE}')
+
+# Also log the gaps as a compact JSON line
+print(f'\n--- gaps json ---')
+print(json.dumps(gaps, indent=2))
+print(f'--- end gaps json ---')
 print(f'\nDone in {(time.time()-t0)/60:.1f} minutes.')
+_tee.close()
