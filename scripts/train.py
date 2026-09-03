@@ -19,8 +19,7 @@ import argparse
 import numpy as np
 import torch
 
-from scripts.base_trainer import BaseTrainer
-from scripts.utils.data import create_cifar_loader, get_class_groups, print_data_info
+from scripts.utils.data import create_cifar_loader, print_data_info
 
 
 def main():
@@ -88,31 +87,20 @@ def main():
 
 def _train_lal(config):
     """Train with Logit-Adjusted Loss."""
-    from losses.lal_loss import LALLoss
-    from models.resnet32 import ResNet32
+    from scripts.train_lal import LALTrainer
 
-    # Set defaults
     epochs = config['epochs'] or 200
     lr = config['lr'] or 0.1
     batch_size = config['batch_size'] or 128
 
-    model = ResNet32(num_classes=100)
-    loss_fn = LALLoss(
-        class_counts=config['class_counts'],
-        tau=1.0,
-    )
-
-    trainer = BaseTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        expert_name='LAL',
-        class_counts=config['class_counts'],
+    trainer = LALTrainer(
         device=config['device'],
         lr=lr,
         weight_decay=config['weight_decay'],
         batch_size=batch_size,
         epochs=epochs,
         checkpoint_dir=config['checkpoint_dir'],
+        class_counts=config['class_counts'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 
@@ -160,26 +148,20 @@ def _train_paco(config):
 
 def _train_ce(config):
     """Train with standard Cross-Entropy loss (no imbalance handling)."""
-    from models.resnet32 import ResNet32
+    from scripts.train_ce import CETrainer
 
     epochs = config['epochs'] or 200
     lr = config['lr'] or 0.1
     batch_size = config['batch_size'] or 128
 
-    model = ResNet32(num_classes=100)
-    loss_fn = torch.nn.CrossEntropyLoss()
-
-    trainer = BaseTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        expert_name='CE',
-        class_counts=config['class_counts'],
+    trainer = CETrainer(
         device=config['device'],
         lr=lr,
         weight_decay=config['weight_decay'],
         batch_size=batch_size,
         epochs=epochs,
         checkpoint_dir=config['checkpoint_dir'],
+        class_counts=config['class_counts'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 
@@ -189,29 +171,20 @@ def _train_ce(config):
 
 def _train_balanced_softmax(config):
     """Train with Balanced Softmax Loss (Ren et al., ECCV 2020)."""
-    from models.resnet32 import ResNet32
-    from losses.balanced_softmax_loss import BalancedSoftmaxLoss
+    from scripts.train_balanced_softmax import BalancedSoftmaxTrainer
 
     epochs = config['epochs'] or 200
     lr = config['lr'] or 0.1
     batch_size = config['batch_size'] or 128
 
-    model = ResNet32(num_classes=100)
-    loss_fn = BalancedSoftmaxLoss(
-        class_counts=torch.from_numpy(config['class_counts']).float(),
-    )
-
-    trainer = BaseTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        expert_name='BalancedSoftmax',
-        class_counts=config['class_counts'],
+    trainer = BalancedSoftmaxTrainer(
         device=config['device'],
         lr=lr,
         weight_decay=config['weight_decay'],
         batch_size=batch_size,
         epochs=epochs,
         checkpoint_dir=config['checkpoint_dir'],
+        class_counts=config['class_counts'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 
