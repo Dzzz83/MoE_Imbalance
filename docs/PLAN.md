@@ -1,5 +1,25 @@
 # Implementation Plan: Boosting-Style Adversarial Expert Training
 
+> **⚠️ Prerequisite: The data pipeline has been fixed.**
+>
+> The original plan below was written based on experiments conducted on a flawed data split
+> (balanced validation set held out BEFORE long-tail subsampling). The data pipeline has since
+> been corrected to follow the standard CIFAR-100-LT protocol. See `docs/stage0-data-pipeline.md`
+> and `docs/redo-plan.md` for details.
+>
+> **Before implementing this boosting plan, the three experts must first be retrained on the
+> proper LT split.** The boosting plan should then be re-evaluated against the new baselines
+> to determine if it's still the best path forward. The findings from the novel routing ideas
+> analysis (`docs/novel-routing-ideas-analysis.md`) may also inform the decision.
+>
+> **Code infrastructure is ready.** The refactored codebase includes:
+> - `data/weighted_dataset.py` — `WeightedDataset` wrapper for per-sample loss weighting
+> - `scripts/train_lal_weighted.py` — LAL with per-sample loss weighting
+> - `scripts/train_paco_weighted.py` — PaCo with per-sample loss weighting
+> - `scripts/utils/data.py` — Shared data loading supporting both old and new splits
+
+---
+
 > **Target problem:** Frozen experts' features encode class identity, not routing relevance (Feature Learning Gap = 19.06%). The three experts fail on the same samples (37.1% all-wrong ceiling). A router cannot learn to pick the best expert because the features don't encode "which expert is best for this sample."
 >
 > **Proposed solution:** Train experts *sequentially* where each expert is trained with upweighted loss on samples where the *previous* experts are wrong. This creates natural specialization: Expert B learns "samples like the ones A gets wrong"; Expert C learns "the hardest samples both A and B get wrong." Routing-relevant information emerges in the features without needing to extract it post-hoc.
@@ -187,7 +207,9 @@ ls -la checkpoints/
 
 ### 4.2 Verify Existing Expert Performance
 
-Run `diversity_analysis.py` to confirm baseline numbers:
+Run `scripts/analyze.py --mode diversity --dataset test` to confirm baseline numbers (requires trained experts on proper split).
+
+**Old baseline numbers (from flawed split — for reference only):**
 ```
 LAL:  43.98% BA
 PaCo: 49.28% BA
@@ -198,7 +220,7 @@ Oracle: 62.90%
 ### 4.3 Compute Error Baseline
 
 Run a diagnostic script to understand the error patterns:
-- **How many training samples does Expert A get wrong?** (~56% = ~5,500 samples)
+- **How many training samples does Expert A get wrong?** (~56% = ~5,500 samples on old split)
 - **Per-class breakdown of errors** — which classes does A fail on most?
 - **Confidence on error samples** — is A confidently wrong or uncertain?
 
@@ -206,7 +228,9 @@ This informs the weighting strategy (see §9).
 
 ### 4.4 Verify Existing Routing Pipeline
 
-Ensure that `correctness_routing.py` and `diversity_analysis.py` still work with the current checkpoints. These will be used in Phase 4 to evaluate the new experts.
+Ensure that `scripts/benchmark.py` and `scripts/analyze.py` work with the current checkpoints. These will be used in Phase 4 to evaluate the new experts.
+
+**Note:** The old `diversity_analysis.py` and `correctness_routing.py` scripts have been superseded by `scripts/analyze.py` and `scripts/benchmark.py` respectively. Use the new unified entry points.
 
 ---
 

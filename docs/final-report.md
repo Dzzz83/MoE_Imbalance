@@ -1,5 +1,22 @@
 # Final Report: Expert Method for CIFAR-100-LT
 
+> **⚠️ IMPORTANT: This report documents results from the ORIGINAL (flawed) data split.**
+>
+> The original pipeline held out 50 samples/class as a balanced validation set **before** applying
+> long-tail subsampling — this is non-standard and was identified as "cheating" (the validation set
+> was balanced, unlike real long-tail scenarios). All numerical results below are from that deprecated
+> split and are **not comparable** to standard CIFAR-100-LT benchmarks.
+>
+> **The data pipeline has been fixed.** See `docs/stage0-data-pipeline.md` and `docs/redo-plan.md`
+> for details on the proper split. New experts need to be trained on the corrected split before
+> any results are valid for publication.
+>
+> This report is preserved for reference — the methodology, infrastructure, and findings about
+> expert diversity and routing limitations remain valid, but the absolute numbers will change
+> with the proper evaluation protocol.
+
+---
+
 ## Summary
 
 This project investigates a two-stage approach for long-tail class imbalance on CIFAR-100 (IR=100): **(1) train multiple diverse experts using different loss paradigms, then (2) dynamically route each test sample to the most suitable expert.** After extensive literature review, implementation, debugging, and empirical analysis, we have established the foundation and identified the optimal expert configuration.
@@ -10,7 +27,7 @@ This project investigates a two-stage approach for long-tail class imbalance on 
 
 ### Data Pipeline
 - `data/cifar_lt.py`: `LongTailCIFAR100` dataset with exponential imbalance (IR=100), support for two-view contrastive sampling, per-view transforms, and class-count retrieval
-- `utils/split_cifar100.py`: Stratified holdout of 50/class (5K) for balanced validation before long-tail subsampling
+- `utils/split_cifar100.py` (deprecated): Stratified holdout of 50/class (5K) for balanced validation before long-tail subsampling — **replaced by `utils/create_lt_split.py`**
 
 ### Three Expert Trainers
 | Expert | Script | Loss | Status |
@@ -250,6 +267,36 @@ After **5 rounds of exhaustive testing (25+ routing methods, including 2 novel a
 | `scripts/mock_test.py` | Updated PaCo test hyperparams to match official values (alpha=0.5→0.01, temp=0.07→0.05) |
 | `requirements.txt` | Added missing `scikit-learn` and `scipy` dependencies |
 | `docs/final-report.md` | This file |
+
+---
+
+---
+
+## Post-Report Infrastructure Refactoring
+
+After this report was written, the codebase underwent a significant refactoring to support the corrected data pipeline and clean up the 40+ ad-hoc scripts:
+
+### Data Pipeline Fix
+- **Old:** `utils/split_cifar100.py` held out 50/class balanced validation BEFORE long-tail subsampling
+- **New:** `utils/create_lt_split.py` applies LT subsampling to the full 50K first, then splits 80/20
+- `data/cifar_lt.py` now supports `already_subsampled=True` and `use_test_set=True`
+- New indices: `lt_train_indices.npy`, `lt_val_indices.npy`, `lt_all_indices.npy`
+
+### Code Refactoring
+- **Old:** 40+ standalone scripts with duplicated boilerplate (data loading, BA computation, metrics)
+- **New:** Unified entry points + shared utilities + OOP router framework:
+  - `scripts/train.py` — single `--method` flag for all expert types
+  - `scripts/evaluate.py` — unified evaluation on any split
+  - `scripts/benchmark.py` — run all routers, produce comparison table
+  - `scripts/analyze.py` — diversity, root cause, calibration analysis
+  - `scripts/utils/` — shared `data.py`, `metrics.py`, `features.py`
+  - `scripts/router/` — 9 OOP routers inheriting from `BaseRouter`
+
+### What Remains
+- **Retrain all three experts** on the proper LT split (requires GPU)
+- **Re-establish baselines** on the CIFAR-100 test set
+- **Re-run routing benchmark** with the new experts
+- **Re-verify root cause problems** — check if findings still hold
 
 ---
 

@@ -3,6 +3,8 @@
 > **Context:** This report analyzes novel approaches to solve the fundamental problem identified after 25+ routing methods across 5 rounds of experiments on CIFAR-100-LT (IR=100). The root cause: **frozen experts' features encode class identity, not routing relevance.** The only way forward is to change what the experts provide so that routing-relevant information naturally emerges.
 >
 > This analysis evaluates 7 distinct ideas (plus hybrid combinations) for novelty, feasibility, likely effectiveness, and implementation path.
+>
+> **⚠️ Note on data split:** This analysis was written in the context of the original (flawed) data pipeline where the validation set was 5K balanced samples. The data pipeline has since been fixed — the validation set is now ~2,169 long-tailed samples following the standard CIFAR-100-LT protocol. References to "5K balanced val set" in this document refer to the old setup. The qualitative analysis of the ideas remains valid, but implementation details (validation set size, expected BA targets) would need adjustment for the new protocol.
 
 ---
 

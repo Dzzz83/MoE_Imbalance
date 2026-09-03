@@ -14,75 +14,126 @@ Three separate ResNet-32 backbones are trained with **fundamentally different tr
 
 ---
 
-## Current Status
+## Data Pipeline — ⚠️ Critical Fix Applied
 
-### ✅ Completed
+### Original (Flawed) Protocol — Now Deprecated
+```
+CIFAR-100 train (50K)
+  ├── 5K balanced validation ← held out BEFORE LT (NON-STANDARD — cheating)
+  └── 45K base pool
+       └── LT subsampling → 9,754 training samples
+```
+The old protocol held out 50 samples/class **before** applying long-tail subsampling, creating a balanced validation set that doesn't exist in real long-tail scenarios. All experiments and results in `docs/experiments.md`, `docs/problem.md`, and `docs/final-report.md` were measured on this flawed split.
 
-| Item | Details |
-|------|---------|
-| Data split | 5K balanced val + 45K base train pool (stratified holdout) |
-| LAL expert | Trained 200 epochs, BA=43.98%, H=62.8% M=41.5% T=27.7% |
-| PaCo expert | Trained 400 epochs, BA=49.28%, H=65.3% M=48.9% T=33.1% |
-| Mixup+CE expert | Trained 200 epochs, BA=40.80% |
-| PaCo fixes | dim=32, K=2048, alpha=0.01, temp=0.05, step schedule [320,360], CIFAR-100 normalization |
-| Diversity analysis | κ(LAL,PaCo)=0.41, κ(LAL,Mixup)=0.45, κ(PaCo,Mixup)=0.44; oracle=62.90% |
-| Code hardening | absolute imports, device placement, checkpoint overwrite, gitignore fixes |
-| **Routing experiments (v1)** | 9 routing methods tested — none achieved routing contribution ≥1% (see `docs/experiments.md` §2) |
-| **Root cause analysis** | 10 verified problems documented in `docs/problem.md` |
-| **89-d enriched routing (v2)** | **52.42% BA (+1.30% over uniform)** across 3 seeds — **achieves the +1% target**. See `docs/experiments.md` §6.1. |
-| **Augmentation consistency (Round 3)** | Tested — failed success criterion (+0.18% gain < 0.5% threshold). See `docs/experiments.md` §7.1. |
-| **Pairwise ranking routing (Round 3)** | LR pairwise comparators (52.10%) and MLP pairwise (50.66%) — both underperform 89-d correctness. See `docs/experiments.md` §7.2–7.3. |
-| **92-d combined routing (Round 3)** | **52.49% ± 0.08% BA (+1.37% over uniform)** across 3 seeds — **best routing method**. Ties optimal fixed weights (52.58%, p=0.71). See `docs/experiments.md` §7.4. |
-| **Meta-router (9-d)** | 52.40% BA (+1.28%) — below 89-d and 92-d methods. See `docs/experiments.md` §7.5. |
-| **TTA-averaged predictions (Round 4)** | Raises absolute BA (53.00%) but hurts routing fraction. See `docs/experiments.md` §8.1. |
-| **Gradient sensitivity routing (Round 4)** | Signal exists (r=0.24-0.34) but redundant with 92-d features. Best: 52.52% (log_grad). See `docs/experiments.md` §8.2. |
-| **Selective routing (Round 4)** | **52.70% BA (+0.12% over opt fixed)** — first method to beat opt fixed. See `docs/experiments.md` §8.3. |
-| **392-d hybrid TTA routing (Round 4)** | **53.22% BA** — highest absolute BA achieved. See `docs/experiments.md` §8.4. |
-| **GDDR (Round 5)** | 46.98% BA — gradient directions in 3072-d space are near-orthogonal (mean cos sim ≈ 0.03). **Failed.** See `docs/experiments.md` §9.1. |
-| **Cluster routing (Round 5)** | Best variant 52.56% BA (+0.08% vs opt fixed) — essentially tied. Per-cluster weights differ but gain within noise. **Failed to beat global opt.** See `docs/experiments.md` §9.2. |
+### Standard Protocol — Now Implemented
+```
+CIFAR-100 train (50K)
+  └── LT subsampling (IR=100) → ~10,847 training samples
+       ├── ~8,678 training (80%)
+       └── ~2,169 validation (20%) ← also long-tailed
 
-### ✅ Resolved — Target Achieved
+CIFAR-100 test (10K) ← final evaluation only
+```
 
-| Item | Details |
-|------|---------|
-| **Routing contribution ≥1%** | ✅ **Achieved** — multiple methods exceed +1% over uniform. Best: Selective 92-d at **+1.58%** over uniform. |
-| **Standard 24-d correctness routing** | 51.70% (+0.58%) — still below target |
-| **89-d enriched correctness routing** | 52.42% (+1.30%) — meets target |
-| **Optimal fixed weights (reference)** | 52.58% (+1.46%) — selective routing beats this by +0.12% |
+**Implementation status:** ✅ Complete.
+- `utils/create_lt_split.py` — Creates proper LT train/val split from full 50K
+- `data/cifar_lt.py` — Updated with `already_subsampled` and `use_test_set` parameters
+- `data/processed/lt_train_indices.npy` — LT training indices (~8,678)
+- `data/processed/lt_val_indices.npy` — LT validation indices (~2,169)
+- `data/processed/lt_all_indices.npy` — Complete LT set (~10,847)
+- Old indices (`base_train_indices.npy`, `balanced_val_indices.npy`) still present but deprecated
 
-### ❌ Remaining Limitations
-
-| Item | Status |
-|------|--------|
-| **Beat optimal fixed weights by ≥1%** | ❌ **Not achieved** — best method (Selective 92-d, 52.70%) beats opt fixed by only +0.12%. Need 53.58% for +1% margin. |
-| **Augmentation consistency routing** | ❌ **Tested and failed** — +0.18% gain, below +0.5% threshold |
-| **Gradient alignment routing (GDDR)** | ❌ **Failed** — gradient directions in 3072-d space are near-orthogonal regardless of expert correctness (mean cos sim ≈ 0.03) |
-| **Cluster-based adaptive weighting** | ❌ **Failed to beat global opt** — best variant achieves 52.56% BA (+0.08% vs opt), gain within noise |
-| **Gradient sensitivity routing** | ❌ **Tested — redundant with 92-d features** — adds only +0.08% |
-| **TTA-averaged routing** | ❌ **Tested — hurts routing fraction** — baseline moves with improvement |
-| **MoCo v2 expert replacement** | ⏳ Requires GPU (raises absolute accuracy, not routing fraction) |
-| **SADE-style test-time adaptation** | ⏳ Requires GPU (potential orthogonal signal) |
-| Final evaluation on CIFAR-100 test set | ⏳ Not needed until method is settled |
+**New experts need to be trained on this proper split.** The old checkpoints (`LAL_best.pt`, `PaCo_best.pt`, `Mixup_best.pt`) were trained on the flawed 9,754-sample split and should not be used for final evaluation.
 
 ---
 
-## Project Structure
+## Current Status
+
+### ✅ Completed — Code Infrastructure
+
+| Item | Details |
+|------|---------|
+| **Data pipeline fix** | `create_lt_split.py`, updated `cifar_lt.py` with proper split support |
+| **Unified training script** | `scripts/train.py` — single entry point for all methods (`--method {lal, mixup, paco, ce, balanced_softmax}`) |
+| **Unified evaluation script** | `scripts/evaluate.py` — evaluate any expert on train/val/test |
+| **Unified benchmark script** | `scripts/benchmark.py` — run all routers, produce comparison table |
+| **Unified analysis script** | `scripts/analyze.py` — diversity, root cause, calibration analysis |
+| **Shared utilities** | `scripts/utils/data.py` — model loading, data loaders, class groups |
+| | `scripts/utils/metrics.py` — BA, per-class acc, group acc, ECE, routing metrics |
+| | `scripts/utils/features.py` — logit extraction, 24-d/89-d/92-d features, PCA |
+| **OOP Router framework** | `scripts/router/base.py` — abstract `BaseRouter` |
+| | `scripts/router/uniform.py` — `UniformRouter` |
+| | `scripts/router/confidence.py` — `ConfidenceRouter` (calibrated) |
+| | `scripts/router/product.py` — `ProductRouter` (geometric mean) |
+| | `scripts/router/correctness.py` — `CorrectnessRouter` (trust meters) |
+| | `scripts/router/pairwise.py` — `PairwiseRouter` (tournament) |
+| | `scripts/router/cluster.py` — `ClusterRouter` (per-cluster weights) |
+| | `scripts/router/gate.py` — `GateRouter` (learned MLP gate) |
+| | `scripts/router/tta.py` — `TTARouter` (test-time augmentation) |
+| | `scripts/router/selective.py` — `SelectiveRouter` (abstain on low confidence) |
+| **Weighted training support** | `scripts/train_lal_weighted.py` — LAL with per-sample loss weighting |
+| | `scripts/train_paco_weighted.py` — PaCo with per-sample loss weighting |
+| | `data/weighted_dataset.py` — `WeightedDataset` wrapper |
+| **Code hardening** | Absolute imports, device placement, checkpoint overwrite fix, gitignore fixes |
+
+### ❌ Remaining — Need New Training Runs
+
+| Item | Status | Details |
+|------|--------|---------|
+| **Retrain LAL on proper split** | ⏳ Pending | Train on `lt_train_indices.npy`, validate on `lt_val_indices.npy` |
+| **Retrain PaCo on proper split** | ⏳ Pending | Same, with 400-epoch PaCo schedule |
+| **Retrain Mixup on proper split** | ⏳ Pending | Same, with 200-epoch Mixup schedule |
+| **Re-establish baselines on test set** | ⏳ Pending | Individual BA, uniform avg, optimal fixed weights |
+| **Re-run routing methods** | ⏳ Pending | 89-d, 92-d, selective, pairwise, etc. |
+| **Re-verify root cause problems** | ⏳ Pending | Feature learning gap, all-wrong ceiling, etc. |
+| **MoCo v2 expert replacement** | ⏳ Requires GPU | Raises absolute accuracy |
+| **SADE-style test-time adaptation** | ⏳ Requires GPU | Potential orthogonal signal |
+| **Final evaluation on CIFAR-100 test set** | ⏳ Not needed until method is settled | |
+
+### Old Results (Flawed Split — For Reference Only)
+
+The following results were obtained on the deprecated 5K-balanced-validation split and are **not comparable** to standard CIFAR-100-LT benchmarks:
+
+| Expert | Val BA (old) | Head | Medium | Tail |
+|--------|:------------:|:----:|:------:|:----:|
+| CE | 39.46% | 68.5% | 37.9% | 12.0% |
+| LAL | 43.98% | 62.8% | 41.5% | 27.7% |
+| PaCo | 49.28% | 65.3% | 48.9% | 33.1% |
+| Mixup | 40.80% | — | — | — |
+
+| Routing Method | BA (old) | vs Uniform |
+|:---------------|:--------:|:----------:|
+| Uniform avg | 51.12% | — |
+| Opt fixed weights | 52.58% | +1.46% |
+| 89-d correctness | 52.42% | +1.30% |
+| 92-d combined | 52.49% | +1.37% |
+| Selective 92-d (best) | **52.70%** | **+1.58%** |
+| 392-d hybrid TTA | 53.22% | +2.10% |
+
+---
+
+## Project Structure (Current)
 
 ```
 expert_method/
 ├── data/                          # CIFAR-100 dataset + split indices
 │   ├── cifar-100-python/          #   raw CIFAR-100 files
-│   ├── processed/                 #   split indices from split_cifar100.py
-│   │   ├── balanced_val_indices.npy   # 5,000 indices (50/class)
-│   │   ├── base_train_indices.npy     # 45,000 indices (450/class)
-│   │   └── val_targets.npy            # labels for verification
+│   ├── processed/                 #   split indices
+│   │   ├── lt_train_indices.npy       # ~8,678 (new — proper LT train)
+│   │   ├── lt_val_indices.npy         # ~2,169 (new — proper LT val)
+│   │   ├── lt_all_indices.npy         # ~10,847 (new — complete LT)
+│   │   ├── base_train_indices.npy     # 45,000 (OLD — deprecated)
+│   │   ├── balanced_val_indices.npy   # 5,000 (OLD — deprecated)
+│   │   └── val_targets.npy            # OLD — deprecated
 │   ├── cifar_lt.py                #   LongTailCIFAR100 Dataset class
+│   ├── weighted_dataset.py        #   WeightedDataset wrapper for boosting
 │   └── __init__.py
 │
 ├── losses/                        # Loss function implementations
 │   ├── ce_loss.py                 #   Standard Cross-Entropy Loss
 │   ├── lal_loss.py                #   Logit-Adjusted Loss (Menon ICLR 2021)
 │   ├── paco_loss.py               #   PaCo Loss — parametric contrastive (Cui ICCV 2021)
+│   ├── balanced_softmax_loss.py   #   Balanced Softmax Loss (Ren ECCV 2020)
 │   └── __init__.py                #   exports CELoss, LALLoss, PaCoLoss
 │
 ├── models/                        # Model architectures
@@ -90,62 +141,62 @@ expert_method/
 │   └── __init__.py
 │
 ├── scripts/                       # Training and diagnostic scripts
+│   ├── __init__.py
+│   ├── train.py                   #   UNIFIED: --method {lal, mixup, paco, ce, balanced_softmax}
+│   ├── evaluate.py                #   UNIFIED: --expert LAL --dataset {train, val, test}
+│   ├── benchmark.py               #   UNIFIED: run all routers, produce comparison table
+│   ├── analyze.py                 #   UNIFIED: --mode {diversity, root_cause, calibration, all}
 │   ├── base_trainer.py            #   BaseTrainer: common loop, metrics, checkpointing
 │   ├── train_lal.py               #   LALTrainer — Logit-Adjusted Loss expert
 │   ├── train_paco.py              #   PaCoTrainer — PaCo contrastive expert
 │   ├── train_mixup.py             #   Mixup+CE trainer
-│   ├── mock_test.py               #   Synthetic dry-run for all experts
-│   ├── diversity_analysis.py      #   Cohen's κ, oracle, unique contribution
-│   ├── debug_routing.py           #   Initial routing diagnostics
-│   ├── debug_routing_root_cause.py #   Systematic root cause verification
-│   ├── deep_debug_routing.py      #   Deep routing diagnostic
-│   ├── eval_router.py             #   MLP router evaluation (5K data)
-│   ├── eval_router_bigdata.py     #   MLP router evaluation (45K data)
-│   ├── eval_router_v2.py          #   Various input representations
-│   ├── gate_routing_diagnostic.py #   NLL-gated mixture on 24-d features
-│   ├── gate_routing_3seeds.py     #   3-seed NLL gate evaluation
-│   ├── per_class_calibration.py   #   Per-class temperature rescaling
-│   ├── verify_routing_hypotheses.py # Hypothesis verification
-│   ├── kaggle_root_cause.py      #   Feature learning gap analysis
-│   ├── correctness_routing.py     #   Correctness-prediction routing (24-d trust meters)
-│   ├── diagnose_loss_oracle.py    #   Loss vs accuracy diagnostic
-│   ├── root_cause_analysis.py     #   Full root cause analysis
-│   ├── root_cause_light.py        #   Lightweight root cause
-│   ├── novel_routing_test.py      #   Round 2: 8 novel routing approaches
-│   ├── refined_routing_test.py    #   Refined tests: MLP, product, signal ensemble
-│   ├── verify_routing_target.py   #   Rigorous 5-fold CV of enriched features
-│   ├── final_routing_push.py      #   Final push: 89-d features, meta-routing
-│   ├── final_verify_89d.py        #   Clean verification of 89-d routing
-│   ├── multi_seed_89d_verify.py   #   Multi-seed (3) verification of 89-d routing
-│   ├── augmentation_consistency_analysis.py  #   Round 3: consistency feasibility study
-│   ├── pairwise_routing.py        #   Round 3: pairwise ranking comparators
-│   ├── pairwise_mlp_combined.py   #   Round 3: MLP pairwise + 92-d combined
-│   ├── multi_seed_92d_verify.py   #   Round 3: multi-seed 92-d verification
-│   ├── rotation_routing.py        #   Round 4: rotation prediction routing
-│   ├── tta_routing.py             #   Round 4: TTA-averaged predictions routing
-│   ├── hybrid_tta_routing.py      #   Round 4: 392-d hybrid (92-d + TTA probs)
-│   ├── gradient_routing.py        #   Round 4: gradient sensitivity routing
-│   └── selective_hybrid_routing.py #   Round 4: selective routing with threshold
+│   ├── train_lal_weighted.py      #   Weighted LAL trainer (boosting)
+│   ├── train_paco_weighted.py     #   Weighted PaCo trainer (boosting)
+│   ├── train_ce.py                #   CE trainer (legacy)
+│   ├── train_balanced_softmax.py  #   Balanced Softmax trainer (legacy)
+│   │
+│   ├── utils/                     #   Shared utilities
+│   │   ├── __init__.py
+│   │   ├── data.py                #   Model loading, data loaders, class groups
+│   │   ├── metrics.py             #   BA, per-class acc, group acc, ECE, routing metrics
+│   │   └── features.py            #   Logit extraction, 24-d/89-d/92-d features, PCA
+│   │
+│   └── router/                    #   OOP Router framework (9 routers)
+│       ├── __init__.py            #   Router registry
+│       ├── base.py                #   BaseRouter (abstract)
+│       ├── uniform.py             #   UniformRouter — average logits
+│       ├── confidence.py          #   ConfidenceRouter — max-softmax + calibration
+│       ├── product.py             #   ProductRouter — geometric mean of probs
+│       ├── correctness.py         #   CorrectnessRouter — trust meters
+│       ├── pairwise.py            #   PairwiseRouter — tournament comparators
+│       ├── cluster.py             #   ClusterRouter — per-cluster optimal weights
+│       ├── gate.py                #   GateRouter — learned MLP gate
+│       ├── tta.py                 #   TTARouter — test-time augmentation
+│       └── selective.py           #   SelectiveRouter — abstain on low confidence
 │
-├── utils/
-│   ├── split_cifar100.py          #   Stratified 50/class validation split
+├── utils/                         # Standalone utilities
+│   ├── create_lt_split.py         #   Create proper CIFAR-100-LT train/val split
 │   └── __init__.py
 │
 ├── docs/                          # Planning and context documentation
 │   ├── AGENTs.md                  #   Agent skill rules for MoE gate routing
-│   ├── PLAN.md                    #   Approved experimental blueprint
+│   ├── PLAN.md                    #   Boosting-style adversarial expert training plan
 │   ├── research.md                #   Literature survey and critical analysis
-│   ├── problem.md                 #   Verified root causes of routing failure (8 problems)
-│   ├── experiments.md             #   Failed experiments log with root causes (9 methods)
+│   ├── problem.md                 #   Verified root causes (OLD SPLIT — for reference)
+│   ├── experiments.md             #   Failed experiments log (OLD SPLIT — for reference)
 │   ├── project-context.md         #   This file
-│   └── final-report.md            #   Stage 1 final report
+│   ├── final-report.md            #   Stage 1 final report (OLD SPLIT — for reference)
+│   ├── novel-routing-ideas-analysis.md  # Novel routing ideas analysis
+│   ├── redo-plan.md               #   Plan to redo with proper data split
+│   ├── stage0-data-pipeline.md    #   Data pipeline fix plan
+│   └── refactor-plan.md           #   Scripts refactor plan (mostly completed)
 │
-├── checkpoints/                   # Model checkpoints
-│   ├── LAL_best.pt                #   LAL expert (BA=43.98%)
+├── checkpoints/                   # Model checkpoints (OLD SPLIT — will be replaced)
+│   ├── LAL_best.pt                #   LAL expert (BA=43.98% on old split)
 │   ├── LAL_latest.pt              #   LAL expert
-│   ├── PaCo_best.pt               #   PaCo expert (BA=49.28%)
+│   ├── PaCo_best.pt               #   PaCo expert (BA=49.28% on old split)
 │   ├── PaCo_latest.pt             #   PaCo expert
-│   ├── Mixup_best.pt              #   Mixup+CE expert (BA=40.80%)
+│   ├── Mixup_best.pt              #   Mixup+CE expert (BA=40.80% on old split)
 │   └── Mixup_latest.pt            #   Mixup+CE expert
 │
 ├── requirements.txt               # Python dependencies
@@ -167,7 +218,7 @@ expert_method/
 
 ### PaCo Hyperparameters
 
-After exhaustive audit of the official PaCo codebase, we discovered:
+After exhaustive audit of the official PaCo codebase:
 
 - **dim=32** (official shell script uses `--moco-dim 32` — was 128 in our code)
 - **K=2048** (official uses K=1024 with batch 128; we use K=2048 with batch 256)
@@ -184,7 +235,7 @@ From TSC paper evidence: classification-boundary loss pairs have κ ≈ 0.82. We
 
 ## Training Hyperparameters
 
-| Hyperparameter | LAL | PaCo | Mixup+CE (planned) |
+| Hyperparameter | LAL | PaCo | Mixup+CE |
 |---------------|:---:|:----:|:------------------:|
 | Epochs | 200 | 400 | 200 |
 | Batch size | 128 | 256 | 128 |
@@ -197,15 +248,31 @@ From TSC paper evidence: classification-boundary loss pairs have κ ≈ 0.82. We
 
 ---
 
-## Workflow
+## Workflow (Current — Using Proper Split)
 
-1. **Prepare**: `python utils/split_cifar100.py` ✅
-2. **Train experts**:
-   - `python scripts/train_lal.py --device cuda` ✅ (200 epochs, BA=43.98%)
-   - `python scripts/train_paco.py --device cuda --epochs 400` ✅ (400 epochs, BA=49.28%)
-   - `python scripts/train_mixup.py --device cuda` ✅ (200 epochs, BA=40.80%)
-3. **Diversity analysis**: `python scripts/diversity_analysis.py` ✅
-4. **Routing experiments (v1)**: 9 routing methods tested — none achieved routing contribution ≥1% ❌
-5. **Root cause analysis**: 10 verified problems documented in `problem.md` ✅
-6. **Routing experiments (v2)**: 89-d enriched correctness-prediction routing achieves **52.41% BA (+1.29%)** ✅
-7. **Remaining GPU options**: MoCo v2, test-time augmentation consistency, SADE — not yet tested
+1. **Prepare data split**: `python utils/create_lt_split.py` ✅
+2. **Train experts** (on proper LT split — **NEED TO RUN**):
+   - `python scripts/train.py --method lal --epochs 200 --lr 0.1`
+   - `python scripts/train.py --method paco --epochs 400 --lr 0.05`
+   - `python scripts/train.py --method mixup --epochs 200 --lr 0.1`
+3. **Evaluate experts**: `python scripts/evaluate.py --expert LAL --dataset test`
+4. **Diversity analysis**: `python scripts/analyze.py --mode diversity --dataset test`
+5. **Routing benchmark**: `python scripts/benchmark.py --dataset test --output results.json`
+6. **Root cause analysis**: `python scripts/analyze.py --mode root_cause --dataset test`
+
+---
+
+## What to Do Next
+
+### Immediate (Requires GPU — Kaggle)
+
+1. **Retrain all three experts** on the proper LT split using `scripts/train.py`
+2. **Evaluate** on the CIFAR-100 test set using `scripts/evaluate.py`
+3. **Run benchmark** using `scripts/benchmark.py --dataset test`
+
+### After New Baselines Are Established
+
+4. **Re-verify root cause problems** — check if feature learning gap, all-wrong ceiling, lone dissenter paradox still hold
+5. **Compare with old results** — does the proper split change the routing dynamics?
+6. **Proceed with boosting-style approach** (`docs/PLAN.md`) if routing gap persists
+7. **Or proceed with novel routing ideas** (`docs/novel-routing-ideas-analysis.md`)

@@ -1,5 +1,21 @@
 # Problem Analysis: Why Routing Fails to Beat Uniform Averaging
 
+> **⚠️ IMPORTANT: This analysis was conducted on the ORIGINAL (flawed) data split.**
+>
+> The original pipeline held out 50 samples/class as a balanced validation set **before** applying
+> long-tail subsampling. This means:
+> - The validation set was balanced (not long-tailed)
+> - Training used only 9,754 samples (from a 45K base pool) instead of ~10,847 (from full 50K)
+> - All metrics below (all-wrong ceiling, lone dissenter paradox, label ambiguity) were measured
+>   on this non-standard split
+>
+> **The data pipeline has been fixed.** See `docs/stage0-data-pipeline.md` for details.
+> After retraining experts on the proper split, these findings should be re-verified.
+> The fundamental limitations (feature learning gap, all-wrong ceiling, lone dissenter paradox)
+> are likely structural and will persist, but the exact percentages will change.
+
+---
+
 ## Overview
 
 Three diverse ResNet-32 experts (LAL, PaCo, Mixup+CE) were trained on CIFAR-100-LT (IR=100). The goal is to build a dynamic router that selects the best expert per test sample. **The router must outperform uniform softmax averaging by ≥1% Balanced Accuracy (BA) to justify its complexity.**

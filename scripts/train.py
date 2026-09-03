@@ -88,7 +88,7 @@ def main():
 
 def _train_lal(config):
     """Train with Logit-Adjusted Loss."""
-    from losses.lal import LALoss
+    from losses.lal_loss import LALLoss
     from models.resnet32 import ResNet32
 
     # Set defaults
@@ -97,60 +97,40 @@ def _train_lal(config):
     batch_size = config['batch_size'] or 128
 
     model = ResNet32(num_classes=100)
-    loss_fn = LALoss(
+    loss_fn = LALLoss(
         class_counts=config['class_counts'],
         tau=1.0,
-    )
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9,
-        weight_decay=config['weight_decay'],
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=epochs,
     )
 
     trainer = BaseTrainer(
         model=model,
         loss_fn=loss_fn,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        device=config['device'],
-        save_dir=config['checkpoint_dir'],
-        experiment_name='LAL',
-        epochs=epochs,
+        expert_name='LAL',
         class_counts=config['class_counts'],
+        device=config['device'],
+        lr=lr,
+        weight_decay=config['weight_decay'],
+        batch_size=batch_size,
+        epochs=epochs,
+        checkpoint_dir=config['checkpoint_dir'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 
 
 def _train_mixup(config):
     """Train with Mixup augmentation + CE loss."""
-    from models.resnet32 import ResNet32
-
     epochs = config['epochs'] or 200
     lr = config['lr'] or 0.1
     batch_size = config['batch_size'] or 128
 
-    model = ResNet32(num_classes=100)
-    loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9,
-        weight_decay=config['weight_decay'],
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=epochs,
-    )
-
     from scripts.train_mixup import MixupTrainer
     trainer = MixupTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        optimizer=optimizer,
-        scheduler=scheduler,
         device=config['device'],
-        save_dir=config['checkpoint_dir'],
-        experiment_name='Mixup',
+        lr=lr,
+        weight_decay=config['weight_decay'],
+        batch_size=batch_size,
         epochs=epochs,
+        checkpoint_dir=config['checkpoint_dir'],
         class_counts=config['class_counts'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
@@ -158,29 +138,18 @@ def _train_mixup(config):
 
 def _train_paco(config):
     """Train with PaCo contrastive learning."""
-    from models.resnet32 import PaCoResNet32
-
     epochs = config['epochs'] or 400
     lr = config['lr'] or 0.05
     batch_size = config['batch_size'] or 256
 
-    model = PaCoResNet32(num_classes=100, dim=32, K=2048)
-    loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9,
-        weight_decay=config['weight_decay'],
-    )
-
     from scripts.train_paco import PaCoTrainer
     trainer = PaCoTrainer(
-        model=model,
-        loss_fn=loss_fn,
-        optimizer=optimizer,
-        scheduler=None,  # PaCo uses custom LR schedule
         device=config['device'],
-        save_dir=config['checkpoint_dir'],
-        experiment_name='PaCo',
+        lr=lr,
+        weight_decay=config['weight_decay'],
+        batch_size=batch_size,
         epochs=epochs,
+        checkpoint_dir=config['checkpoint_dir'],
         class_counts=config['class_counts'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
@@ -199,24 +168,18 @@ def _train_ce(config):
 
     model = ResNet32(num_classes=100)
     loss_fn = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9,
-        weight_decay=config['weight_decay'],
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=epochs,
-    )
 
     trainer = BaseTrainer(
         model=model,
         loss_fn=loss_fn,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        device=config['device'],
-        save_dir=config['checkpoint_dir'],
-        experiment_name='CE',
-        epochs=epochs,
+        expert_name='CE',
         class_counts=config['class_counts'],
+        device=config['device'],
+        lr=lr,
+        weight_decay=config['weight_decay'],
+        batch_size=batch_size,
+        epochs=epochs,
+        checkpoint_dir=config['checkpoint_dir'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 
@@ -237,24 +200,18 @@ def _train_balanced_softmax(config):
     loss_fn = BalancedSoftmaxLoss(
         class_counts=torch.from_numpy(config['class_counts']).float(),
     )
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=lr, momentum=0.9,
-        weight_decay=config['weight_decay'],
-    )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=epochs,
-    )
 
     trainer = BaseTrainer(
         model=model,
         loss_fn=loss_fn,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        device=config['device'],
-        save_dir=config['checkpoint_dir'],
-        experiment_name='BalancedSoftmax',
-        epochs=epochs,
+        expert_name='BalancedSoftmax',
         class_counts=config['class_counts'],
+        device=config['device'],
+        lr=lr,
+        weight_decay=config['weight_decay'],
+        batch_size=batch_size,
+        epochs=epochs,
+        checkpoint_dir=config['checkpoint_dir'],
     )
     trainer.train(config['train_loader'], config['val_loader'])
 

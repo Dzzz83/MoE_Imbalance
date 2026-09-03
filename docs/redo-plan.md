@@ -1,8 +1,17 @@
 # Redo Plan — Proper CIFAR-100-LT Benchmark
 
+> **Status Update — Phase 0 Complete, Phases 1–6 Pending**
+>
+> Phase 0 (data pipeline fix) has been implemented. See `docs/stage0-data-pipeline.md` for
+> implementation details and `docs/project-context.md` for the current project state.
+> The remaining phases (retrain experts, re-establish baselines, re-run routing experiments)
+> require GPU time on Kaggle.
+
+---
+
 ## What Needs to Change
 
-### Current (Flawed) Setup
+### Old (Flawed) Setup — ✅ Now Deprecated
 ```
 CIFAR-100 train (50K)
   ├── 5K balanced validation ← held out BEFORE LT (NOT standard)
@@ -10,7 +19,7 @@ CIFAR-100 train (50K)
        └── LT subsampling → 9,754 training samples
 ```
 
-### Proper Setup
+### New (Proper) Setup — ✅ Implemented
 ```
 CIFAR-100 train (50K)
   └── LT subsampling (IR=100) → ~10,847 training samples
@@ -22,55 +31,41 @@ CIFAR-100 test (10K) ← final evaluation only
 
 ---
 
-## Phase 0: Recreate the Data Pipeline
+## Phase 0: Recreate the Data Pipeline — ✅ COMPLETE
 
-### 0.1 Fix `data/cifar_lt.py`
+### 0.1 Fix `data/cifar_lt.py` — ✅ Done
 
-**Change:** The current code loads the full 50K training set, then restricts to `base_train_indices` (45K). Instead, it should apply LT subsampling directly to the full 50K without any pre-holdout.
+**Changes made:**
+- Added `already_subsampled: bool = False` parameter — when True, skips internal LT subsampling and uses the provided indices directly
+- Added `use_test_set: bool = False` parameter — loads the original CIFAR-100 test set (10K balanced)
+- All existing behavior preserved for backward compatibility (old training scripts still work with `skip_longtail=True`)
 
-**What to modify:**
-- Remove the dependency on `base_train_indices` for the training set
-- The LT subsampling should be applied to the full 50K
-- The validation set should be a held-out portion of the LT-subsampled data
+### 0.2 Create `utils/create_lt_split.py` — ✅ Done (replaces `utils/split_cifar100.py`)
 
-**New `LongTailCIFAR100` behavior:**
-- `train=True`: Returns LT-subsampled training data (from full 50K)
-- `train=False, skip_longtail=False`: Returns LT-subsampled validation data (from full 50K, different seed)
-- `train=False, skip_longtail=True`: Returns balanced data (for test set)
+**New file** creates the proper CIFAR-100-LT train/val split:
+- Applies exponential subsampling (IR=100) to the **full 50K** training set
+- Splits resulting ~10,847 samples into train (80%, ~8,678) and val (20%, ~2,169)
+- Both splits follow the long-tailed distribution (no cheating)
+- Fixed seed (42) for reproducibility
+- Verifies no overlap between train and val indices
+- Saves `lt_train_indices.npy`, `lt_val_indices.npy`, `lt_all_indices.npy`
 
-### 0.2 Update or Replace `utils/split_cifar100.py`
+The old `utils/split_cifar100.py` has been removed.
 
-**Current:** Holds out 50/class as balanced validation → creates `base_train_indices.npy` and `balanced_val_indices.npy`
+### 0.3 Files Affected — ✅ Done
 
-**New:** 
-- Apply LT subsampling to the full 50K training set
-- Split the resulting ~10,847 samples into train (~8,678) and val (~2,169)
-- Save the train/val indices
-- The test set loader loads the original CIFAR-100 test set (10K)
-
-**Implementation:**
-```python
-# New split_cifar100.py
-full_train = CIFAR100(root='./data', train=True)
-# Apply exponential subsampling
-indices = apply_lt_subsampling(full_train, ir=100)  # ~10,847 samples
-# Shuffle and split 80/20
-rng = np.random.RandomState(42)
-rng.shuffle(indices)
-split = int(0.8 * len(indices))
-train_idx = indices[:split]    # ~8,678
-val_idx = indices[split:]      # ~2,169
-np.save('lt_train_indices.npy', train_idx)
-np.save('lt_val_indices.npy', val_idx)
-```
-
-### 0.3 Files Affected
-
-| File | Change |
-|:-----|:-------|
-| `data/cifar_lt.py` | Remove `base_train_indices` logic for training; apply LT to full 50K |
-| `utils/split_cifar100.py` | Rewrite to create LT train/val split from full 50K |
-| `data/processed/*` | Replace `base_train_indices.npy`, `balanced_val_indices.npy` with new files |
+| File | Change | Status |
+|:-----|:-------|:-------|
+| `data/cifar_lt.py` | Added `already_subsampled`, `use_test_set` params | ✅ |
+| `utils/create_lt_split.py` | **New** — creates proper LT train/val split | ✅ |
+| `utils/split_cifar100.py` | Removed (replaced by create_lt_split.py) | ✅ |
+| `data/processed/lt_train_indices.npy` | **New** — ~8,678 LT training indices | ✅ |
+| `data/processed/lt_val_indices.npy` | **New** — ~2,169 LT validation indices | ✅ |
+| `data/processed/lt_all_indices.npy` | **New** — ~10,847 complete LT indices | ✅ |
+| `data/processed/base_train_indices.npy` | Still present (deprecated) | ⏸️ |
+| `data/processed/balanced_val_indices.npy` | Still present (deprecated) | ⏸️ |
+| `scripts/utils/data.py` | Updated to use new indices | ✅ |
+| `scripts/train.py` | Updated to use new data loading | ✅ |
 
 ---
 
@@ -270,27 +265,32 @@ If the problems are less severe → the existing routing methods might already w
 
 ## Effort Summary
 
-| Phase | Description | Scripts to Modify | GPU Hours | CPU Hours |
-|:-----:|:------------|:-----------------:|:---------:|:---------:|
-| 0 | Fix data pipeline | 2 | 0 | 1 |
-| 1 | Retrain 3 experts | 3 | 6 | 0 |
-| 2 | Re-establish baselines | 2 | 0.5 | 2 |
-| 3 | Rebuild trust meters | 2 | 1 | 2 |
-| 4 | Re-run ~12 routing methods | 10-12 | 2 | 4 |
-| 5 | Re-verify 12 root causes | 1 | 0.5 | 2 |
-| 6 | Re-evaluate boosting | 0 | 0 | 1 |
-| **Total** | | **~20** | **~10** | **~12** |
+| Phase | Description | Scripts to Modify | GPU Hours | CPU Hours | Status |
+|:-----:|:------------|:-----------------:|:---------:|:---------:|:------:|
+| 0 | Fix data pipeline | 2 | 0 | 1 | ✅ Complete |
+| 1 | Retrain 3 experts | 3 | 6 | 0 | ⏳ Pending |
+| 2 | Re-establish baselines | 2 | 0.5 | 2 | ⏳ Pending |
+| 3 | Rebuild trust meters | 2 | 1 | 2 | ⏳ Pending |
+| 4 | Re-run ~12 routing methods | 10-12 | 2 | 4 | ⏳ Pending |
+| 5 | Re-verify 12 root causes | 1 | 0.5 | 2 | ⏳ Pending |
+| 6 | Re-evaluate boosting | 0 | 0 | 1 | ⏳ Pending |
+| **Total** | | **~20** | **~10** | **~12** | **Phase 0 done** |
+
+### Notes on Current Status
+
+- **Phase 0** is fully implemented. The codebase now supports both the old (backward-compatible) and new data protocols.
+- **Phases 1–6** require GPU access (Kaggle T4) to execute.
+- The code infrastructure for Phases 2–4 is already in place: `scripts/train.py`, `scripts/evaluate.py`, `scripts/benchmark.py`, and `scripts/analyze.py` are all ready to use with the new data split.
+- No additional scripting is needed for Phases 2–4 — just run the existing entry points with the new expert checkpoints.
 
 ---
 
-## Critical Open Questions
+## Open Questions — Mostly Resolved
 
-Before starting, we need to decide:
+1. **Do we keep the existing experts and just re-evaluate on the test set?** ❌ **No — must retrain from scratch.** The existing experts were trained on 9,754 samples from the 45K base pool. The proper setup trains on ~10,847 samples from the full 50K. The training distribution is different (~1,093 more samples, different class counts). Re-evaluating old experts on the test set would not give valid benchmark numbers.
 
-1. **Do we keep the existing experts and just re-evaluate on the test set?** Or do we retrain from scratch? The existing experts were trained on 9,754 samples (from 45K base pool). The proper setup would train on ~10,847 samples (from full 50K). The difference is ~1,093 more training samples. This might improve expert performance slightly.
+2. **Do we re-run ALL 25+ routing methods, or just the most important ones?** ✅ **Use `scripts/benchmark.py` which runs all 9 routers automatically.** The benchmark script handles all routing methods in a single command. Individual experiment scripts from the old rounds can be consulted for specific details but the primary evaluation is through the benchmark.
 
-2. **Do we re-run ALL 25+ routing methods, or just the most important ones?** The top 10 methods capture the key findings. The rest were clearly inferior.
+3. **Do we fix the 10 code bugs first?** ✅ **Already done.** The data index bug, PaCo hyperparams, device placement, checkpoint overwrite, and all other infrastructure bugs were fixed during the original experiments. The refactored codebase incorporates all these fixes.
 
-3. **Do we fix the 10 code bugs first?** The data index bug, PaCo hyperparams, etc. were fixed during the project. These fixes should be applied to the new training run.
-
-4. **What's the goal?** Is this for a publication, or just to get correct numbers? If publication, we need to follow the standard benchmark exactly. If just for analysis, we might be able to use the existing experts and just re-evaluate on the test set.
+4. **What's the goal?** The primary goal is to obtain correct, reproducible numbers on the standard CIFAR-100-LT benchmark protocol. The refactored codebase supports this directly.

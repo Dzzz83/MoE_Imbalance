@@ -1,5 +1,15 @@
 # Research Report: Ensemble + Dynamic Routing for Long-Tail Class Imbalance on CIFAR-100
 
+> **Note on Data Split:** The empirical results referenced in this report (expert BA values,
+> diversity metrics, etc.) were measured on the original (flawed) data split where a balanced
+> validation set was held out BEFORE long-tail subsampling. The data pipeline has since been
+> corrected to follow the standard CIFAR-100-LT protocol (LT subsampling on full 50K, then
+> 80/20 train/val split). See `docs/stage0-data-pipeline.md` for details. The literature
+> survey, theoretical analysis, and proposed modifications remain valid; the absolute numbers
+> will change with the proper evaluation protocol.
+
+---
+
 ## 1. Introduction
 
 **Problem.** CIFAR-100 with an imbalance ratio of 0.01 (100∶1) produces a severe long-tailed label distribution: a handful of head classes contain thousands of training examples while dozens of tail classes contain as few as 1–2 samples. Standard cross-entropy training collapses on tail classes because the gradient signal is swamped by head-class updates, yielding a model that trivially predicts head classes and achieves poor balanced accuracy. Existing remedies fall into three camps — re-weighting, re-sampling, and margin-based logit adjustments — but each saturates at roughly the same performance ceiling on CIFAR-100-LT (≈48–50% overall accuracy with ResNet-32).

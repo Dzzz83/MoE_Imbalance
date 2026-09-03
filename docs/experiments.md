@@ -1,5 +1,22 @@
 # Experiments Log — Failed Approaches & Key Findings
 
+> **⚠️ IMPORTANT: All experiments in this log were conducted on the ORIGINAL (flawed) data split.**
+>
+> The original pipeline held out 50 samples/class as a balanced validation set **before** applying
+> long-tail subsampling. The numerical results below (BA values, oracle gaps, all-wrong percentages)
+> are from that deprecated split and **will change** when re-evaluated on the proper protocol.
+>
+> **The data pipeline has been fixed.** New indices (`lt_train_indices.npy`, `lt_val_indices.npy`)
+> implement the standard CIFAR-100-LT protocol. After retraining experts on the proper split,
+> these experiments should be re-run using the unified `scripts/benchmark.py` entry point.
+>
+> The qualitative findings (why each method failed) remain valid — they reflect fundamental
+> properties of the routing problem, not artifacts of the data split.
+>
+> See `docs/redo-plan.md` for the redo plan and `docs/stage0-data-pipeline.md` for the fix details.
+
+---
+
 This document catalogs all experimental approaches that were tried and why they failed to beat the average ensemble baseline (51.12% BA). Each entry includes the hypothesis, the result, and the root cause.
 
 ---
@@ -813,3 +830,56 @@ Gradient directions in 3072-dimensional space are **always near-orthogonal** reg
 While per-cluster weights DO differ across clusters (e.g., Cluster 1 favors LAL at 0.45 vs global 0.20), the feature space clusters by **visual similarity**, not by "which expert is best." Two visually similar classes may benefit from different experts. The per-class oracle BA (57.92%) shows that if we could perfectly group by class, the gain would be +5.44%, but feature clustering cannot achieve this.
 
 **Verdict:** ❌ Failed to meaningfully beat global optimal fixed weights. The concept is sound (per-cluster weights DO differ) but the gain (+0.08%) is within noise.
+
+---
+
+## Appendix: Post-Experiment Codebase Refactoring
+
+After the 5 rounds of experiments documented above, the codebase underwent a major refactoring to:
+1. **Fix the data pipeline** — replace the flawed balanced-validation split with the proper CIFAR-100-LT protocol
+2. **Consolidate the 40+ ad-hoc scripts** into a clean, maintainable framework
+3. **Enable systematic re-evaluation** of all routing methods on the correct data split
+
+### What Changed
+
+| Aspect | Before (Experiments) | After (Refactored) |
+|:-------|:---------------------|:-------------------|
+| **Data split** | 5K balanced val + 9,754 LT train (flawed) | ~2,169 LT val + ~8,678 LT train (standard) |
+| **Training scripts** | 5 standalone trainers | `scripts/train.py --method {lal, mixup, paco}` |
+| **Evaluation scripts** | 1 standalone evaluator | `scripts/evaluate.py --expert LAL --dataset test` |
+| **Routing scripts** | 23 standalone scripts, ~12K lines | `scripts/benchmark.py` + `scripts/router/` (9 OOP routers) |
+| **Analysis scripts** | 7 overlapping analysis scripts | `scripts/analyze.py --mode {diversity, root_cause, calibration}` |
+| **Shared utilities** | Duplicated in every script | `scripts/utils/{data,metrics,features}.py` |
+| **Data loading** | 25 copies of similar code | 1 function: `create_cifar_loader()` |
+| **BA computation** | 37 copies | 1 function: `balanced_accuracy()` |
+
+### How to Re-run These Experiments on the Proper Split
+
+```bash
+# 1. Train experts on the proper LT split (requires GPU)
+python scripts/train.py --method lal --epochs 200
+python scripts/train.py --method paco --epochs 400
+python scripts/train.py --method mixup --epochs 200
+
+# 2. Run all routing methods on the test set
+python scripts/benchmark.py --dataset test --output results_proper_split.json
+
+# 3. Run diversity and root cause analysis
+python scripts/analyze.py --mode all --dataset test
+```
+
+### Files Now Obsolete
+
+The following scripts from the experiment rounds are superseded by the refactored framework and can be archived:
+
+| Obsolete Script | Replaced By |
+|:----------------|:------------|
+| `correctness_routing.py` | `scripts/router/correctness.py` + `scripts/benchmark.py` |
+| `debug_routing.py`, `deep_debug_routing.py` | `scripts/analyze.py --mode root_cause` |
+| `gate_routing_3seeds.py`, `gate_routing_diagnostic.py` | `scripts/router/gate.py` |
+| `gradient_routing.py`, `gradient_alignment_routing.py` | `scripts/benchmark.py` (as variants) |
+| `pairwise_routing.py`, `pairwise_mlp_combined.py` | `scripts/router/pairwise.py` |
+| `cluster_routing.py` | `scripts/router/cluster.py` |
+| `tta_routing.py`, `hybrid_tta_routing.py` | `scripts/router/tta.py` |
+| `selective_hybrid_routing.py` | `scripts/router/selective.py` |
+| `eval_router*.py`, `verify_*.py`, `final_*.py` | `scripts/benchmark.py` |
