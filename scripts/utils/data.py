@@ -81,20 +81,30 @@ def load_all_experts(
     """Load all expert models and return as a dict keyed by name.
 
     Args:
-        expert_names: List like ['LAL', 'Mixup', 'PaCo']. Defaults to all three.
+        expert_names: List like ['LAL', 'Mixup', 'PaCo']. Defaults to all available.
         checkpoint_dir: Override checkpoint directory.
     Returns:
-        Dict mapping expert name → loaded model.
+        Dict mapping expert name → loaded model. Skips missing checkpoints with a warning.
     """
     if expert_names is None:
         expert_names = ["LAL", "Mixup", "PaCo", "CE", "BalancedSoftmax"]
 
+    if checkpoint_dir is None:
+        checkpoint_dir = str(DEFAULT_CHECKPOINT_DIR)
+
     models = {}
     for name in expert_names:
-        ckpt_path = None
-        if checkpoint_dir is not None:
-            ckpt_path = os.path.join(checkpoint_dir, f"{name}_best.pt")
+        ckpt_path = os.path.join(checkpoint_dir, f"{name}_best.pt")
+        if not os.path.exists(ckpt_path):
+            print(f"  [Warning] Checkpoint not found: {ckpt_path} — skipping {name}")
+            continue
         models[name] = load_expert_checkpoint(name, ckpt_path, device)
+
+    if not models:
+        raise FileNotFoundError(
+            f"No expert checkpoints found in {checkpoint_dir}. "
+            f"Searched for: {expert_names}"
+        )
 
     return models
 
@@ -162,6 +172,7 @@ def create_cifar_loader(
     if expert_name is not None and expert_name.upper() == "PACO" and dataset_type == "train":
         from scripts.train_paco import _augmentation_regular, _augmentation_sim_cifar
         dataset.transform = [_augmentation_regular, _augmentation_sim_cifar]
+        dataset.two_view = True
 
     if shuffle is None:
         shuffle = (dataset_type == "train")

@@ -37,7 +37,7 @@ def main():
         description='Evaluate a trained expert on any dataset split'
     )
     parser.add_argument('--expert', type=str, required=True,
-                        choices=['LAL', 'Mixup', 'PaCo'])
+                        choices=['LAL', 'Mixup', 'PaCo', 'CE', 'BalancedSoftmax'])
     parser.add_argument('--checkpoint', type=str, default=None,
                         help='Path to .pt file (default: checkpoints/{expert}_best.pt)')
     parser.add_argument('--dataset', type=str, default='test',
@@ -63,6 +63,16 @@ def main():
     )
     print(f"Evaluating on {args.dataset} set ({len(loader.dataset):,} samples)...")
 
+    # ── Load training counts for meaningful head/med/tail grouping ──
+    if args.dataset in ('test', 'val'):
+        # Use training class counts for group definitions
+        _, train_counts = create_cifar_loader(
+            'train', args.data_root, batch_size=args.batch_size,
+        )
+        group_counts = train_counts
+    else:
+        group_counts = class_counts
+
     # ── Run evaluation ──
     t0 = time.time()
     logits = extract_logits(model, loader, args.device, args.expert)
@@ -74,7 +84,7 @@ def main():
     # ── Compute metrics ──
     ba = balanced_accuracy(targets, preds)
     per_class = per_class_accuracy(targets, preds)
-    groups = get_class_groups(class_counts)
+    groups = get_class_groups(group_counts)
     group_acc = group_accuracies(targets, preds, groups)
     conf_metrics = confidence_metrics(
         probs.max(axis=1),

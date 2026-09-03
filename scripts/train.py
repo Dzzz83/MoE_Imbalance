@@ -102,7 +102,8 @@ def _train_lal(config):
         checkpoint_dir=config['checkpoint_dir'],
         class_counts=config['class_counts'],
     )
-    trainer.train(config['train_loader'], config['val_loader'])
+    trainer.train(config['train_loader'], config['val_loader'],
+                  class_counts=config['class_counts'])
 
 
 def _train_mixup(config):
@@ -186,7 +187,8 @@ def _train_balanced_softmax(config):
         checkpoint_dir=config['checkpoint_dir'],
         class_counts=config['class_counts'],
     )
-    trainer.train(config['train_loader'], config['val_loader'])
+    trainer.train(config['train_loader'], config['val_loader'],
+                  class_counts=config['class_counts'])
 
 
 if __name__ == '__main__':
