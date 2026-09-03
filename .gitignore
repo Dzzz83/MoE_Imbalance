@@ -1,5 +1,7 @@
-# ── Project docs (planning notes, literature survey) ──
-docs/
+# ── Project docs — we track key context files, not auto-generated planning notes ──
+# docs/AGENTs.md, docs/project-context.md, docs/final-report.md are tracked
+# docs/research.md, docs/experiments.md, docs/problem.md, docs/PLAN.md are tracked
+# Edit this pattern if you add new doc files you want to ignore
 
 # ── Python virtual environment ──
 .venv/

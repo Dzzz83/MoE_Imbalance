@@ -144,9 +144,23 @@ class PaCoLoss(nn.Module):
         loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
         loss = loss.mean()
 
+        # Compute contrastive-only loss for logging (InfoNCE on anchor_dot_contrast only)
+        # Note: anchor_dot_contrast is already divided by self.temperature (see line 96)
+        with torch.no_grad():
+            # Numerical stability on contrastive logits only
+            logits_max_c, _ = torch.max(anchor_dot_contrast, dim=1, keepdim=True)
+            logits_c = anchor_dot_contrast - logits_max_c.detach()
+            exp_logits_c = torch.exp(logits_c) * (self.gamma * logits_mask)
+            log_prob_c = logits_c - torch.log(exp_logits_c.sum(1, keepdim=True) + 1e-12)
+            # Contrastive positives: same-class samples (mask * alpha)
+            contrastive_pos_mask = mask * self.alpha
+            mean_log_prob_pos_c = (contrastive_pos_mask * log_prob_c).sum(1) / contrastive_pos_mask.sum(1).clamp(min=1.0)
+            contrastive_loss_val = - (self.temperature / self.base_temperature) * mean_log_prob_pos_c
+            contrastive_loss_val = contrastive_loss_val.mean()
+
         aux = {
-            'contrastive_loss': loss.detach(),
-            # approximate "ce" part from sup_logits alone for logging
+            'total_loss': loss.detach(),
+            'contrastive_loss': contrastive_loss_val.detach(),
             'ce_loss': F.cross_entropy(sup_logits, labels[:batch_size].view(-1)).detach(),
         }
         return loss, aux

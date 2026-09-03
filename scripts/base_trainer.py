@@ -123,7 +123,8 @@ class BaseTrainer:
     # ── to be overridden by subclasses ─────────────────────────────────
 
     def _compute_loss(
-        self, images: torch.Tensor, targets: torch.Tensor
+        self, images: torch.Tensor, targets: torch.Tensor,
+        weights: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, dict]:
         """
         Forward pass + loss computation.
@@ -131,6 +132,7 @@ class BaseTrainer:
         Args:
             images:  (B, 3, 32, 32) on self.device
             targets: (B,) on self.device
+            weights: (B,) optional per-sample loss weights on self.device.
 
         Returns:
             loss:       scalar tensor (already on device, ready for backward)
@@ -154,11 +156,19 @@ class BaseTrainer:
         n_batches = 0
         aux_acc: dict[str, float] = {}
 
-        for images, targets in loader:
+        for batch in loader:
+            # Support both (image, target) and (image, target, weight) returns
+            if len(batch) == 3:
+                images, targets, weights = batch
+                weights = weights.to(self.device)
+            else:
+                images, targets = batch
+                weights = None
+
             images = images.to(self.device)
             targets = targets.to(self.device)
 
-            loss, aux = self._compute_loss(images, targets)
+            loss, aux = self._compute_loss(images, targets, weights=weights)
 
             self.optimiser.zero_grad()
             loss.backward()
@@ -278,11 +288,6 @@ class BaseTrainer:
                 'val_loss': val_metrics['loss'],
                 'val_ba': val_metrics['ba'],
             }
-            # optional train BA (expensive on long-tailed data — compute
-            # only if `class_counts` was provided, which enables it)
-            if 'train_ba' in train_metrics:
-                log['train_ba'] = train_metrics['ba']
-
             for prefix, src in [('train', train_metrics), ('val', val_metrics)]:
                 for key in ('acc_head', 'acc_medium', 'acc_tail'):
                     if key in src:

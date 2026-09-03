@@ -44,74 +44,100 @@ class LongTailCIFAR100(Dataset):
         seed: int = 42,
         skip_longtail: bool = False,
         two_view: bool = False,
+        already_subsampled: bool = False,
+        use_test_set: bool = False,
     ):
         """
         Args:
             skip_longtail: If True, keep ALL samples from base_train_indices
                            without applying any long-tail subsampling.
-                           Use this for the balanced validation set.
+                           Use this for the balanced validation set (old protocol).
             two_view: If True, return two independently augmented views per
                       sample (used by PaCo / contrastive training).
+            already_subsampled: If True, base_train_indices are already
+                                LT-subsampled. Skip internal subsampling.
+                                Use this for the standard CIFAR-100-LT protocol.
+            use_test_set: If True, load the original CIFAR-100 test set (10K).
+                          Overrides base_train_indices and already_subsampled.
         """
         super().__init__()
         self.imbalance_ratio = imbalance_ratio
         self.train = train
         self.two_view = two_view
 
-        # ── load the full CIFAR-100 training set ──
-        full = datasets.CIFAR100(
-            root=root, train=True, download=download
-        )
-        all_images = full.data          # ndarray (50000, 32, 32, 3)
-        all_targets = np.array(full.targets)  # (50000,)
-        self.classes = full.classes
-        self.n_classes = len(full.classes)    # 100
-
-        # ── restrict to the base-training pool ──
-        if base_train_indices is not None:
-            self.images = all_images[base_train_indices]
-            self.targets = all_targets[base_train_indices]
-            self.base_indices = base_train_indices.copy()
-        else:
-            # fallback: use EVERYTHING (no held-out val set)
-            self.images = all_images
-            self.targets = all_targets
-            self.base_indices = np.arange(len(all_images))
-
-        if skip_longtail:
-            # ── keep ALL samples — no long-tail subsampling ──
+        # ── load data ──
+        if use_test_set:
+            # Load the original CIFAR-100 test set (10K balanced)
+            test = datasets.CIFAR100(root=root, train=False, download=download)
+            self.images = test.data
+            self.targets = np.array(test.targets)
+            self.base_indices = np.arange(len(self.images))
+            self.classes = test.classes
+            self.n_classes = len(test.classes)
+            # Keep all test samples (no subsampling)
             self.sample_images = self.images
             self.sample_targets = self.targets
             self.sample_indices = self.base_indices.copy()
         else:
-            # ── compute per-class long-tailed counts ──
-            rng = np.random.default_rng(seed)
-            n_available_per_class = self._count_per_class(self.targets)
-            n_max = int(n_available_per_class[0].item())
-
-            target_counts = self._exponential_counts(
-                n_max, self.n_classes, self.imbalance_ratio
+            # ── load the full CIFAR-100 training set ──
+            full = datasets.CIFAR100(
+                root=root, train=True, download=download
             )
-            target_counts = np.minimum(target_counts, n_available_per_class)
+            all_images = full.data          # ndarray (50000, 32, 32, 3)
+            all_targets = np.array(full.targets)  # (50000,)
+            self.classes = full.classes
+            self.n_classes = len(full.classes)    # 100
 
-            # ── sample without replacement for each class ──
-            chosen_indices: list[int] = []
-            chosen_targets: list[int] = []
+            # ── restrict to the base-training pool ──
+            if base_train_indices is not None:
+                self.images = all_images[base_train_indices]
+                self.targets = all_targets[base_train_indices]
+                self.base_indices = base_train_indices.copy()
+            else:
+                # fallback: use EVERYTHING (no held-out val set)
+                self.images = all_images
+                self.targets = all_targets
+                self.base_indices = np.arange(len(all_images))
 
-            for cls in range(self.n_classes):
-                cls_positions = np.where(self.targets == cls)[0]
-                n_keep = int(target_counts[cls].item())
-                assert n_keep <= len(cls_positions), (
-                    f"Class {cls}: want {n_keep} but only {len(cls_positions)} available"
+            if skip_longtail:
+                # ── keep ALL samples — no long-tail subsampling ──
+                self.sample_images = self.images
+                self.sample_targets = self.targets
+                self.sample_indices = self.base_indices.copy()
+            elif already_subsampled:
+                # ── indices are already LT-subsampled — use directly ──
+                self.sample_images = self.images
+                self.sample_targets = self.targets
+                self.sample_indices = self.base_indices.copy()
+            else:
+                # ── compute per-class long-tailed counts ──
+                rng = np.random.default_rng(seed)
+                n_available_per_class = self._count_per_class(self.targets)
+                n_max = int(n_available_per_class[0].item())
+
+                target_counts = self._exponential_counts(
+                    n_max, self.n_classes, self.imbalance_ratio
                 )
-                sampled = rng.choice(cls_positions, size=n_keep, replace=False)
-                chosen_indices.extend(sampled.tolist())
-                chosen_targets.extend([cls] * n_keep)
+                target_counts = np.minimum(target_counts, n_available_per_class)
 
-            order = np.argsort(chosen_indices)
-            self.sample_indices = np.array(chosen_indices, dtype=np.int64)[order]
-            self.sample_images = self.images[self.sample_indices]
-            self.sample_targets = np.array(chosen_targets, dtype=np.int64)[order]
+                # ── sample without replacement for each class ──
+                chosen_indices: list[int] = []
+                chosen_targets: list[int] = []
+
+                for cls in range(self.n_classes):
+                    cls_positions = np.where(self.targets == cls)[0]
+                    n_keep = int(target_counts[cls].item())
+                    assert n_keep <= len(cls_positions), (
+                        f"Class {cls}: want {n_keep} but only {len(cls_positions)} available"
+                    )
+                    sampled = rng.choice(cls_positions, size=n_keep, replace=False)
+                    chosen_indices.extend(sampled.tolist())
+                    chosen_targets.extend([cls] * n_keep)
+
+                order = np.argsort(chosen_indices)
+                self.sample_indices = np.array(chosen_indices, dtype=np.int64)[order]
+                self.sample_images = self.images[self.sample_indices]
+                self.sample_targets = np.array(chosen_targets, dtype=np.int64)[order]
 
         # ── transforms ──
         if self.train:
@@ -189,5 +215,14 @@ class LongTailCIFAR100(Dataset):
                 view2 = self.transform(img)
             return [view1, view2], label
         else:
-            img_tensor = self.transform(img) if not isinstance(self.transform, (list, tuple)) else self.transform[0](img)
+            if isinstance(self.transform, (list, tuple)):
+                # If transform is a list but two_view=False, warn and use the first transform
+                import warnings
+                warnings.warn(
+                    f"transform is a {type(self.transform).__name__} of length {len(self.transform)} "
+                    f"but two_view=False. Using transform[0] only."
+                )
+                img_tensor = self.transform[0](img)
+            else:
+                img_tensor = self.transform(img)
             return img_tensor, label

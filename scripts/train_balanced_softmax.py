@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train the Logit-Adjusted Loss (LAL) expert."""
+"""Train a Balanced Softmax expert (Ren et al., ECCV 2020)."""
 
 import os
 import sys
@@ -13,61 +13,57 @@ import torch
 from torch.utils.data import DataLoader
 
 from models.resnet32 import ResNet32
-from losses.lal_loss import LALLoss
+from losses.balanced_softmax_loss import BalancedSoftmaxLoss
 from scripts.base_trainer import BaseTrainer
 from data.cifar_lt import LongTailCIFAR100
 
 
-class LALTrainer(BaseTrainer):
+class BalancedSoftmaxTrainer(BaseTrainer):
     """
-    Trainer for the Logit-Adjusted Loss expert.
+    Trainer for the Balanced Softmax expert.
 
-    The class priors are computed from the long-tailed training set
-    and used to initialise the LAL loss.
+    Adjusts logits by adding log(class_counts) before softmax to
+    compensate for class imbalance. Equivalent to LAL with τ=1
+    when using raw counts instead of normalized priors.
     """
 
-    def __init__(self, class_priors: torch.Tensor | None = None, **kwargs):
+    def __init__(self, class_counts: torch.Tensor | None = None, **kwargs):
         self.model = ResNet32(num_classes=100)
-        # loss is created after we know priors; set to None for now
         self._loss_fn = None
-        self._class_priors = class_priors
+        self._class_counts = class_counts
         super().__init__(
             model=self.model,
-            loss_fn=None,  # will be set in train()
-            expert_name='LAL',
+            loss_fn=None,
+            expert_name='BalancedSoftmax',
             **kwargs,
         )
 
-    def _init_loss(self, class_priors: torch.Tensor):
-        self._loss_fn = LALLoss(class_priors=class_priors, tau=1.0).to(self.device)
-        # also update the base class loss_fn reference
+    def _init_loss(self, class_counts: torch.Tensor):
+        self._loss_fn = BalancedSoftmaxLoss(class_counts=class_counts).to(self.device)
         self.loss_fn = self._loss_fn
 
     def _compute_loss(self, images, targets, weights=None):
         logits = self.model(images)
-        loss = self._loss_fn(logits, targets)
         if weights is not None:
-            # Recompute unreduced for weighting
-            adjusted = logits + self._loss_fn.tau * self._loss_fn.log_prior.unsqueeze(0)
+            # Recompute with weighting
+            adjusted = logits + self._loss_fn.log_counts.unsqueeze(0)
             unreduced = torch.nn.functional.cross_entropy(
                 adjusted, targets, reduction='none'
             )
             loss = (unreduced * weights).mean()
+        else:
+            loss = self._loss_fn(logits, targets)
         return loss, {}
 
     def _forward_for_eval(self, images):
         return self.model(images)
 
     def train(self, train_loader, val_loader, class_counts=None):
-        # Compute class priors from the training set
         if class_counts is not None:
-            priors = torch.tensor(
-                class_counts / class_counts.sum(), dtype=torch.float32
-            )
+            counts = torch.tensor(class_counts, dtype=torch.float32)
         else:
-            # fallback: uniform priors
-            priors = torch.ones(100, dtype=torch.float32) / 100.0
-        self._init_loss(priors)
+            counts = torch.ones(100, dtype=torch.float32)
+        self._init_loss(counts)
         return super().train(train_loader, val_loader, class_counts=class_counts)
 
 
@@ -86,7 +82,7 @@ def main():
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
-    # ── data ──────────────────────────────────────────────────────────
+    # ── data ──
     train_idx = np.load(f'{args.data_root}/processed/lt_train_indices.npy')
     val_idx = np.load(f'{args.data_root}/processed/lt_val_indices.npy')
 
@@ -111,11 +107,10 @@ def main():
                             shuffle=False, num_workers=2, pin_memory=True)
 
     class_counts = train_set.get_class_counts()
-    priors = torch.tensor(class_counts / class_counts.sum(), dtype=torch.float32)
 
-    # ── train ─────────────────────────────────────────────────────────
-    trainer = LALTrainer(
-        class_priors=priors,
+    # ── train ──
+    trainer = BalancedSoftmaxTrainer(
+        class_counts=torch.tensor(class_counts, dtype=torch.float32),
         device=args.device,
         lr=args.lr,
         batch_size=args.batch_size,

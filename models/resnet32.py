@@ -237,10 +237,10 @@ class PaCoResNet32(nn.Module):
         def hook_k(_, __, output):
             self.feat_k = output.view(output.size(0), -1)
 
-        # The backbone's avgpool output is at index -2 (last two modules:
-        # avgpool then proj_head; avgpool is at -2)
-        self.encoder_q[-2].register_forward_hook(hook_q)  # avgpool output
-        self.encoder_k[-2].register_forward_hook(hook_k)
+        # Register hook on the backbone's avgpool layer directly (robust to
+        # architecture changes in the Sequential wrapper)
+        self.encoder_q[0].avgpool.register_forward_hook(hook_q)
+        self.encoder_k[0].avgpool.register_forward_hook(hook_k)
 
     @torch.no_grad()
     def _momentum_update_key_encoder(self):

@@ -136,11 +136,13 @@ class PaCoTrainer(BaseTrainer):
 
     # ── forward helpers ──────────────────────────────────────────────
 
-    def _compute_loss(self, images, targets):
+    def _compute_loss(self, images, targets, weights=None):
         features, all_labels, logits = self.model(
             im_q=images[0], im_k=images[1], labels=targets
         )
         loss, aux = self.loss_fn(features, all_labels, logits)
+        if weights is not None:
+            loss = loss * weights.mean()
         return loss, aux
 
     def _forward_for_eval(self, images):
@@ -156,12 +158,20 @@ class PaCoTrainer(BaseTrainer):
         grad_norm_sum = 0.0
         n_batches = 0
 
-        for images, targets in loader:
+        for batch in loader:
+            # Support both (image, target) and (image, target, weight) returns
+            if len(batch) == 3:
+                images, targets, weights = batch
+                weights = weights.to(self.device)
+            else:
+                images, targets = batch
+                weights = None
+
             images[0] = images[0].to(self.device)
             images[1] = images[1].to(self.device)
             targets = targets.to(self.device)
 
-            loss, aux = self._compute_loss(images, targets)
+            loss, aux = self._compute_loss(images, targets, weights=weights)
 
             self.optimiser.zero_grad()
             loss.backward()
@@ -313,31 +323,30 @@ def main():
                         help='Queue size for MoCo memory bank (K = 8 * batch_size recommended)')
     parser.add_argument('--workers', type=int, default=4,
                         help='DataLoader workers')
-    parser.add_argument('--amp', action='store_true', default=True,
-                        help='Use automatic mixed precision')
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
     args = parser.parse_args()
 
     # ── data ──
-    base_idx = np.load(f'{args.data_root}/processed/base_train_indices.npy')
-    val_idx = np.load(f'{args.data_root}/processed/balanced_val_indices.npy')
+    train_idx = np.load(f'{args.data_root}/processed/lt_train_indices.npy')
+    val_idx = np.load(f'{args.data_root}/processed/lt_val_indices.npy')
 
     # Override transforms on the dataset for PaCo-specific augmentations
     # We monkey-patch the transform after dataset creation
     train_set = LongTailCIFAR100(
         root=args.data_root,
-        base_train_indices=base_idx,
+        base_train_indices=train_idx,
         imbalance_ratio=100.0,
         train=True, download=False,
         two_view=True,
+        already_subsampled=True,
     )
     val_set = LongTailCIFAR100(
         root=args.data_root,
         base_train_indices=val_idx,
         imbalance_ratio=100.0,
         train=False, download=False,
-        skip_longtail=True,
         two_view=False,
+        already_subsampled=True,
     )
 
     # Replace transforms with official PaCo augmentations

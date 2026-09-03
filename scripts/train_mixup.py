@@ -79,13 +79,16 @@ class MixupTrainer(BaseTrainer):
         )
         self.mixup_alpha = mixup_alpha
 
-    def _compute_loss(self, images, targets):
+    def _compute_loss(self, images, targets, weights=None):
         # Apply Mixup
         mixed_images, targets_a, targets_b, lam = mixup_data(
             images, targets, alpha=self.mixup_alpha,
         )
         logits = self.model(mixed_images)
         loss = mixup_criterion(self.loss_fn, logits, targets_a, targets_b, lam)
+        if weights is not None:
+            # Weight the loss per-sample
+            loss = (loss * weights).mean()
         return loss, {}
 
     def _forward_for_eval(self, images):
@@ -111,14 +114,15 @@ def main():
     args = parser.parse_args()
 
     # ── prepare data ──────────────────────────────────────────────────
-    base_idx = np.load(f'{args.data_root}/processed/base_train_indices.npy')
-    val_idx = np.load(f'{args.data_root}/processed/balanced_val_indices.npy')
+    train_idx = np.load(f'{args.data_root}/processed/lt_train_indices.npy')
+    val_idx = np.load(f'{args.data_root}/processed/lt_val_indices.npy')
 
     train_set = LongTailCIFAR100(
         root=args.data_root,
-        base_train_indices=base_idx,
+        base_train_indices=train_idx,
         imbalance_ratio=100.0,
         train=True, download=False,
+        already_subsampled=True,
     )
     # Balanced validation set (50 samples per class, no long-tail)
     val_set = LongTailCIFAR100(
@@ -126,7 +130,7 @@ def main():
         base_train_indices=val_idx,
         imbalance_ratio=100.0,
         train=False, download=False,
-        skip_longtail=True,
+        already_subsampled=True,
     )
 
     train_loader = DataLoader(train_set, batch_size=args.batch_size,
