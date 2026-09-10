@@ -125,7 +125,7 @@ class DACECTrainer(BaseTrainer):
 
         super().__init__(
             model=self.model,
-            loss_fn=None,
+            loss_fn=CELoss(),  # used by BaseTrainer.validate()
             expert_name='DACE_C',
             **kwargs,
         )
