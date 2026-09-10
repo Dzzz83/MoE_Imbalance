@@ -92,6 +92,35 @@ def load_expert(checkpoint_path: str, has_routing: bool,
 
 # ── Prototype computation ────────────────────────────────────────────────
 
+def assert_mask_matches_embedding(emb: torch.Tensor, mask: torch.Tensor,
+                                  name: str) -> None:
+    """Fail loudly if a boolean mask cannot legally index its embedding.
+
+    Boolean indexing (`emb[mask]`) requires the mask to be on the same device
+    as the indexed tensor.  When they diverge, CUDA raises an opaque error:
+
+        RuntimeError: indices should be either on cpu or on the same device
+        as the indexed tensor (cpu)
+
+    This helper converts that into a self-describing failure.  It only reads
+    `.device` / `.dtype`, so it is unit-testable without an accelerator.
+
+    Raises:
+        RuntimeError: on device mismatch or a non-boolean mask.
+    """
+    if emb.device != mask.device:
+        raise RuntimeError(
+            f"compute_prototypes: Expert {name} embedding device "
+            f"({emb.device}) != KL mask device ({mask.device}); "
+            f"boolean indexing would fail. Move both to one device."
+        )
+    if mask.dtype != torch.bool:
+        raise RuntimeError(
+            f"compute_prototypes: Expert {name} KL mask dtype is "
+            f"{mask.dtype}, expected torch.bool"
+        )
+
+
 @torch.no_grad()
 def compute_prototypes(
     expert_a: torch.nn.Module,
@@ -115,7 +144,18 @@ def compute_prototypes(
         prototypes: dict with keys 'A', 'B', 'C', each containing
                     {'agree': tensor, 'disagree': tensor}
     """
-    # Collect all routing embeddings and KL labels
+    # Collect all routing embeddings and KL labels.
+    #
+    # DEVICE RULE: every per-sample tensor accumulated below is reduced to
+    # `acc_device` in the same statement that appends it.  Embeddings and the
+    # boolean KL masks are later combined by boolean indexing
+    # (`emb_all[mask]`), which PyTorch only permits when both operands live on
+    # the same device.  Moving only one of them raises, on CUDA:
+    #     RuntimeError: indices should be either on cpu or on the same device
+    #     as the indexed tensor (cpu)
+    # Accumulating on CPU also keeps VRAM flat for the whole validation set.
+    acc_device = torch.device('cpu')
+
     emb_b_list = []
     emb_c_list = []
     kl_b_labels = []   # KL(A || B) > threshold?
@@ -139,22 +179,27 @@ def compute_prototypes(
         # KL(A || B) for Expert B's agreement
         kl_ab = (probs_a * (torch.log(probs_a + 1e-12)
                             - torch.log(probs_b + 1e-12))).sum(dim=1)
-        kl_b_labels.append(kl_ab > kl_threshold)
+        kl_b_labels.append((kl_ab > kl_threshold).detach().to(acc_device))
 
         # KL(avg(A,B) || C) for Expert C's agreement
         avg_probs = (probs_a + probs_b) / 2.0
         kl_ac = (avg_probs * (torch.log(avg_probs + 1e-12)
                               - torch.log(probs_c + 1e-12))).sum(dim=1)
-        kl_c_labels.append(kl_ac > kl_threshold)
+        kl_c_labels.append((kl_ac > kl_threshold).detach().to(acc_device))
 
-        emb_b_list.append(emb_b.cpu())
-        emb_c_list.append(emb_c.cpu())
+        emb_b_list.append(emb_b.detach().to(acc_device))
+        emb_c_list.append(emb_c.detach().to(acc_device))
 
     # Concatenate
     emb_b_all = torch.cat(emb_b_list, dim=0)
     emb_c_all = torch.cat(emb_c_list, dim=0)
     kl_b_all = torch.cat(kl_b_labels, dim=0)
     kl_c_all = torch.cat(kl_c_labels, dim=0)
+
+    # Invariant guard: turn a cryptic cross-device indexing error into an
+    # explicit, self-describing failure if this rule is ever broken again.
+    assert_mask_matches_embedding(emb_b_all, kl_b_all, 'B')
+    assert_mask_matches_embedding(emb_c_all, kl_c_all, 'C')
 
     # Compute prototypes for Expert B
     has_disagree_b = kl_b_all.sum() > 0
@@ -176,6 +221,25 @@ def compute_prototypes(
     else:
         proto_c_disagree = emb_c_all.mean(dim=0)
         proto_c_agree = emb_c_all.mean(dim=0)
+
+    # Additive guard: a degenerate split collapses the routing scores to a
+    # constant (score = sim(disagree) - sim(agree) = 0), which silently makes
+    # argmax always return Expert A. Surface it instead of hiding it.
+    n_agree_b = int((~kl_b_all).sum())
+    n_disagree_b = int(kl_b_all.sum())
+    n_agree_c = int((~kl_c_all).sum())
+    n_disagree_c = int(kl_c_all.sum())
+
+    if torch.equal(proto_b_agree, proto_b_disagree):
+        print("  [Warning] Expert B agree/disagree prototypes are identical "
+              f"(agree={n_agree_b}, disagree={n_disagree_b} of "
+              f"{len(kl_b_all)}); B's routing score is constant. "
+              "Consider raising --kl-threshold.")
+    if torch.equal(proto_c_agree, proto_c_disagree):
+        print("  [Warning] Expert C agree/disagree prototypes are identical "
+              f"(agree={n_agree_c}, disagree={n_disagree_c} of "
+              f"{len(kl_c_all)}); C's routing score is constant. "
+              "Consider raising --kl-threshold.")
 
     # For Expert A (no routing head): create a dummy prototype
     # A is selected when both B and C show "agree" patterns with the ensemble
