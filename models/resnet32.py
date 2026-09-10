@@ -135,6 +135,108 @@ class ResNet32(nn.Module):
 
 
 # ---------------------------------------------------------------------------
+# RoutingHead  — 2-layer MLP for DACE routing embeddings
+# ---------------------------------------------------------------------------
+
+class RoutingHead(nn.Module):
+    """
+    2-layer MLP that maps backbone features to a routing embedding.
+
+    Architecture: Linear(64, 64) → ReLU → Linear(64, dim)
+
+    Args:
+        feat_dim: Input feature dimension (64 for ResNet-32 backbone).
+        routing_dim: Output embedding dimension (default 32).
+    """
+
+    def __init__(self, feat_dim: int = 64, routing_dim: int = 32):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(feat_dim, feat_dim),
+            nn.ReLU(inplace=True),
+            nn.Linear(feat_dim, routing_dim),
+        )
+
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def forward(self, features: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            features: (B, feat_dim) backbone features.
+        Returns:
+            embedding: (B, routing_dim) routing embedding.
+        """
+        return self.net(features)
+
+
+# ---------------------------------------------------------------------------
+# ResNet-32 with Dual Output  (classifier + routing head)
+# ---------------------------------------------------------------------------
+
+class ResNet32WithRouting(nn.Module):
+    """
+    ResNet-32 backbone with two heads:
+      - Classifier head: nn.Linear(64, num_classes) → logits
+      - Routing head:    RoutingHead(64 → 32)       → routing embedding
+
+    The routing head gradient flows into the backbone, allowing the backbone
+    features to encode routing-relevant information (disagreement patterns).
+
+    Usage:
+        model = ResNet32WithRouting(num_classes=100, routing_dim=32)
+
+        # Training: returns (logits, routing_embedding)
+        logits, routing_emb = model(images)
+
+        # Inference (no routing head): returns logits only
+        logits = model.forward_logits(images)
+    """
+
+    def __init__(self, num_classes: int = 100, routing_dim: int = 32):
+        super().__init__()
+        self.backbone = ResNet32Backbone()
+        self.classifier = nn.Linear(64, num_classes)
+        self.routing_head = RoutingHead(feat_dim=64, routing_dim=routing_dim)
+
+        # Init classifier weights (RoutingHead already inits itself)
+        nn.init.kaiming_normal_(self.classifier.weight)
+        if self.classifier.bias is not None:
+            nn.init.constant_(self.classifier.bias, 0)
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """
+        Forward pass returning both logits and routing embedding.
+
+        Args:
+            x: (B, 3, 32, 32) input images.
+
+        Returns:
+            logits: (B, num_classes) classifier logits.
+            routing_emb: (B, routing_dim) routing embedding.
+        """
+        features = self.backbone(x)          # (B, 64)
+        logits = self.classifier(features)    # (B, num_classes)
+        routing_emb = self.routing_head(features)  # (B, routing_dim)
+        return logits, routing_emb
+
+    def forward_logits(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass returning only logits (for evaluation / checkpointing)."""
+        features = self.backbone(x)
+        return self.classifier(features)
+
+    def forward_with_features(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Forward pass returning (logits, routing_emb, backbone_features)."""
+        features = self.backbone(x)
+        logits = self.classifier(features)
+        routing_emb = self.routing_head(features)
+        return logits, routing_emb, features
+
+
+# ---------------------------------------------------------------------------
 # MoCo-based PaCo model  (Cui et al., ICCV 2021)
 # ---------------------------------------------------------------------------
 

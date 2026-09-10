@@ -55,7 +55,7 @@ def load_expert_checkpoint(
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
 
     if expert_name.upper() == "PACO":
-        model = PaCoResNet32(num_classes=100, dim=32, K=2048)
+        model = PaCoResNet32(num_classes=100, dim=32, K=1024)
         model.load_state_dict(ckpt["model_state_dict"], strict=False)
     else:
         model = ResNet32(num_classes=100)
