@@ -157,7 +157,9 @@ def compute_prototypes(
     kl_c_all = torch.cat(kl_c_labels, dim=0)
 
     # Compute prototypes for Expert B
-    if kl_b_all.sum() > 0 and (1 - kl_b_all).sum() > 0:
+    has_disagree_b = kl_b_all.sum() > 0
+    has_agree_b = (~kl_b_all).sum() > 0
+    if has_disagree_b and has_agree_b:
         proto_b_disagree = emb_b_all[kl_b_all].mean(dim=0)
         proto_b_agree = emb_b_all[~kl_b_all].mean(dim=0)
     else:
@@ -166,7 +168,9 @@ def compute_prototypes(
         proto_b_agree = emb_b_all.mean(dim=0)
 
     # Compute prototypes for Expert C
-    if kl_c_all.sum() > 0 and (1 - kl_c_all).sum() > 0:
+    has_disagree_c = kl_c_all.sum() > 0
+    has_agree_c = (~kl_c_all).sum() > 0
+    if has_disagree_c and has_agree_c:
         proto_c_disagree = emb_c_all[kl_c_all].mean(dim=0)
         proto_c_agree = emb_c_all[~kl_c_all].mean(dim=0)
     else:
