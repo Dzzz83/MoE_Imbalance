@@ -1,0 +1,45 @@
+# CE expert — standard cross-entropy (ERM baseline, no imbalance handling)
+#
+# Recipe source : Cao et al., LDAM-DRW `cifar_train.py` — the reference CIFAR-LT
+#                 setup: 200 epochs, SGD (momentum 0.9, wd 2e-4, no nesterov),
+#                 linear warmup over 5 epochs, lr x0.01 at epoch 160 and
+#                 x0.0001 at epoch 180.
+# Data          : the canonical CIFAR-100-LT IR=100 training set (10,847 samples).
+#                 There is no validation split; the balanced 10K test set is used
+#                 for reported numbers only.
+# Reported model: the final-epoch checkpoint.
+
+expert: ce
+seed: 0                # one LT split; 3 training seeds are 0, 42, 123
+device: auto           # 'auto' -> cuda when available, else cpu
+
+model:
+  arch: resnet32
+  num_classes: 100
+
+loss: {}               # cross-entropy has no loss hyperparameters
+
+optimiser:
+  name: sgd
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 2.0e-4
+  nesterov: false
+
+schedule:
+  epochs: 200
+  warmup_epochs: 5
+  decay_epochs: [160, 180]
+  decay_factors: [0.01, 0.0001]
+
+data:
+  root: ./data
+  imbalance_ratio: 100.0   # imb_factor 0.01; fixed across the project
+  batch_size: 128
+  num_workers: 2
+  pin_memory: true
+
+checkpoint:
+  dir: ./checkpoints
+  save_from_epoch: 160     # milestone checkpoints (inspection only)
+  save_every: 20

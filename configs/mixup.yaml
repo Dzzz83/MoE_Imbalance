@@ -1,0 +1,46 @@
+# Mixup + Cross-Entropy expert — Zhang et al., ICLR 2018
+#
+# Recipe source : alpha = 1.0 from the original mixup paper (CIFAR-100). Mixup is
+#                 also what BalPoE (Sanchez Aimar et al., CVPR 2023) relies on for
+#                 expert calibration on CIFAR-100-LT IR=100; that paper follows
+#                 Cao et al. for its CIFAR protocol, which is the shared schedule
+#                 used here. Mixup is the one expert with no loss-specific
+#                 reference repo, so alpha is recorded as the mixup-paper default.
+# Data          : the canonical CIFAR-100-LT IR=100 training set (10,847 samples).
+# Reported model: the final-epoch checkpoint.
+
+expert: mixup
+seed: 0
+device: auto
+
+model:
+  arch: resnet32
+  num_classes: 100
+
+loss:
+  alpha: 1.0           # Beta(alpha, alpha) mixing coefficient
+
+optimiser:
+  name: sgd
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 2.0e-4
+  nesterov: false
+
+schedule:
+  epochs: 200
+  warmup_epochs: 5
+  decay_epochs: [160, 180]
+  decay_factors: [0.01, 0.0001]
+
+data:
+  root: ./data
+  imbalance_ratio: 100.0
+  batch_size: 128
+  num_workers: 2
+  pin_memory: true
+
+checkpoint:
+  dir: ./checkpoints
+  save_from_epoch: 160
+  save_every: 20

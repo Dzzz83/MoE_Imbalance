@@ -1,121 +1,255 @@
 """
-Create proper CIFAR-100-LT train/val split (standard benchmark protocol).
+Build the canonical CIFAR-100-LT training index set.
 
-Applies exponential subsampling (IR=100) to the FULL 50K CIFAR-100 training set
-(no pre-holdout), then splits the resulting ~10,847 samples into train (80%)
-and val (20%). Both splits follow the long-tailed distribution.
+Protocol produced here
+----------------------
+    CIFAR-100 train (50,000, balanced)
+      └── apply imbalance factor 0.01 (IR=100) per class  ->  10,847 samples
+           └── ALL 10,847 samples ARE the training set
+    CIFAR-100 test (10,000, balanced) is the ONLY evaluation set.
 
-This replaces the old split_cifar100.py which held out 50/class as balanced
-validation BEFORE creating the long tail — that was non-standard.
+There is deliberately **no validation split**. Experts train on the full
+long-tailed training set and are evaluated on the balanced test set, which is
+the standard CIFAR-100-LT protocol used by LDAM (Cao et al., NeurIPS 2019),
+RIDE (Wang et al., ICLR 2021) and PaCo (Cui et al., ICCV 2021).
+
+The per-class count follows
+
+    n_i = n_max * IR ** (-i / (C - 1))
+
+with i = 0 the head class and i = C-1 the tail class. For C=100, n_max=500 and
+IR=100 this yields head=500, tail=5, total=10,847.
+
+Reproducibility
+---------------
+The artifact is a pure function of (source targets, imbalance factor, seed), so
+``data/processed/`` does not need to be version-controlled: regenerating with
+the same seed reproduces the index array exactly.
 
 Usage:
-    python utils/create_lt_split.py
-    # Creates: data/processed/lt_train_indices.npy  (~8,678)
-    #          data/processed/lt_val_indices.npy    (~2,169)
-    #          data/processed/lt_all_indices.npy    (~10,847)
+    python utils/create_lt_split.py                        # IR=100, seed 42
+    python utils/create_lt_split.py --imb-factor 0.01 --seed 42
+    python utils/create_lt_split.py --output my_indices.npy
 """
 
+from __future__ import annotations
+
+import argparse
+import os
+import sys
+
 import numpy as np
-from pathlib import Path
-from torchvision import datasets
+
+# Allow `python utils/create_lt_split.py` from the project root (same bootstrap
+# pattern used by scripts/*.py).
+_proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _proj_root not in sys.path:
+    sys.path.insert(0, _proj_root)
+
+from data.protocol_splits import LT_TRAIN_FILENAME  # noqa: E402
+
+#: Imbalance factor = min_class_count / max_class_count (Cui et al. convention).
+IMBALANCE_FACTOR_DEFAULT: float = 0.01
+#: Imbalance ratio = max_class_count / min_class_count.
+IR_DEFAULT: float = 100.0
+#: Fixed across the whole project so every comparison shares one LT profile.
+SEED_DEFAULT: int = 42
 
 
-def exponential_counts(n_max: int, n_classes: int, ir: float) -> np.ndarray:
+def imbalance_factor_to_ir(imbalance_factor: float) -> float:
+    """Convert the `imb_factor` convention to the imbalance ratio.
+
+    ``imb_factor`` is min/max class count (0.01 means 100:1), so the ratio is
+    its reciprocal. Kept as a named function because the two conventions are
+    used interchangeably in the literature and confusing them silently changes
+    the dataset.
     """
-    Compute n_i = n_max * ir ^ (-i / (n_classes - 1)).
+    if not 0.0 < imbalance_factor <= 1.0:
+        raise ValueError(
+            f"imbalance_factor must be in (0, 1], got {imbalance_factor!r}"
+        )
+    return 1.0 / imbalance_factor
 
-    Matches the standard long-tail CIFAR protocol used by:
-      - LDAM (Cao et al., NeurIPS 2019)
-      - RIDE (Wang et al., ICLR 2021)
-      - PaCo (Cui et al., ICCV 2021)
-      - LAL (Menon et al., ICLR 2021)
 
-    Guarantees at least 1 sample per class via floor + max(1).
-    """
-    indices = np.arange(n_classes, dtype=np.float64)
-    exp = -indices / (n_classes - 1)
-    raw = n_max * (ir ** exp)
-    return np.maximum(raw.astype(np.int64), 1)
+class LongTailProfile:
+    """The per-class sample count of an exponentially long-tailed dataset."""
+
+    def __init__(self, n_classes: int, n_max: int, imbalance_ratio: float) -> None:
+        if n_classes < 2:
+            raise ValueError(f"n_classes must be >= 2, got {n_classes}")
+        if n_max < 1:
+            raise ValueError(f"n_max must be >= 1, got {n_max}")
+        if imbalance_ratio < 1.0:
+            raise ValueError(f"imbalance_ratio must be >= 1, got {imbalance_ratio}")
+        self.n_classes = n_classes
+        self.n_max = n_max
+        self.imbalance_ratio = float(imbalance_ratio)
+
+    def counts(self) -> np.ndarray:
+        """Per-class target counts, ``n_i = n_max * IR ** (-i / (C-1))``.
+
+        Truncated to int (floor for positives) and floored at 1 so that no class
+        is ever empty — matching the reference implementations.
+        """
+        i = np.arange(self.n_classes, dtype=np.float64)
+        raw = self.n_max * (self.imbalance_ratio ** (-i / (self.n_classes - 1)))
+        return np.maximum(raw.astype(np.int64), 1)
+
+    @property
+    def total(self) -> int:
+        return int(self.counts().sum())
+
+    def describe(self) -> str:
+        c = self.counts()
+        return (
+            f"{len(c)} classes, total={int(c.sum())}, head={int(c[0])}, "
+            f"tail={int(c[-1])}, IR={c[0] / max(int(c[-1]), 1):.1f}"
+        )
+
+
+class LongTailIndexBuilder:
+    """Samples which CIFAR-100 training images survive the long-tail subsample."""
+
+    def __init__(self, targets: np.ndarray, imbalance_ratio: float = IR_DEFAULT) -> None:
+        targets = np.asarray(targets)
+        if targets.ndim != 1:
+            raise ValueError(f"targets must be 1-D, got shape {targets.shape}")
+        self.targets = targets
+        self.n_classes = int(targets.max()) + 1
+        self.imbalance_ratio = float(imbalance_ratio)
+        self.available = np.bincount(targets, minlength=self.n_classes)
+        self.profile = LongTailProfile(
+            n_classes=self.n_classes,
+            n_max=int(self.available.max()),
+            imbalance_ratio=self.imbalance_ratio,
+        )
+
+    def target_counts(self) -> np.ndarray:
+        """Wanted per-class counts, capped by what the source actually holds."""
+        return np.minimum(self.profile.counts(), self.available)
+
+    def build(self, seed: int = SEED_DEFAULT) -> np.ndarray:
+        """Return the sorted, unique training indices of the long-tailed set.
+
+        Classes are sampled in ascending class order from a single seeded RNG,
+        so the result is deterministic for a given (targets, IR, seed).
+        """
+        counts = self.target_counts()
+        rng = np.random.default_rng(seed)
+        chosen: list[int] = []
+
+        for cls in range(self.n_classes):
+            cls_positions = np.where(self.targets == cls)[0]
+            n_keep = int(counts[cls])
+            if n_keep > len(cls_positions):
+                raise ValueError(
+                    f"class {cls}: want {n_keep} samples but only "
+                    f"{len(cls_positions)} available"
+                )
+            sampled = rng.choice(cls_positions, size=n_keep, replace=False)
+            chosen.extend(int(x) for x in sampled)
+
+        return np.array(sorted(chosen), dtype=np.int64)
+
+
+def build_lt_indices(
+    targets: np.ndarray,
+    imbalance_ratio: float = IR_DEFAULT,
+    seed: int = SEED_DEFAULT,
+) -> np.ndarray:
+    """Convenience wrapper around :class:`LongTailIndexBuilder`."""
+    return LongTailIndexBuilder(targets, imbalance_ratio).build(seed)
+
+
+def _load_train_targets(data_root: str, download: bool = False) -> np.ndarray:
+    from torchvision import datasets
+
+    try:
+        full = datasets.CIFAR100(root=data_root, train=True, download=download)
+    except Exception as exc:  # pragma: no cover - environment dependent
+        raise RuntimeError(
+            f"Cannot load CIFAR-100 train split from '{data_root}': {exc}"
+        ) from exc
+    return np.asarray(full.targets, dtype=np.int64)
 
 
 def main(
-    data_root: str = "./data",
-    ir: float = 100.0,
-    val_split: float = 0.2,
-    seed: int = 42,
-):
-    # ── load full CIFAR-100 training set (50K, balanced) ──
-    full = datasets.CIFAR100(root=data_root, train=True, download=True)
-    targets = np.array(full.targets)
-    n_classes = len(full.classes)
-    n_total = len(targets)
+    data_root: str = './data',
+    imbalance_factor: float = IMBALANCE_FACTOR_DEFAULT,
+    seed: int = SEED_DEFAULT,
+    output_name: str = LT_TRAIN_FILENAME,
+    download: bool = False,
+) -> np.ndarray:
+    """Build and save the canonical long-tailed training index set."""
+    from pathlib import Path
 
-    print(f"Full CIFAR-100 training set: {n_total} samples, {n_classes} classes")
-    print(f"  Per class: {n_total // n_classes} samples (balanced)")
-    print(f"  Target IR: {ir}")
-    print()
+    ir = imbalance_factor_to_ir(imbalance_factor)
+    targets = _load_train_targets(data_root, download=download)
 
-    # ── compute per-class LT target counts ──
-    n_per_class = np.array([(targets == c).sum() for c in range(n_classes)])
-    n_max = int(n_per_class.max())
-    target_counts = exponential_counts(n_max, n_classes, ir)
-    target_counts = np.minimum(target_counts, n_per_class)
+    n_per_class = np.bincount(targets)
+    print(f"Source: CIFAR-100 train, {len(targets)} samples, "
+          f"{len(n_per_class)} classes, {n_per_class.min()}-{n_per_class.max()} per class")
+    print(f"Imbalance factor {imbalance_factor} -> IR {ir:g}")
 
-    print("Target per-class counts (first 10 / last 5):")
-    for i in list(range(10)) + list(range(95, 100)):
-        print(f"  Class {i:3d}: {target_counts[i]:3d} samples")
-    print(f"  Total target: {target_counts.sum()}")
-    print()
+    builder = LongTailIndexBuilder(targets, ir)
+    print(f"Target profile: {builder.profile.describe()}")
 
-    # ── sample without replacement for each class ──
-    rng = np.random.default_rng(seed)
-    lt_indices: list[int] = []
+    indices = builder.build(seed)
 
-    for cls in range(n_classes):
-        cls_positions = np.where(targets == cls)[0]
-        n_keep = int(target_counts[cls])
-        sampled = rng.choice(cls_positions, size=n_keep, replace=False)
-        lt_indices.extend(sampled.tolist())
+    # ── verify the realized profile before writing anything ──
+    realized = np.bincount(targets[indices], minlength=builder.n_classes)
+    expected = builder.target_counts()
+    if not np.array_equal(realized, expected):
+        raise AssertionError(
+            "realized per-class counts differ from the target profile:\n"
+            f"  realized={realized[:5]}...{realized[-5:]}\n"
+            f"  expected={expected[:5]}...{expected[-5:]}"
+        )
+    if realized.min() < 1:
+        raise AssertionError(
+            f"{(realized == 0).sum()} classes ended up with zero samples — "
+            f"the long-tailed profile must cover every class"
+        )
+    if len(np.unique(indices)) != len(indices):
+        raise AssertionError("duplicate indices produced")
 
-    lt_indices = np.array(sorted(lt_indices), dtype=np.int64)
-
-    # ── shuffle and split into train / val ──
-    shuffled = lt_indices.copy()
-    rng.shuffle(shuffled)
-    split = int(len(shuffled) * (1 - val_split))
-    train_idx = np.array(sorted(shuffled[:split]), dtype=np.int64)
-    val_idx = np.array(sorted(shuffled[split:]), dtype=np.int64)
-
-    # ── verify no overlap ──
-    overlap = np.intersect1d(train_idx, val_idx)
-    assert len(overlap) == 0, f"Train/val overlap: {len(overlap)} samples!"
-
-    # ── verify LT distribution is preserved in both splits ──
-    train_targets = targets[train_idx]
-    val_targets = targets[val_idx]
-    for name, tgt in [("Train", train_targets), ("Val", val_targets)]:
-        counts = np.array([(tgt == c).sum() for c in range(n_classes)])
-        actual_ir = counts.max() / max(counts.min(), 1)
-        print(f"{name}: {len(tgt)} samples, head={counts[0]}, tail={counts[99]}, IR={actual_ir:.1f}")
-
-    # ── save ──
-    out_dir = Path(data_root) / "processed"
+    out_dir = Path(data_root) / 'processed'
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    np.save(out_dir / "lt_train_indices.npy", train_idx)
-    np.save(out_dir / "lt_val_indices.npy", val_idx)
-    np.save(out_dir / "lt_all_indices.npy", lt_indices)
+    out_path = out_dir / output_name
+    np.save(out_path, indices)
 
     print()
-    print(f"Saved to {out_dir.resolve()}:")
-    print(f"  lt_train_indices.npy  ({len(train_idx)} indices) — for training experts")
-    print(f"  lt_val_indices.npy    ({len(val_idx)} indices)   — for validation during training")
-    print(f"  lt_all_indices.npy    ({len(lt_indices)} indices) — complete LT set")
+    print(f"Wrote {out_path.resolve()}")
+    print(f"  {len(indices)} training indices, head={realized[0]}, "
+          f"tail={realized[-1]}, IR={realized.max() / realized.min():.1f}")
     print()
-    print("✅ Standard CIFAR-100-LT split created. No cheating.")
-    print(f"   Train on the LT training set. Validate on the LT validation set.")
-    print(f"   Evaluate FINAL results on the original CIFAR-100 test set (10K).")
+    print("✅ Canonical CIFAR-100-LT training set created (no validation split).")
+    print("   Train on these indices. Evaluate FINAL results on the CIFAR-100 test set (10K).")
+    return indices
 
 
-if __name__ == "__main__":
-    main()
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--data-root', default='./data')
+    parser.add_argument(
+        '--imb-factor', type=float, default=IMBALANCE_FACTOR_DEFAULT,
+        help=f'min/max class-count ratio (default {IMBALANCE_FACTOR_DEFAULT} = IR 100)',
+    )
+    parser.add_argument('--seed', type=int, default=SEED_DEFAULT)
+    parser.add_argument('--output', default=LT_TRAIN_FILENAME)
+    parser.add_argument(
+        '--download', action='store_true',
+        help='allow torchvision to download CIFAR-100 if absent',
+    )
+    return parser.parse_args()
+
+
+if __name__ == '__main__':
+    args = _parse_args()
+    main(
+        data_root=args.data_root,
+        imbalance_factor=args.imb_factor,
+        seed=args.seed,
+        output_name=args.output,
+        download=args.download,
+    )

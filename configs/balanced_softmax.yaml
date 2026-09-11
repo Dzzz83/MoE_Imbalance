@@ -1,0 +1,51 @@
+# Balanced Softmax (BS) expert — Ren et al., NeurIPS 2020
+#
+# Recipe source : LDAM-DRW `cifar_train.py` schedule (shared CIFAR-LT protocol).
+#                 The official Balanced Meta-Softmax repo uses an iteration-based
+#                 recipe (13,000 iterations, batch 512, base_lr 0.05) on its own
+#                 classifier-balancing framework; it is not epoch-based and gives
+#                 no CIFAR-100 IR=100 config, so the shared 200-epoch protocol is
+#                 used instead for a fair ensemble comparison.
+#                 (Recorded deviation — see docs/specs/training-protocol.md.)
+# Data          : the canonical CIFAR-100-LT IR=100 training set (10,847 samples).
+# Reported model: the final-epoch checkpoint.
+#
+# WARNING — duplicate objective: this loss adds log(n_y), while LA with tau=1.0
+# adds log(n_y) - log(N). The only difference is a class-independent constant that
+# cancels in the softmax, so BS and LA are the same objective and contribute no
+# ensemble diversity. Kept for comparability with the recorded results.
+
+expert: balanced_softmax
+seed: 0
+device: auto
+
+model:
+  arch: resnet32
+  num_classes: 100
+
+loss: {}               # per-class counts come from the data, not a hyperparameter
+
+optimiser:
+  name: sgd
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 2.0e-4
+  nesterov: false
+
+schedule:
+  epochs: 200
+  warmup_epochs: 5
+  decay_epochs: [160, 180]
+  decay_factors: [0.01, 0.0001]
+
+data:
+  root: ./data
+  imbalance_ratio: 100.0
+  batch_size: 128
+  num_workers: 2
+  pin_memory: true
+
+checkpoint:
+  dir: ./checkpoints
+  save_from_epoch: 160
+  save_every: 20

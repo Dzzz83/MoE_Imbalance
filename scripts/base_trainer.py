@@ -1,10 +1,25 @@
 """
-Base trainer that implements the common training loop, metrics logging,
-and checkpointing logic.  Specific trainers (CE, LAL, PaCo) subclass this
-and override `_compute_loss()`.
+Base trainer implementing the published CIFAR-LT training protocol.
+
+Recipe (Cao et al., LDAM-DRW `cifar_train.py` — the reference CIFAR-LT setup):
+
+    epochs       200          lr            0.1
+    batch        128          weight decay  2e-4
+    optimiser    SGD, momentum 0.9, nesterov=False
+    warmup       linear over the first 5 epochs
+    schedule     base_lr for epochs <=160, x0.01 for 161..180, x0.0001 for 181..200
+
+There is **no validation split and no early stopping**. Experts train on the full
+long-tailed training set and are evaluated on the balanced 10K test set. The
+final-epoch model is the reported model; checkpoints at every 20th epoch from
+epoch 160 exist for inspection only and must never be selected on test accuracy.
+
+Subclasses set `self.model` / `self.loss_fn` and implement `_compute_loss`, which
+returns `(loss, logits, aux)`.
 """
 
 import json
+import random
 import time
 from pathlib import Path
 
@@ -12,7 +27,54 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import CosineAnnealingLR
+
+
+# ---------------------------------------------------------------------------
+# Reproducibility
+# ---------------------------------------------------------------------------
+
+def set_seed(seed: int) -> None:
+    """Seed every RNG the training path uses (AGENTs.md section 10)."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+# ---------------------------------------------------------------------------
+# Learning-rate schedule
+# ---------------------------------------------------------------------------
+
+def step_lr(
+    epoch: int,
+    base_lr: float = 0.1,
+    warmup_epochs: int = 5,
+    decay_epochs: tuple[int, int] = (160, 180),
+    decay_factors: tuple[float, float] = (0.01, 0.0001),
+) -> float:
+    """Learning rate for a 1-indexed epoch, matching LDAM-DRW exactly.
+
+    LDAM-DRW's ``adjust_learning_rate`` reads::
+
+        epoch = epoch + 1
+        if epoch <= 5:     lr = args.lr * epoch / 5     # linear warmup
+        elif epoch > 180:  lr = args.lr * 0.0001
+        elif epoch > 160:  lr = args.lr * 0.01
+        else:              lr = args.lr
+
+    This function takes an already 1-indexed epoch, so the boundaries are
+    161 and 181.
+    """
+    if epoch < 1:
+        raise ValueError(f"epoch must be >= 1, got {epoch}")
+    if epoch <= warmup_epochs:
+        return base_lr * epoch / warmup_epochs
+    if epoch > decay_epochs[1]:
+        return base_lr * decay_factors[1]
+    if epoch > decay_epochs[0]:
+        return base_lr * decay_factors[0]
+    return base_lr
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +86,7 @@ def compute_class_groups(
     many_thresh: int = 100,
     few_thresh: int = 20,
 ) -> dict:
-    """Return indices for Head (≥many), Medium, and Tail (<few) classes."""
+    """Return indices for Head (>=many), Medium, and Tail (<few) classes."""
     return {
         'head':   np.where(class_counts >= many_thresh)[0],
         'medium': np.where((class_counts >= few_thresh)
@@ -66,57 +128,65 @@ def group_accuracies(
 # ---------------------------------------------------------------------------
 
 class BaseTrainer:
-    """
-    Shared training infrastructure.
+    """Shared training infrastructure for the four experts.
 
-    Subclasses must set:
-        self.model
-        self.loss_fn    (can be None if _compute_loss handles everything)
-        self.expert_name
+    Subclasses must set ``self.model``, ``self.expert_name`` and implement
+    ``_compute_loss`` returning ``(loss, logits, aux)``.
     """
+
+    #: Whether the (logits, targets) pair yields a meaningful training accuracy.
+    #: Mixup sets this to False, since its logits come from mixed inputs.
+    reports_train_accuracy: bool = True
 
     def __init__(
         self,
         model: nn.Module,
-        loss_fn: nn.Module | None,
         expert_name: str,
+        loss_fn: nn.Module | None = None,
         class_counts: np.ndarray | None = None,
         device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
         lr: float = 0.1,
-        weight_decay: float = 5e-4,
+        weight_decay: float = 2e-4,
         momentum: float = 0.9,
         batch_size: int = 128,
         epochs: int = 200,
         warmup_epochs: int = 5,
+        decay_epochs: tuple[int, int] = (160, 180),
+        decay_factors: tuple[float, float] = (0.01, 0.0001),
+        save_from_epoch: int = 160,
+        save_every: int = 20,
         checkpoint_dir: str = './checkpoints',
+        seed: int = 0,
     ):
+        self.device = device
         self.model = model.to(device)
         self.loss_fn = loss_fn.to(device) if loss_fn is not None else None
         self.expert_name = expert_name
-        self.device = device
         self.lr = lr
         self.epochs = epochs
         self.warmup_epochs = warmup_epochs
+        self.decay_epochs = tuple(decay_epochs)
+        self.decay_factors = tuple(decay_factors)
+        self.batch_size = batch_size
+        self.save_from_epoch = save_from_epoch
+        self.save_every = save_every
+        self.seed = seed
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-        # class groups for head/medium/tail reporting
         self.class_groups = None
         if class_counts is not None:
-            self.class_groups = compute_class_groups(class_counts)
+            self.class_groups = compute_class_groups(np.asarray(class_counts))
 
-        # optimiser & scheduler
+        # No nesterov: the reference CIFAR-LT recipe uses plain momentum SGD.
         self.optimiser = torch.optim.SGD(
             self.model.parameters(),
             lr=lr,
             momentum=momentum,
             weight_decay=weight_decay,
-            nesterov=True,
+            nesterov=False,
         )
-        self.scheduler = CosineAnnealingLR(self.optimiser, T_max=epochs)
 
-        # tracking
-        self.best_metric_val = -1e9
         self.epoch = 0
         self.history: list[dict] = []
 
@@ -125,9 +195,8 @@ class BaseTrainer:
     def _compute_loss(
         self, images: torch.Tensor, targets: torch.Tensor,
         weights: torch.Tensor | None = None,
-    ) -> tuple[torch.Tensor, dict]:
-        """
-        Forward pass + loss computation.
+    ) -> tuple[torch.Tensor, torch.Tensor, dict]:
+        """Forward pass and loss.
 
         Args:
             images:  (B, 3, 32, 32) on self.device
@@ -135,15 +204,8 @@ class BaseTrainer:
             weights: (B,) optional per-sample loss weights on self.device.
 
         Returns:
-            loss:       scalar tensor (already on device, ready for backward)
-            aux:        dict of auxiliary scalars for logging (e.g. component losses)
-        """
-        raise NotImplementedError
-
-    def _forward_for_eval(self, images: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass used during validation / checkpointing.
-        Returns logits of shape (B, C).
+            (loss, logits, aux) where loss is a scalar tensor, logits is (B, C),
+            and aux is a dict of extra scalars for logging.
         """
         raise NotImplementedError
 
@@ -153,11 +215,12 @@ class BaseTrainer:
         self.model.train()
         total_loss = 0.0
         grad_norm_sum = 0.0
+        correct = 0
+        seen = 0
         n_batches = 0
         aux_acc: dict[str, float] = {}
 
         for batch in loader:
-            # Support both (image, target) and (image, target, weight) returns
             if len(batch) == 3:
                 images, targets, weights = batch
                 weights = weights.to(self.device)
@@ -168,199 +231,158 @@ class BaseTrainer:
             images = images.to(self.device)
             targets = targets.to(self.device)
 
-            loss, aux = self._compute_loss(images, targets, weights=weights)
+            loss, logits, aux = self._compute_loss(images, targets, weights=weights)
+
+            if not torch.isfinite(logits).all():
+                n_bad = int((~torch.isfinite(logits)).sum())
+                raise FloatingPointError(
+                    f"[{self.expert_name}] epoch {self.epoch}: {n_bad} non-finite "
+                    f"value(s) in logits — aborting instead of continuing a "
+                    f"diverged run"
+                )
+            if not torch.isfinite(loss):
+                raise FloatingPointError(
+                    f"[{self.expert_name}] epoch {self.epoch}: non-finite loss "
+                    f"({loss.item()}) — aborting instead of continuing a "
+                    f"diverged run"
+                )
 
             self.optimiser.zero_grad()
             loss.backward()
 
-            # gradient norm (before clipping)
             total_norm_sq = 0.0
             for p in self.model.parameters():
                 if p.grad is not None:
                     total_norm_sq += p.grad.norm().item() ** 2
             grad_norm = total_norm_sq ** 0.5
 
-            nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=10.0)
             self.optimiser.step()
 
             total_loss += loss.item()
             grad_norm_sum += grad_norm
             n_batches += 1
 
+            if self.reports_train_accuracy:
+                correct += int((logits.argmax(dim=1) == targets).sum())
+                seen += targets.numel()
+
             for k, v in aux.items():
                 aux_acc[k] = aux_acc.get(k, 0.0) + (v.item() if torch.is_tensor(v) else v)
+
+        if n_batches == 0:
+            raise RuntimeError(
+                f"[{self.expert_name}] training loader produced no batches"
+            )
 
         metrics = {
             'loss': total_loss / n_batches,
             'grad_norm': grad_norm_sum / n_batches,
         }
+        if self.reports_train_accuracy:
+            metrics['acc'] = correct / max(seen, 1)
         for k, v in aux_acc.items():
             metrics[k] = v / n_batches
         return metrics
 
-    def validate(self, loader: DataLoader) -> dict:
-        """Compute loss and accuracy metrics on a validation set."""
-        self.model.eval()
-        total_loss = 0.0
-        all_targets, all_preds = [], []
-        n_batches = 0
+    # ── checkpointing ─────────────────────────────────────────────────
 
-        with torch.no_grad():
-            for images, targets in loader:
-                images = images.to(self.device)
-                targets = targets.to(self.device)
+    def _should_save(self, epoch: int) -> bool:
+        if epoch == self.epochs:
+            return True
+        if epoch < self.save_from_epoch:
+            return False
+        return (epoch - self.save_from_epoch) % self.save_every == 0
 
-                logits = self._forward_for_eval(images)
-                loss = self.loss_fn(logits, targets) if self.loss_fn is not None else torch.tensor(0.0)
-
-                total_loss += loss.item()
-                preds = logits.argmax(dim=1)
-                all_targets.append(targets.cpu().numpy())
-                all_preds.append(preds.cpu().numpy())
-                n_batches += 1
-
-        all_targets = np.concatenate(all_targets)
-        all_preds = np.concatenate(all_preds)
-        ba, _ = balanced_accuracy(all_targets, all_preds)
-
-        metrics = {
-            'loss': total_loss / n_batches,
-            'ba': ba,
+    def _save_checkpoint(self, log: dict, is_final: bool) -> Path:
+        tag = 'final' if is_final else f'epoch{self.epoch}'
+        path = self.checkpoint_dir / f'{self.expert_name}_seed{self.seed}_{tag}.pt'
+        state = {
+            'epoch': self.epoch,
+            'seed': self.seed,
+            'expert_name': self.expert_name,
+            'model_state_dict': self.model.state_dict(),
+            'optimiser_state_dict': self.optimiser.state_dict(),
+            'is_final': is_final,
+            'log': log,
         }
-        if self.class_groups is not None:
-            grp = group_accuracies(all_targets, all_preds, self.class_groups)
-            for name, acc in grp.items():
-                metrics[f'acc_{name}'] = acc
+        torch.save(state, path)
+        return path
 
-        return metrics
+    def load_checkpoint(self, path: str) -> None:
+        state = torch.load(path, map_location=self.device, weights_only=False)
+        self.model.load_state_dict(state['model_state_dict'])
+        self.optimiser.load_state_dict(state['optimiser_state_dict'])
+        self.epoch = state['epoch']
+        self.seed = state.get('seed', self.seed)
+        print(f"Loaded checkpoint from {path} (epoch {self.epoch}, seed {self.seed})")
+
+    def save_history(self, path: str | None = None) -> None:
+        if path is None:
+            path = self.checkpoint_dir / f'{self.expert_name}_seed{self.seed}_history.json'
+        with open(path, 'w') as f:
+            json.dump(self.history, f, indent=2)
+        print(f"History saved to {path}")
 
     # ── public training loop ──────────────────────────────────────────
 
-    def train(
-        self,
-        train_loader: DataLoader,
-        val_loader: DataLoader,
-        class_counts: np.ndarray | None = None,
-    ) -> list[dict]:
-        """
-        Full training loop.
+    def train(self, train_loader: DataLoader) -> list[dict]:
+        """Train on the full long-tailed training set for a fixed budget.
 
-        Args:
-            train_loader: long-tailed CIFAR-100 training set.
-            val_loader:   balanced CIFAR-100 validation set.
-            class_counts: per-class sample counts in the training set
-                          (used to compute training-set BA).
+        No validation set is used and no checkpoint is selected: the final-epoch
+        model is the reported model.
 
         Returns:
             history: list of per-epoch log dicts.
         """
-        # update class groups if provided here
-        if class_counts is not None and self.class_groups is None:
-            self.class_groups = compute_class_groups(class_counts)
-
+        set_seed(self.seed)
         total_start = time.time()
 
         for epoch in range(1, self.epochs + 1):
             self.epoch = epoch
             epoch_start = time.time()
 
-            # warmup LR (linear from 0 → self.lr)
-            if epoch <= self.warmup_epochs:
-                warmup_lr = self.lr * epoch / self.warmup_epochs
-                for pg in self.optimiser.param_groups:
-                    pg['lr'] = warmup_lr
+            current_lr = step_lr(
+                epoch,
+                base_lr=self.lr,
+                warmup_epochs=self.warmup_epochs,
+                decay_epochs=self.decay_epochs,
+                decay_factors=self.decay_factors,
+            )
+            for pg in self.optimiser.param_groups:
+                pg['lr'] = current_lr
 
-            train_metrics = self._train_one_epoch(train_loader)
-            val_metrics = self.validate(val_loader)
+            metrics = self._train_one_epoch(train_loader)
 
-            # scheduler step (only after warmup)
-            if epoch > self.warmup_epochs:
-                self.scheduler.step()
-
-            current_lr = self.optimiser.param_groups[0]['lr']
-
-            # compile epoch log
             log = {
                 'epoch': epoch,
                 'lr': current_lr,
                 'time_s': time.time() - epoch_start,
-                'train_loss': train_metrics['loss'],
-                'val_loss': val_metrics['loss'],
-                'val_ba': val_metrics['ba'],
+                'train_loss': metrics['loss'],
+                'train_acc': metrics.get('acc'),
+                'grad_norm': metrics['grad_norm'],
             }
-            for prefix, src in [('train', train_metrics), ('val', val_metrics)]:
-                for key in ('acc_head', 'acc_medium', 'acc_tail'):
-                    if key in src:
-                        log[f'{prefix}_{key}'] = src[key]
-
-            # gradient norm
-            log['grad_norm'] = train_metrics.get('grad_norm', 0.0)
-
-            # extra aux losses
-            for k, v in train_metrics.items():
-                if k not in ('loss', 'grad_norm', 'ba'):
+            for k, v in metrics.items():
+                if k not in ('loss', 'grad_norm', 'acc'):
                     log[f'train_{k}'] = v
 
             self.history.append(log)
 
-            # ── checkpoint by validation BA (strict 0.1% improvement) ──
-            current_val_ba = val_metrics.get('ba', 0.0)
-            if current_val_ba > self.best_metric_val + 1e-3:
-                self.best_metric_val = current_val_ba
-                self._save_checkpoint(log, is_best=True)
+            if self._should_save(epoch):
+                path = self._save_checkpoint(log, is_final=(epoch == self.epochs))
+                print(f"[{self.expert_name}] checkpoint -> {path.name}")
 
-            # print every 10 epochs + first/last
             if epoch == 1 or epoch % 10 == 0 or epoch == self.epochs:
-                h, m, t = (val_metrics.get('acc_head', 0.0),
-                           val_metrics.get('acc_medium', 0.0),
-                           val_metrics.get('acc_tail', 0.0))
+                acc_str = (f"Train Acc {log['train_acc']:.2%} | "
+                           if log['train_acc'] is not None else "")
                 print(
-                    f"[{self.expert_name}] Epoch {epoch:3d}/{self.epochs} | "
-                    f"LR {current_lr:.4f} | "
+                    f"[{self.expert_name} seed={self.seed}] Epoch {epoch:3d}/{self.epochs} | "
+                    f"LR {current_lr:.6f} | "
                     f"Train Loss {log['train_loss']:.4f} | "
-                    f"Val Loss {log['val_loss']:.4f} | "
-                    f"Val BA {log['val_ba']:.2%} | "
-                    f"H {h:.1%} M {m:.1%} T {t:.1%} | "
+                    f"{acc_str}"
                     f"GradNorm {log['grad_norm']:.2f}"
                 )
 
         total_time = time.time() - total_start
-        print(f"[{self.expert_name}] ✓ Done in {total_time:.0f}s. "
-              f"Best Val BA = {self.best_metric_val:.2%}")
+        print(f"[{self.expert_name} seed={self.seed}] done in {total_time:.0f}s "
+              f"({self.epochs} epochs, final-epoch model is the reported model)")
         return self.history
-
-    # ── checkpointing ─────────────────────────────────────────────────
-
-    def _save_checkpoint(self, log: dict, is_best: bool = False):
-        tag = 'best' if is_best else f'epoch_{self.epoch}'
-        path = self.checkpoint_dir / f'{self.expert_name}_{tag}.pt'
-        state = {
-            'epoch': self.epoch,
-            'model_state_dict': self.model.state_dict(),
-            'optimiser_state_dict': self.optimiser.state_dict(),
-            'scheduler_state_dict': self.scheduler.state_dict(),
-            'best_metric_val': self.best_metric_val,
-            'log': log,
-            'expert_name': self.expert_name,
-        }
-        torch.save(state, path)
-
-        # also overwrite latest
-        latest = self.checkpoint_dir / f'{self.expert_name}_latest.pt'
-        torch.save(state, latest)
-
-    def load_checkpoint(self, path: str):
-        state = torch.load(path, map_location=self.device)
-        self.model.load_state_dict(state['model_state_dict'])
-        self.optimiser.load_state_dict(state['optimiser_state_dict'])
-        self.scheduler.load_state_dict(state['scheduler_state_dict'])
-        self.best_metric_val = state['best_metric_val']
-        self.epoch = state['epoch']
-        print(f"Loaded checkpoint from {path} (epoch {self.epoch})")
-
-    def save_history(self, path: str | None = None):
-        if path is None:
-            path = self.checkpoint_dir / f'{self.expert_name}_history.json'
-        with open(path, 'w') as f:
-            json.dump(self.history, f, indent=2)
-        print(f"History saved to {path}")
