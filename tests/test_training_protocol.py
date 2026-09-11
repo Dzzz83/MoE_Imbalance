@@ -113,8 +113,6 @@ def test_defaults_are_the_published_recipe():
     assert p['epochs'].default == 200, p['epochs'].default
     assert p['warmup_epochs'].default == 5, p['warmup_epochs'].default
     assert tuple(p['decay_epochs'].default) == (160, 180), p['decay_epochs'].default
-    assert p['save_from_epoch'].default == 160, p['save_from_epoch'].default
-    assert p['save_every'].default == 20, p['save_every'].default
     print("  ✅ defaults: 200 ep, lr 0.1, wd 2e-4, mom 0.9, batch 128, warmup 5, 160/180")
 
 
@@ -159,8 +157,7 @@ def test_no_validation_machinery_on_trainer():
 
 def test_history_has_no_validation_metrics():
     """Per-epoch logs must not contain val_* keys."""
-    t = _TinyTrainer(device='cpu', epochs=2, save_from_epoch=1, save_every=1,
-                     checkpoint_dir=_tmp_ckpt('history'))
+    t = _TinyTrainer(device='cpu', epochs=2, checkpoint_dir=_tmp_ckpt('history'))
     hist = t.train(_tiny_loader())
     assert hist, "empty history"
     keys = set().union(*[set(h) for h in hist])
@@ -203,24 +200,39 @@ def _tmp_ckpt(name):
     return tempfile.mkdtemp(prefix=f'dsh_ckpt_{name}_')
 
 
-def test_checkpoint_policy_writes_final_and_milestones():
-    """Checkpoints every `save_every` from `save_from_epoch`, plus final."""
+def test_only_the_final_checkpoint_is_written():
+    """Exactly one checkpoint per run: the final epoch (the reported model).
+
+    Milestone checkpoints (epoch 160/180) were removed: they were inspection-only,
+    cost ~7.7 MB per expert, and pushing them to the repo made every future clone
+    slower, since git history is permanent.
+    """
     d = _tmp_ckpt('policy')
-    t = _TinyTrainer(device='cpu', epochs=5, save_from_epoch=2, save_every=2,
-                     checkpoint_dir=d, seed=0)
+    # 180 epochs would previously have produced epoch160 + epoch180 + final;
+    # only the final may exist now.
+    t = _TinyTrainer(device='cpu', epochs=180, checkpoint_dir=d, seed=0)
     t.train(_tiny_loader())
     names = sorted(os.path.basename(p) for p in glob.glob(os.path.join(d, '*.pt')))
-    assert any('final' in n for n in names), f"no final checkpoint: {names}"
-    assert any('epoch4' in n for n in names), f"milestone epoch 4 missing: {names}"
-    assert any('epoch2' in n for n in names), f"milestone epoch 2 missing: {names}"
-    print(f"  ✅ checkpoints: {names}")
+    assert len(names) == 1, f"expected exactly 1 checkpoint, got {names}"
+    assert 'final' in names[0], f"the only checkpoint must be the final one: {names}"
+    print(f"  ✅ exactly one checkpoint written: {names}")
+
+
+def test_no_milestone_checkpoint_knobs_remain():
+    """The save_from_epoch / save_every machinery must be gone."""
+    p = inspect.signature(bt.BaseTrainer.__init__).parameters
+    for banned in ('save_from_epoch', 'save_every'):
+        assert banned not in p, f"BaseTrainer still accepts '{banned}'"
+    t = _TinyTrainer(device='cpu', epochs=1, checkpoint_dir=_tmp_ckpt('noknobs'))
+    for banned in ('save_from_epoch', 'save_every', '_should_save'):
+        assert not hasattr(t, banned), f"trainer still carries '{banned}'"
+    print("  ✅ no milestone-checkpoint knobs remain")
 
 
 def test_checkpoint_names_include_expert_and_seed():
     """Three seeds must not clobber each other."""
     d = _tmp_ckpt('seednames')
-    t = _TinyTrainer(device='cpu', epochs=1, save_from_epoch=1, save_every=1,
-                     checkpoint_dir=d, seed=123)
+    t = _TinyTrainer(device='cpu', epochs=1, checkpoint_dir=d, seed=123)
     t.train(_tiny_loader())
     names = sorted(os.path.basename(p) for p in glob.glob(os.path.join(d, '*.pt')))
     assert all('Tiny' in n for n in names), names
@@ -231,8 +243,7 @@ def test_checkpoint_names_include_expert_and_seed():
 def test_final_checkpoint_is_self_describing():
     """The saved state must record expert, seed and epoch."""
     d = _tmp_ckpt('selfdescribing')
-    t = _TinyTrainer(device='cpu', epochs=2, save_from_epoch=2, save_every=2,
-                     checkpoint_dir=d, seed=7)
+    t = _TinyTrainer(device='cpu', epochs=2, checkpoint_dir=d, seed=7)
     t.train(_tiny_loader())
     finals = glob.glob(os.path.join(d, '*final*.pt'))
     assert finals, "no final checkpoint written"
@@ -250,7 +261,7 @@ def test_final_checkpoint_is_self_describing():
 
 def test_nan_loss_raises():
     """A non-finite loss must stop training immediately."""
-    t = _NaNLossTrainer(device='cpu', epochs=1, save_from_epoch=1, save_every=1,
+    t = _NaNLossTrainer(device='cpu', epochs=1,
                         checkpoint_dir=_tmp_ckpt('nanloss'))
     try:
         t.train(_tiny_loader())
@@ -262,7 +273,7 @@ def test_nan_loss_raises():
 
 def test_nonfinite_logits_raise():
     """Non-finite logits must stop training immediately."""
-    t = _NaNLogitsTrainer(device='cpu', epochs=1, save_from_epoch=1, save_every=1,
+    t = _NaNLogitsTrainer(device='cpu', epochs=1,
                           checkpoint_dir=_tmp_ckpt('nanlogits'))
     try:
         t.train(_tiny_loader())
@@ -324,7 +335,7 @@ def test_synthetic_dry_run_all_four_experts():
     for name, fname in configs.items():
         cfg_path = os.path.join(_proj_root, 'configs', fname)
         cfg = TrainingConfig.from_file(cfg_path).replace(
-            epochs=3, save_from_epoch=3, save_every=1,
+            epochs=3,
             checkpoint_dir=tempfile.mkdtemp(prefix=f'dsh_dry_{name}_'),
             device='cpu',
         )
@@ -349,7 +360,8 @@ TESTS = [
     ("No validation machinery", test_no_validation_machinery_on_trainer),
     ("History has no validation metrics", test_history_has_no_validation_metrics),
     ("Scripts use only canonical artifact", test_training_scripts_reference_only_canonical_artifact),
-    ("Checkpoint policy", test_checkpoint_policy_writes_final_and_milestones),
+    ("Only the final checkpoint is written", test_only_the_final_checkpoint_is_written),
+    ("No milestone-checkpoint knobs", test_no_milestone_checkpoint_knobs_remain),
     ("Checkpoint names carry expert+seed", test_checkpoint_names_include_expert_and_seed),
     ("Final checkpoint self-describing", test_final_checkpoint_is_self_describing),
     ("NaN loss raises", test_nan_loss_raises),

@@ -86,8 +86,6 @@ class DataConfig:
 @dataclass(frozen=True)
 class CheckpointConfig:
     dir: str = './checkpoints'
-    save_from_epoch: int = 160
-    save_every: int = 20
 
 
 # ---------------------------------------------------------------------------
@@ -216,11 +214,6 @@ class TrainingConfig:
                 f"{source}: nesterov must be False — the reference CIFAR-LT recipe "
                 f"uses plain momentum SGD"
             )
-        if self.checkpoint.save_from_epoch > self.schedule.epochs:
-            raise ConfigError(
-                f"{source}: save_from_epoch {self.checkpoint.save_from_epoch} is past "
-                f"the end of training (epochs={self.schedule.epochs})"
-            )
 
     # ── derived / overrides ───────────────────────────────────────────
 
@@ -239,23 +232,14 @@ class TrainingConfig:
         device: str | None = None,
         epochs: int | None = None,
         checkpoint_dir: str | None = None,
-        save_from_epoch: int | None = None,
-        save_every: int | None = None,
     ) -> 'TrainingConfig':
         """Return a new config with the given CLI/override values applied."""
         schedule = self.schedule
         if epochs is not None:
             schedule = dataclasses.replace(schedule, epochs=epochs)
         checkpoint = self.checkpoint
-        if checkpoint_dir is not None or save_from_epoch is not None or save_every is not None:
-            checkpoint = dataclasses.replace(
-                checkpoint,
-                dir=checkpoint_dir if checkpoint_dir is not None else checkpoint.dir,
-                save_from_epoch=(save_from_epoch if save_from_epoch is not None
-                                 else checkpoint.save_from_epoch),
-                save_every=(save_every if save_every is not None
-                            else checkpoint.save_every),
-            )
+        if checkpoint_dir is not None:
+            checkpoint = dataclasses.replace(checkpoint, dir=checkpoint_dir)
         return dataclasses.replace(
             self,
             seed=self.seed if seed is None else seed,

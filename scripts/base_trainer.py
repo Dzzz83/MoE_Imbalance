@@ -171,8 +171,6 @@ class BaseTrainer:
         warmup_epochs: int = 5,
         decay_epochs: tuple[int, int] = (160, 180),
         decay_factors: tuple[float, float] = (0.01, 0.0001),
-        save_from_epoch: int = 160,
-        save_every: int = 20,
         checkpoint_dir: str = './checkpoints',
         seed: int = 0,
     ):
@@ -186,8 +184,6 @@ class BaseTrainer:
         self.decay_epochs = tuple(decay_epochs)
         self.decay_factors = tuple(decay_factors)
         self.batch_size = batch_size
-        self.save_from_epoch = save_from_epoch
-        self.save_every = save_every
         self.seed = seed
         self.checkpoint_dir = Path(checkpoint_dir)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -304,14 +300,8 @@ class BaseTrainer:
 
     # ── checkpointing ─────────────────────────────────────────────────
 
-    def _should_save(self, epoch: int) -> bool:
-        if epoch == self.epochs:
-            return True
-        if epoch < self.save_from_epoch:
-            return False
-        return (epoch - self.save_from_epoch) % self.save_every == 0
-
-    def _save_checkpoint(self, log: dict, is_final: bool) -> Path:
+    def _save_checkpoint(self, log: dict, is_final: bool = True) -> Path:
+        """Write the checkpoint. Only the final-epoch model is ever saved."""
         tag = 'final' if is_final else f'epoch{self.epoch}'
         path = self.checkpoint_dir / f'{self.expert_name}_seed{self.seed}_{tag}.pt'
         state = {
@@ -347,7 +337,7 @@ class BaseTrainer:
         """Train on the full long-tailed training set for a fixed budget.
 
         No validation set is used and no checkpoint is selected: the final-epoch
-        model is the reported model.
+        model is the reported model, and it is the only checkpoint written.
 
         Returns:
             history: list of per-epoch log dicts.
@@ -385,8 +375,8 @@ class BaseTrainer:
 
             self.history.append(log)
 
-            if self._should_save(epoch):
-                path = self._save_checkpoint(log, is_final=(epoch == self.epochs))
+            if epoch == self.epochs:
+                path = self._save_checkpoint(log, is_final=True)
                 print(f"[{self.expert_name}] checkpoint -> {path.name}")
 
             if epoch == 1 or epoch % 10 == 0 or epoch == self.epochs:

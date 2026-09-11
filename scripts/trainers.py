@@ -122,8 +122,6 @@ class ConfigDrivenTrainer(BaseTrainer):
             warmup_epochs=config.schedule.warmup_epochs,
             decay_epochs=config.schedule.decay_epochs,
             decay_factors=config.schedule.decay_factors,
-            save_from_epoch=config.checkpoint.save_from_epoch,
-            save_every=config.checkpoint.save_every,
             checkpoint_dir=config.checkpoint.dir,
             seed=config.seed,
         )

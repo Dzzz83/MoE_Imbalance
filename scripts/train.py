@@ -98,7 +98,7 @@ def describe(config: TrainingConfig) -> str:
         f"  optimiser: {o.name} lr={o.lr} momentum={o.momentum} "
         f"weight_decay={o.weight_decay} nesterov={o.nesterov}\n"
         f"  data: {d.root} batch={d.batch_size} IR={d.imbalance_ratio}\n"
-        f"  checkpoints: {c.dir} every {c.save_every} from epoch {c.save_from_epoch} + final"
+        f"  checkpoints: {c.dir} (final epoch only)"
     )
 
 
@@ -134,8 +134,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--epochs', type=int, default=None,
                         help='override the epoch budget')
     parser.add_argument('--checkpoint-dir', default=None)
-    parser.add_argument('--save-from-epoch', type=int, default=None)
-    parser.add_argument('--save-every', type=int, default=None)
     parser.add_argument('--max-batches', type=int, default=None,
                         help='DRY RUN only: expose the first N batches (AGENTs.md gate)')
     args = parser.parse_args(argv)
@@ -146,8 +144,6 @@ def main(argv: list[str] | None = None) -> int:
             device=args.device,
             epochs=args.epochs,
             checkpoint_dir=args.checkpoint_dir,
-            save_from_epoch=args.save_from_epoch,
-            save_every=args.save_every,
         )
     except ConfigError as exc:
         print(f"config error: {exc}", file=sys.stderr)

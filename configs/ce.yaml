@@ -40,6 +40,4 @@ data:
   pin_memory: true
 
 checkpoint:
-  dir: ./checkpoints
-  save_from_epoch: 160     # milestone checkpoints (inspection only)
-  save_every: 20
+  dir: ./checkpoints       # final-epoch checkpoint only

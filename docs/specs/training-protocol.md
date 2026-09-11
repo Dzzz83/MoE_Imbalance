@@ -1,5 +1,15 @@
 # Doublecheck spec
 
+> **Amendment (2026-09-11): final-epoch checkpoint only.**
+> This spec originally required "the last epoch plus every 20th epoch from 160 saved
+> per seed". The milestone checkpoints (epoch 160/180) have since been **removed**.
+> They were inspection-only — never valid for selection — and cost ~7.7 MB per
+> expert, which mattered because the Kaggle notebook pushes checkpoints back to the
+> repository and git history is permanent (138 MB for 3 seeds versus 46 MB for
+> finals only). Each run now writes exactly one checkpoint, the final epoch, and
+> `save_from_epoch` / `save_every` no longer exist in the config schema, the CLI or
+> the trainer.
+
 ## Goal
 Rewrite the expert training loop so CE/LA/BS/Mixup train on the full 10,847-sample long-tailed training set under the published CIFAR-LT recipe (200 epochs, lr 0.1, SGD, warmup 5, x0.01 decay at 160 and x1e-4 at 180), with no validation split, no early stopping, and the last epoch plus every 20th epoch from 160 saved per seed.
 

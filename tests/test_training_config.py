@@ -7,6 +7,7 @@ published CIFAR-LT recipe, that the schema rejects typos and missing sections,
 and that the registry turns a config into the right trainer.
 """
 
+import dataclasses
 import os
 import sys
 import tempfile
@@ -133,12 +134,12 @@ def test_configs_declare_no_validation():
 
 
 def test_checkpoint_policy_in_configs():
-    """save_from_epoch 160 and save_every 20 in every config."""
+    """No config may declare milestone checkpoints: final epoch only."""
     for fname, _, _ in EXPECTED.values():
         cfg = cfg_mod.TrainingConfig.from_file(os.path.join(CONFIG_DIR, fname))
-        assert cfg.checkpoint.save_from_epoch == 160, fname
-        assert cfg.checkpoint.save_every == 20, fname
-    print("  ✅ checkpoint policy: every 20 from 160 + final")
+        fields = {f.name for f in dataclasses.fields(cfg.checkpoint)}
+        assert fields == {'dir'}, f"{fname}: unexpected checkpoint fields {fields}"
+    print("  ✅ checkpoint policy: final epoch only")
 
 
 def test_loss_hyperparameters_live_in_their_own_config():
@@ -181,7 +182,7 @@ loss: {}
 optimiser: {name: sgd, lr: 0.1, momentum: 0.9, weight_decay: 2.0e-4, nesterov: false}
 schedule: {epochs: 200, warmup_epochs: 5, decay_epochs: [160, 180], decay_factors: [0.01, 0.0001]}
 data: {root: ./data, imbalance_ratio: 100.0, batch_size: 128, num_workers: 2, pin_memory: true}
-checkpoint: {dir: ./checkpoints, save_from_epoch: 160, save_every: 20}
+checkpoint: {dir: ./checkpoints}
 """
 
 
@@ -206,7 +207,7 @@ def test_unknown_key_is_rejected():
 
 def test_missing_section_is_rejected():
     """A missing required section must fail loudly."""
-    bad = VALID.replace('checkpoint: {dir: ./checkpoints, save_from_epoch: 160, save_every: 20}\n', '')
+    bad = VALID.replace('checkpoint: {dir: ./checkpoints}\n', '')
     try:
         cfg_mod.TrainingConfig.from_file(_write_yaml(bad))
     except cfg_mod.ConfigError as e:
@@ -280,8 +281,6 @@ def test_trainer_takes_settings_from_config():
     assert pg['momentum'] == cfg.optimiser.momentum
     assert abs(pg['weight_decay'] - cfg.optimiser.weight_decay) < 1e-15
     assert pg['nesterov'] == cfg.optimiser.nesterov
-    assert t.save_from_epoch == cfg.checkpoint.save_from_epoch
-    assert t.save_every == cfg.checkpoint.save_every
     print("  ✅ trainer settings come from the config")
 
 

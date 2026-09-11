@@ -55,7 +55,7 @@ def _tiny_loader(n=32, batch=32, seed=0):
 
 def _config(fname, **overrides):
     base = {
-        'epochs': 1, 'save_from_epoch': 1, 'save_every': 1, 'device': 'cuda',
+        'epochs': 1, 'device': 'cuda',
         'checkpoint_dir': tempfile.mkdtemp(prefix='dsh_gputest_'),
     }
     base.update(overrides)
@@ -175,7 +175,7 @@ def test_nonfinite_logits_raise_on_gpu():
             logits[0, 0] = float('inf')
             return F.cross_entropy(logits, targets), logits, {}
 
-    t = _NaN(device='cuda', epochs=1, save_from_epoch=1, save_every=1,
+    t = _NaN(device='cuda', epochs=1,
              checkpoint_dir=tempfile.mkdtemp(prefix='dsh_gputest_nan_'))
     try:
         t.train(_tiny_loader())
