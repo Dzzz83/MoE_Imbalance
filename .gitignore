@@ -6,10 +6,19 @@
 # ── Python virtual environment ──
 .venv/
 
-# ── Data (downloaded CIFAR-100 archive, extracted files, and generated split indices) ──
+# ── Data (downloaded CIFAR-100 archive and extracted files) ──
 /data/cifar-100-python/
 /data/cifar-100-python.tar.gz
-/data/processed/
+
+# ── Generated split indices ──
+# Everything here stays local EXCEPT the canonical long-tailed training split.
+# It is 87 KB, fully deterministic (IR=100, seed 42) and required before the
+# first training step, so it must travel with the repo: a Kaggle clone without
+# it dies with ProtocolError before epoch 1.
+# Note: the parent directory is deliberately NOT excluded wholesale — git cannot
+# re-include a file whose parent directory is excluded.
+/data/processed/*
+!/data/processed/lt_ir100_train_indices.npy
 
 # ── Python bytecode ──
 __pycache__/

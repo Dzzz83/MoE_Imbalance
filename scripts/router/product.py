@@ -1,12 +1,11 @@
 """
 Product-of-experts routing — multiply softmax probabilities across experts.
 
-No training required. Combines expert predictions via geometric mean.
+Parameter-free: combines expert predictions via the geometric mean, so nothing
+is fitted and no held-out data is required.
 """
 
 from __future__ import annotations
-
-from typing import Self
 
 import numpy as np
 
@@ -19,44 +18,25 @@ EPS = 1e-12
 class ProductRouter(BaseRouter):
     """Route by multiplying softmax probabilities across experts.
 
-    The product ensemble computes::
-
-        P(y|x) ∝ ∏_{e} P_e(y|x)
-
-    which is equivalent to summing log-probs. This tends to sharpen
-    predictions and down-weight uncertain experts.
+    The product ensemble computes ``P(y|x) ∝ ∏_e P_e(y|x)``, equivalent to
+    summing log-probabilities, which sharpens predictions and down-weights
+    uncertain experts.
     """
-
-    def train(
-        self,
-        val_logits: np.ndarray,
-        val_labels: np.ndarray,
-        val_features: dict | None = None,
-    ) -> Self:
-        """No training needed for product combination."""
-        self._is_trained = True
-        return self
 
     def predict(
         self,
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Return expert with highest contribution to product."""
-        probs = softmax(logits)
-        product = np.prod(probs + EPS, axis=1)
-        product /= product.sum(axis=1, keepdims=True)
-        # Estimate per-expert contribution
-        uniform = np.ones_like(probs) / probs.shape[-1]
-        contribution = np.abs(probs - uniform).mean(axis=2)
-        return contribution.argmax(axis=1)
+        """Return the expert contributing most to the product."""
+        return self._contribution(logits).argmax(axis=1)
 
     def predict_class(
         self,
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Multiply softmax probabilities, renormalize, argmax."""
+        """Multiply softmax probabilities, renormalise, argmax."""
         probs = softmax(logits)
         product = np.prod(probs + EPS, axis=1)
         product /= product.sum(axis=1, keepdims=True)
@@ -67,16 +47,14 @@ class ProductRouter(BaseRouter):
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Product combination is inherently soft — return the product weights
-        as the effective contribution of each expert to the final prediction.
-        This is approximated by the normalized product contribution.
-        """
+        """Per-expert contribution to the product (normalised to sum to 1)."""
+        return self._contribution(logits)
+
+    @staticmethod
+    def _contribution(logits: np.ndarray) -> np.ndarray:
+        """How far each expert's distribution sits from uniform, normalised."""
         probs = softmax(logits)
-        product = np.prod(probs + EPS, axis=1)
-        product /= product.sum(axis=1, keepdims=True)
-        # Estimate per-expert contribution: how much does each expert
-        # shift the product away from uniform?
         uniform = np.ones_like(probs) / probs.shape[-1]
         contribution = np.abs(probs - uniform).mean(axis=2)  # (N, num_experts)
-        contribution /= contribution.sum(axis=1, keepdims=True)
-        return contribution
+        total = contribution.sum(axis=1, keepdims=True)
+        return contribution / np.maximum(total, EPS)

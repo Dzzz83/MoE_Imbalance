@@ -1,28 +1,26 @@
 """
-Test-Time Augmentation (TTA) routing — apply routing on TTA-averaged predictions.
+Test-Time Augmentation (TTA) routing.
 
-Computes predictions over multiple augmented views of each sample, then
-applies the same routing methods on the TTA-smoothed features.
+Averages expert logits over several augmented views of each sample, then applies
+a **parameter-free** router to the averaged logits. Nothing is fitted, so no
+held-out data is required: TTA changes the inputs, not the decision rule.
 """
 
 from __future__ import annotations
 
-from typing import Self, Callable
-
 import numpy as np
 
 from scripts.router.base import BaseRouter
-from scripts.utils.features import softmax
-
-EPS = 1e-12
+from scripts.router.confidence import ConfidenceRouter
 
 
 class TTARouter(BaseRouter):
-    """Apply routing on test-time augmentation averaged predictions.
+    """Apply a parameter-free base router to TTA-averaged logits.
 
-    Wraps an existing router: first averages predictions over N_AUGS
-    augmentations per sample, then runs the wrapped router on the
-    TTA-smoothed features.
+    Args:
+        base_router: the rule to apply. Defaults to raw confidence selection.
+        expert_names: expert labels; required when `base_router` is omitted.
+        n_augs: number of augmented views averaged upstream.
     """
 
     def __init__(
@@ -30,36 +28,25 @@ class TTARouter(BaseRouter):
         base_router: BaseRouter | None = None,
         expert_names: list[str] | None = None,
         n_augs: int = 10,
-    ):
+    ) -> None:
         if base_router is None:
-            # Default: use confidence routing on TTA predictions
-            from scripts.router.confidence import ConfidenceRouter
-            base_router = ConfidenceRouter(expert_names, calibrate=False)
+            if not expert_names:
+                raise ValueError(
+                    "TTARouter needs either a base_router or explicit expert_names"
+                )
+            base_router = ConfidenceRouter(expert_names)
         super().__init__(expert_names if expert_names else base_router.expert_names)
+        if n_augs < 1:
+            raise ValueError(f"n_augs must be >= 1, got {n_augs}")
         self.base_router = base_router
         self.n_augs = n_augs
-
-    def train(
-        self,
-        val_logits: np.ndarray,
-        val_labels: np.ndarray,
-        val_features: dict | None = None,
-    ) -> Self:
-        """Train the base router on TTA features if needed."""
-        # For TTA, we typically train the base router on single-pass features
-        # and apply on TTA features at test time
-        self.base_router.train(val_logits, val_labels, val_features)
-        self._is_trained = True
-        return self
 
     def predict(
         self,
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Apply base router on TTA-averaged predictions."""
-        # TTA average: logits here are already averaged across augs
-        # or we use the base router's predict directly
+        """Delegate to the base router on TTA-averaged logits."""
         return self.base_router.predict(logits, features)
 
     def predict_proba(
@@ -67,5 +54,17 @@ class TTARouter(BaseRouter):
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Return routing weights from base router on TTA features."""
+        """Routing weights from the base router."""
         return self.base_router.predict_proba(logits, features)
+
+    def predict_class(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """Class predictions from the base router."""
+        return self.base_router.predict_class(logits, features)
+
+    def __repr__(self) -> str:
+        return (f"TTARouter(base={self.base_router.name}, n_augs={self.n_augs}, "
+                f"experts={self.expert_names})")

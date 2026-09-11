@@ -249,6 +249,42 @@ def test_cpu_config_is_not_flagged():
     print("  ✅ explicit cpu run is not flagged")
 
 
+def test_kaggle_environment_is_detected():
+    """A Kaggle kernel must be recognised, so the guard stays silent there."""
+    from scripts import train as train_mod
+    os.environ['KAGGLE_KERNEL_RUN_TYPE'] = 'Batch'
+    try:
+        assert train_mod.is_kaggle_environment() is True, \
+            "Kaggle kernel not detected from KAGGLE_KERNEL_RUN_TYPE"
+    finally:
+        del os.environ['KAGGLE_KERNEL_RUN_TYPE']
+    os.environ['KAGGLE_URL_BASE'] = 'https://www.kaggle.com'
+    try:
+        assert train_mod.is_kaggle_environment() is True, \
+            "Kaggle kernel not detected from KAGGLE_URL_BASE"
+    finally:
+        del os.environ['KAGGLE_URL_BASE']
+    assert train_mod.is_kaggle_environment() is False, \
+        "the workspace machine was misdetected as Kaggle"
+    print("  ✅ Kaggle environment detected (and workspace is not Kaggle)")
+
+
+def test_no_warning_when_running_on_kaggle():
+    """The full run belongs on Kaggle — the guard must not nag there."""
+    from scripts import train as train_mod
+    cfg = TrainingConfig.from_file(os.path.join(CONFIG_DIR, 'ce.yaml'))
+    os.environ['KAGGLE_KERNEL_RUN_TYPE'] = 'Batch'
+    try:
+        flagged = train_mod.full_run_on_local_gpu(cfg, max_batches=None)
+    finally:
+        del os.environ['KAGGLE_KERNEL_RUN_TYPE']
+    assert flagged is False, (
+        "a Kaggle run was flagged as 'local GPU' — the banner told the user "
+        "full training belongs on Kaggle while they were already on Kaggle"
+    )
+    print("  ✅ no banner when running on Kaggle")
+
+
 TESTS = [
     ("CUDA available", test_cuda_is_available),
     ("device auto -> cuda", test_device_auto_resolves_to_cuda),
@@ -258,6 +294,8 @@ TESTS = [
     ("Real batch size fits in VRAM", test_real_batch_size_fits_in_vram),
     ("NaN guard fires on GPU", test_nonfinite_logits_raise_on_gpu),
     ("CPU/GPU forward agreement", test_forward_agrees_between_cpu_and_gpu),
+    ("Kaggle environment detected", test_kaggle_environment_is_detected),
+    ("No banner on Kaggle", test_no_warning_when_running_on_kaggle),
     ("Reportable GPU run flagged", test_reportable_run_on_local_gpu_is_flagged),
     ("Dry run not flagged", test_dry_run_is_not_flagged),
     ("CPU run not flagged", test_cpu_config_is_not_flagged),

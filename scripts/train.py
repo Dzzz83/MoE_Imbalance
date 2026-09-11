@@ -57,16 +57,34 @@ def record_config(config: TrainingConfig) -> Path:
     return path
 
 
+def is_kaggle_environment() -> bool:
+    """True when this process is running inside a Kaggle kernel.
+
+    Kaggle is the *intended* place for a full training sweep, so the local-GPU
+    warning below must not fire there. It fired on Kaggle once and told the user
+    that full training belongs on Kaggle while they were already on Kaggle.
+    """
+    for var in ('KAGGLE_KERNEL_RUN_TYPE', 'KAGGLE_URL_BASE', 'KAGGLE_DATA_PROXY_TOKEN'):
+        if os.environ.get(var):
+            return True
+    try:
+        return str(Path.cwd()).startswith('/kaggle')
+    except OSError:
+        return False
+
+
 def full_run_on_local_gpu(
     config: TrainingConfig, max_batches: int | None
 ) -> bool:
-    """True when a *reportable* run would execute on this machine's GPU.
+    """True when a *reportable* run would execute on the workspace machine's GPU.
 
-    The GPU here exists for verification only — the 12-run sweep belongs on
-    Kaggle — so a non-dry run that lands on the local GPU is worth flagging.
-    This is advisory: it never blocks or delays a run.
+    The workspace GPU exists for verification only — the 12-run sweep belongs on
+    Kaggle — so a non-dry run that lands on it is worth flagging. This is
+    advisory: it never blocks or delays a run. Kaggle itself is never flagged.
     """
     if max_batches is not None:
+        return False
+    if is_kaggle_environment():
         return False
     return config.resolved_device.startswith('cuda')
 

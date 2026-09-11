@@ -240,6 +240,71 @@ def test_missing_artifact_raises():
     raise AssertionError("missing artifact did not raise ProtocolError")
 
 
+def test_canonical_artifact_is_not_gitignored():
+    """The artifact must survive a fresh clone — Kaggle has no local data dir.
+
+    `data/processed/` was ignored wholesale, so a Kaggle clone received zero
+    index files and training died with ProtocolError before the first epoch.
+    """
+    import subprocess
+
+    path = os.path.join(PROCESSED, ps.LT_TRAIN_FILENAME)
+    result = subprocess.run(
+        ['git', 'check-ignore', '-q', path],
+        cwd=_proj_root, capture_output=True,
+    )
+    assert result.returncode != 0, (
+        f"{ps.LT_TRAIN_FILENAME} is gitignored, so a fresh clone (Kaggle) will "
+        f"not have it and training cannot start"
+    )
+    print(f"  ✅ {ps.LT_TRAIN_FILENAME} is not gitignored")
+
+
+def test_canonical_artifact_is_tracked_by_git():
+    """The artifact must actually be committed, not merely un-ignored."""
+    import subprocess
+
+    rel = f'data/processed/{ps.LT_TRAIN_FILENAME}'
+    result = subprocess.run(
+        ['git', 'ls-files', '--error-unmatch', rel],
+        cwd=_proj_root, capture_output=True, text=True,
+    )
+    assert result.returncode == 0, (
+        f"{rel} is not tracked by git — Kaggle would clone a repo without the "
+        f"canonical split. Run: git add {rel}"
+    )
+    print(f"  ✅ {rel} is tracked by git")
+
+
+def test_missing_artifact_error_names_the_remedy():
+    """The failure must be actionable, not just a bare path."""
+    try:
+        ps.load_lt_train_indices('/nonexistent_root')
+    except ps.ProtocolError as e:
+        msg = str(e)
+        assert 'create_lt_split' in msg or 'git' in msg.lower(), (
+            f"error does not say how to fix it: {msg}"
+        )
+        print("  ✅ missing-artifact error names the remedy")
+        return
+    raise AssertionError("missing artifact did not raise ProtocolError")
+
+
+def test_generator_reproduces_the_committed_artifact():
+    """Regeneration from raw data must reproduce the tracked artifact.
+
+    This is the fallback on a machine (like Kaggle) whose clone lacked the
+    artifact: `utils/create_lt_split.py` needs only `data/cifar-100-python`.
+    """
+    from utils.create_lt_split import build_lt_indices
+
+    idx = build_lt_indices(_targets(), imbalance_ratio=100.0, seed=42)
+    assert len(idx) == EXPECTED_TOTAL, len(idx)
+    assert np.array_equal(idx, ps.load_lt_train_indices(DATA_ROOT)), \
+        "regeneration does not reproduce the committed artifact"
+    print(f"  ✅ regenerates from raw data ({len(idx)} indices)")
+
+
 def test_index_range_guard():
     """An out-of-range index array (e.g. full CIFAR train) must be rejected."""
     ps.assert_no_test_leakage(np.array([0, 100, 49999]), 'train_core')
@@ -269,6 +334,10 @@ TESTS = [
     ("Injected overlap detected", test_verify_detects_injected_leakage),
     ("Any val split rejected", test_verify_rejects_any_val_split),
     ("Missing artifact raises", test_missing_artifact_raises),
+    ("Artifact not gitignored", test_canonical_artifact_is_not_gitignored),
+    ("Artifact tracked by git", test_canonical_artifact_is_tracked_by_git),
+    ("Missing-artifact error actionable", test_missing_artifact_error_names_the_remedy),
+    ("Generator reproduces artifact", test_generator_reproduces_the_committed_artifact),
     ("Index range guard", test_index_range_guard),
 ]
 

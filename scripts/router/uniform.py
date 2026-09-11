@@ -1,42 +1,26 @@
 """
 Uniform averaging router — the simplest baseline.
 
-Averages logits across all experts, then takes argmax.
-No training required.
+Averages logits across all experts, then takes argmax. Parameter-free: nothing
+is fitted, so no held-out data is required.
 """
 
 from __future__ import annotations
 
-from typing import Self
-
 import numpy as np
 
 from scripts.router.base import BaseRouter
-from scripts.utils.features import softmax
 
 
 class UniformRouter(BaseRouter):
-    """Route by averaging logits across all experts.
-
-    This is the standard uniform ensemble baseline.
-    """
-
-    def train(
-        self,
-        val_logits: np.ndarray,
-        val_labels: np.ndarray,
-        val_features: dict | None = None,
-    ) -> Self:
-        """No training needed for uniform averaging."""
-        self._is_trained = True
-        return self
+    """Route by averaging logits across all experts (the standard baseline)."""
 
     def predict(
         self,
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Uniform averaging: no single expert chosen. Return expert 0 (all equal)."""
+        """Uniform averaging selects no single expert; return expert 0 for all."""
         return np.zeros(logits.shape[0], dtype=np.int64)
 
     def predict_proba(
@@ -44,9 +28,8 @@ class UniformRouter(BaseRouter):
         logits: np.ndarray,
         features: dict | None = None,
     ) -> np.ndarray:
-        """Uniform weights for all experts."""
-        N = logits.shape[0]
-        return np.ones((N, self.num_experts), dtype=np.float32) / self.num_experts
+        """Equal weight for every expert."""
+        return np.ones((logits.shape[0], self.num_experts), dtype=np.float32) / self.num_experts
 
     def predict_class(
         self,
@@ -54,5 +37,4 @@ class UniformRouter(BaseRouter):
         features: dict | None = None,
     ) -> np.ndarray:
         """Average logits across experts, then argmax."""
-        avg_logits = logits.mean(axis=1)
-        return avg_logits.argmax(axis=1)
+        return logits.mean(axis=1).argmax(axis=1)

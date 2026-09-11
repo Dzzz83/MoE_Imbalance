@@ -65,8 +65,16 @@ def load_lt_train_indices(data_root: str = './data') -> np.ndarray:
     path = Path(data_root) / 'processed' / LT_TRAIN_FILENAME
     if not path.exists():
         raise ProtocolError(
-            f"Missing protocol artifact: {path}. "
-            f"Generate it with: python utils/create_lt_split.py"
+            f"Missing protocol artifact: {path}\n"
+            f"  This file is committed to the repository and is required before "
+            f"the first training step.\n"
+            f"  Fix one of:\n"
+            f"    (a) restore it from git:  git checkout -- "
+            f"data/processed/{LT_TRAIN_FILENAME}   (or git pull)\n"
+            f"    (b) regenerate it (deterministic, needs data/cifar-100-python):\n"
+            f"        python utils/create_lt_split.py\n"
+            f"  If it was regenerated, verify it still matches the committed split "
+            f"before training:  python tests/test_protocol_splits.py"
         )
     return np.load(str(path))
 
