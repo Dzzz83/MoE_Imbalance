@@ -34,12 +34,30 @@ from torch.utils.data import DataLoader
 # ---------------------------------------------------------------------------
 
 def set_seed(seed: int) -> None:
-    """Seed every RNG the training path uses (AGENTs.md section 10)."""
+    """Seed every RNG the training path uses (AGENTs.md section 10).
+
+    Also pins the CUDA backend so that a seed actually reproduces a run:
+
+    * ``cudnn.deterministic`` — cuDNN picks deterministic kernels
+    * ``cudnn.benchmark``     — no per-run algorithm autotuning
+    * TF32 disabled           — ``cudnn.allow_tf32`` defaults to True on Ampere
+      and newer, which perturbs convolution results (measured: CPU/GPU logits
+      diverged by 1.2e-01 with TF32 on versus 2.7e-04 with it off). Kaggle's T4
+      is Turing and has no TF32, so leaving it on would make local GPU
+      verification numerically unrepresentative of the reported Kaggle runs.
+
+    The cost is throughput on Ampere-or-newer GPUs; determinism was chosen
+    deliberately over speed (see docs/specs/gpu-verification.md).
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.allow_tf32 = False
+    torch.set_float32_matmul_precision('highest')
 
 
 # ---------------------------------------------------------------------------

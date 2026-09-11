@@ -39,9 +39,18 @@ CIFAR-100 test (10K) → final evaluation only
 
 | Component | Specification |
 |-----------|---------------|
-| **Primary training** | Kaggle T4 GPU (30h quota per session) |
-| **Local execution** | CPU-only for analysis, feature extraction, routing evaluation |
-| **Dependencies** | `requirements.txt` (torch, torchvision, numpy, scikit-learn, scipy) |
+| **Primary training** | Kaggle T4 GPU (30h quota per session) — where the reported runs happen |
+| **Local execution** | RTX 3060 Laptop GPU (6 GB, sm_86) plus CPU. The local GPU is for **verification and testing only**; it is not used for reported runs |
+| **Dependencies** | `requirements.txt` (torch, torchvision, numpy, scikit-learn, scipy, PyYAML) |
+
+**Local GPU verification.** `tests/test_gpu.py` exercises the CUDA path (device
+placement, finite grads, VRAM headroom, NaN guard, CPU/GPU agreement). It skips
+cleanly on a CPU-only machine. `set_seed` pins `cudnn.deterministic=True`,
+`benchmark=False` and disables TF32, because measured CPU/GPU logits diverge by
+**1.2e-01 with TF32 on** versus **2.8e-04 with it off** — cuDNN's TF32 defaults
+to on for Ampere-or-newer parts like this one, while Kaggle's T4 is Turing and
+has no TF32. Leaving it on would make local verification unrepresentative of the
+reported Kaggle runs. Cost: throughput on Ampere+ GPUs.
 
 ---
 

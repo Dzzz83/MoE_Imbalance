@@ -57,6 +57,20 @@ def record_config(config: TrainingConfig) -> Path:
     return path
 
 
+def full_run_on_local_gpu(
+    config: TrainingConfig, max_batches: int | None
+) -> bool:
+    """True when a *reportable* run would execute on this machine's GPU.
+
+    The GPU here exists for verification only — the 12-run sweep belongs on
+    Kaggle — so a non-dry run that lands on the local GPU is worth flagging.
+    This is advisory: it never blocks or delays a run.
+    """
+    if max_batches is not None:
+        return False
+    return config.resolved_device.startswith('cuda')
+
+
 def describe(config: TrainingConfig) -> str:
     s, o, c, d = config.schedule, config.optimiser, config.checkpoint, config.data
     return (
@@ -124,6 +138,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_batches is not None:
         print(f"[DRY RUN] limiting to {args.max_batches} batches — the resulting "
               f"model is NOT a reportable result")
+    elif full_run_on_local_gpu(config, args.max_batches):
+        print("!" * 72)
+        print("WARNING: this is a REPORTABLE run executing on the LOCAL GPU.")
+        print("  The local GPU is for verification only; full training belongs on")
+        print("  Kaggle. If you only meant to check that the code runs, add")
+        print("  --max-batches 2.")
+        print("!" * 72)
 
     run_training(config, max_batches=args.max_batches)
     return 0

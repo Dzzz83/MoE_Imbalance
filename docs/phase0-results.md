@@ -231,9 +231,15 @@ Rationale:
 2. The binding constraint is structural, not architectural: a **44.2% all-wrong floor**
    caps what any router can recover, and the accessible headroom is smaller than the
    measurement noise.
-3. There is **no local GPU**. Each full A+B+C retrain costs ~1.6h on Kaggle plus
-   upload/download, and Phase 5's "rebuild the experts" hypothesis has now been directly
-   falsified by the original-pool control in §5.
+3. Each full A+B+C retrain costs ~1.6h on Kaggle plus upload/download, and Phase 5's
+   "rebuild the experts" hypothesis has now been directly falsified by the
+   original-pool control in §5.
+
+   *(Correction, recorded 2026-09-11: this item previously read "There is **no local
+   GPU**". That is no longer true — the workspace machine now has an RTX 3060 Laptop
+   (6 GB, sm_86) with a CUDA-enabled torch build (`2.14.0+cu126`). The GPU is for
+   verification and testing only; full training still happens on Kaggle, so the
+   budget argument above is unchanged. See `docs/specs/gpu-verification.md`.)*
 
 ### What I recommend instead
 
