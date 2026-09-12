@@ -23,6 +23,11 @@ class TTARouter(BaseRouter):
         n_augs: number of augmented views averaged upstream.
     """
 
+    #: TTA routing is defined over view-averaged logits, so the evaluator must
+    #: feed this rule the TTA pass rather than the plain one. Without this flag
+    #: the row silently duplicated the Confidence row.
+    requires_tta = True
+
     def __init__(
         self,
         base_router: BaseRouter | None = None,

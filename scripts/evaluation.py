@@ -35,6 +35,36 @@ class EvaluationError(RuntimeError):
 # Metrics
 # ---------------------------------------------------------------------------
 
+def _softmax(logits: np.ndarray) -> np.ndarray:
+    """Numerically stable softmax over the last axis."""
+    shifted = logits - logits.max(axis=-1, keepdims=True)
+    exp = np.exp(shifted)
+    return exp / exp.sum(axis=-1, keepdims=True)
+
+
+def tta_average_log_probs(
+    per_view_logits: list[np.ndarray], eps: float = 1e-12
+) -> np.ndarray:
+    """Average predictions over augmented views, in probability space.
+
+    Computes ``log(mean_v softmax(logits_v))`` — the mean of the per-view
+    probability distributions, returned as log-probabilities.
+
+    Averaging **probabilities** rather than raw logits is the standard TTA
+    ensemble: logits sit on an arbitrary scale, so a single overconfident view
+    would dominate a logit average. Returning log-probabilities keeps the router
+    interface unchanged — routers apply ``softmax`` to their input, which
+    recovers exactly the averaged distribution.
+
+    With a single view this is the identity (up to the eps clamp).
+    """
+    if not per_view_logits:
+        raise EvaluationError("TTA needs at least one view")
+    stack = np.stack([_softmax(v) for v in per_view_logits], axis=0)
+    mean_prob = stack.mean(axis=0)
+    return np.log(np.maximum(mean_prob, eps))
+
+
 def balanced_accuracy(targets: np.ndarray, preds: np.ndarray) -> float:
     """Mean per-class recall over the classes present in `targets`."""
     targets = np.asarray(targets)
@@ -131,10 +161,30 @@ class ExpertPool:
         found = self.available()
         return [n for n in self.expert_names if n not in found]
 
+    def _check_device(self) -> None:
+        """Fail clearly when a CUDA device is requested but unusable.
+
+        Observed for real: the NVIDIA driver wedged around a reboot,
+        ``torch.cuda.is_available()`` went False, and ``torch.load`` raised a
+        traceback about deserialisation that named neither the cause nor the
+        remedy. Checked at call time, not cached, so a driver that recovers is
+        picked up without restarting the process.
+        """
+        if str(self.device).startswith('cuda') and not torch.cuda.is_available():
+            raise EvaluationError(
+                f"device '{self.device}' was requested, but no working CUDA device "
+                f"is available (torch.cuda.is_available() is False).\n"
+                f"  Fix one of:\n"
+                f"    (a) run on CPU:     add --device cpu\n"
+                f"    (b) check the GPU:  nvidia-smi   — if it cannot reach the "
+                f"driver, a reboot (or `sudo modprobe nvidia`) usually clears it"
+            )
+
     def load(self) -> 'ExpertPool':
         """Load every available expert. Needs at least two to be a pool."""
         from models.resnet32 import ResNet32
 
+        self._check_device()
         paths = self.available()
         if len(paths) < 2:
             raise EvaluationError(
@@ -160,12 +210,41 @@ class ExpertPool:
         return np.stack(per_expert, axis=1)
 
     @torch.no_grad()
-    def logits(self, loader) -> tuple[np.ndarray, np.ndarray]:
-        """Stacked logits and labels for a whole loader."""
+    def logits(
+        self,
+        loader,
+        n_augs: int = 1,
+        tta_seed: int = 0,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Stacked logits and labels for a whole loader.
+
+        Args:
+            loader: yields (images, targets).
+            n_augs: number of augmented views per sample. ``1`` is plain
+                single-view inference; ``> 1`` enables test-time augmentation,
+                averaging the per-view probability distributions.
+            tta_seed: fixes the view sampling so TTA is reproducible.
+
+        Returns:
+            (logits, labels). With ``n_augs > 1`` the logits are
+            log-probabilities of the view-averaged distribution.
+        """
+        from data.tta import AugmentationViews
+
+        if n_augs < 1:
+            raise EvaluationError(f"n_augs must be >= 1, got {n_augs}")
+        if n_augs == 1 and tta_seed != 0:
+            raise EvaluationError("tta_seed is meaningless when n_augs == 1")
+
+        views = None if n_augs == 1 else AugmentationViews(n_views=n_augs, seed=tta_seed)
         chunks, labels = [], []
         for batch in loader:
             images, targets = batch[0], batch[1]
-            chunks.append(self.logits_from_batch(images))
+            if views is None:
+                chunks.append(self.logits_from_batch(images))
+            else:
+                per_view = [self.logits_from_batch(v) for v in views(images)]
+                chunks.append(tta_average_log_probs(per_view))
             labels.append(np.asarray(targets))
         if not chunks:
             raise EvaluationError("loader produced no batches")

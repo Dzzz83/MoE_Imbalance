@@ -350,6 +350,85 @@ def test_synthetic_dry_run_all_four_experts():
               f"grads populated")
 
 
+def test_seed_controls_model_initialisation():
+    """Two trainers built from the same config must start from identical weights.
+
+    Regression test for a real bug: the model was constructed in
+    ``ConfigDrivenTrainer.__init__`` while ``set_seed`` was only called inside
+    ``train()`` — after the weights already existed. Every run therefore started
+    from an uncontrolled random initialisation, so ``--seed`` did not make a run
+    reproducible and the "3 seeds" were three arbitrary runs.
+    """
+    from scripts.config import TrainingConfig
+    from scripts.trainers import build_trainer
+
+    cfg = TrainingConfig.from_file(
+        os.path.join(_proj_root, 'configs', 'ce.yaml')).replace(device='cpu')
+    counts = np.array([500] + [5] * 99)
+
+    def first_matrix(model):
+        for k, v in model.state_dict().items():
+            if v.ndim >= 2:
+                return k, v
+        raise AssertionError("no matrix parameter found")
+
+    k1, w1 = first_matrix(build_trainer(cfg, counts, device='cpu').model)
+    k2, w2 = first_matrix(build_trainer(cfg, counts, device='cpu').model)
+    assert torch.equal(w1, w2), (
+        f"same seed gave different initial weights for {k1} "
+        f"(max |Δ|={float((w1 - w2).abs().max()):.6f}) — the seed does not cover "
+        f"model initialisation"
+    )
+    print(f"  ✅ identical init under the same seed ({k1})")
+
+
+def test_same_seed_gives_an_identical_run():
+    """End-to-end: same seed must reproduce the whole training history."""
+    from scripts.config import TrainingConfig
+    from scripts.trainers import build_trainer
+
+    counts = np.array([500] + [5] * 99)
+    g = torch.Generator().manual_seed(0)
+    loader = DataLoader(
+        TensorDataset(torch.randn(16, 3, 32, 32, generator=g),
+                      torch.randint(0, 100, (16,), generator=g)),
+        batch_size=8, shuffle=True,   # data order must be seeded too
+    )
+
+    histories = []
+    for tag in ('a', 'b'):
+        cfg = TrainingConfig.from_file(
+            os.path.join(_proj_root, 'configs', 'ce.yaml')).replace(
+            device='cpu', epochs=3, checkpoint_dir=_tmp_ckpt(f'same_{tag}'))
+        histories.append(build_trainer(cfg, counts, device='cpu').train(loader))
+
+    losses_a = [h['train_loss'] for h in histories[0]]
+    losses_b = [h['train_loss'] for h in histories[1]]
+    assert losses_a == losses_b, (
+        f"same seed produced different runs:\n  {losses_a}\n  {losses_b}"
+    )
+    print(f"  ✅ same seed reproduces the run exactly: {losses_a}")
+
+
+def test_different_seeds_give_different_inits():
+    """The seed must actually matter — not be ignorable."""
+    from scripts.config import TrainingConfig
+    from scripts.trainers import build_trainer
+
+    counts = np.array([500] + [5] * 99)
+    path = os.path.join(_proj_root, 'configs', 'ce.yaml')
+
+    def first_matrix(seed):
+        cfg = TrainingConfig.from_file(path).replace(device='cpu', seed=seed)
+        for _, v in build_trainer(cfg, counts, device='cpu').model.state_dict().items():
+            if v.ndim >= 2:
+                return v
+
+    assert not torch.equal(first_matrix(78), first_matrix(88)), \
+        "different seeds produced identical initial weights"
+    print("  ✅ different seeds give different inits")
+
+
 TESTS = [
     ("LR schedule matches reference", test_lr_schedule_matches_reference),
     ("LR schedule scales with base_lr", test_lr_schedule_scales_with_base_lr),
@@ -369,6 +448,9 @@ TESTS = [
     ("set_seed reproducible", test_seed_makes_initialisation_reproducible),
     ("Different seed changes init", test_seed_changes_initialisation),
     ("Synthetic dry-run: 4 experts", test_synthetic_dry_run_all_four_experts),
+    ("Seed controls model init", test_seed_controls_model_initialisation),
+    ("Same seed reproduces the run", test_same_seed_gives_an_identical_run),
+    ("Different seeds differ", test_different_seeds_give_different_inits),
 ]
 
 

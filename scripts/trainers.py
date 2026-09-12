@@ -29,7 +29,7 @@ from losses.balanced_softmax_loss import BalancedSoftmaxLoss
 from losses.ce_loss import CELoss
 from losses.lal_loss import LALLoss
 from models.resnet32 import ResNet32
-from scripts.base_trainer import BaseTrainer
+from scripts.base_trainer import BaseTrainer, set_seed
 from scripts.config import ConfigError, TrainingConfig
 
 EXPECTED_NUM_CLASSES = 100
@@ -104,6 +104,14 @@ class ConfigDrivenTrainer(BaseTrainer):
     ) -> None:
         self.config = config
         counts = None if class_counts is None else np.asarray(class_counts)
+
+        # Seed BEFORE building the model. `train()` also seeds, but that happens
+        # after the weights already exist — without this call the initialisation
+        # came from whatever RNG state the process happened to be in, so `--seed`
+        # did not make a run reproducible and the "3 seeds" were three arbitrary
+        # runs. Measured symptom: LAL and Balanced Softmax, which implement the
+        # same objective, produced different weights and κ=0.460 instead of 1.0.
+        set_seed(config.seed)
 
         model = self.build_model(config)
         loss_fn = self.build_loss(config, counts)

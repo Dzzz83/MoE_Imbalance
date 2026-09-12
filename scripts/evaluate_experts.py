@@ -58,6 +58,23 @@ def softmax(logits: np.ndarray) -> np.ndarray:
     return exp / exp.sum(axis=-1, keepdims=True)
 
 
+def select_logits(router_class, plain_logits, tta_logits):
+    """Return the logits a rule must be evaluated on.
+
+    A rule declaring ``requires_tta`` gets the view-averaged pass; every other
+    rule gets the plain single-view pass. Centralised so no rule can silently be
+    handed the wrong input — the bug that made the TTA row a duplicate of the
+    Confidence row.
+    """
+    if getattr(router_class, 'requires_tta', False):
+        if tta_logits is None:
+            raise EvaluationError(
+                f"{router_class.__name__} requires TTA logits but none were computed"
+            )
+        return tta_logits
+    return plain_logits
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--checkpoint-dir', default='./checkpoints')
@@ -67,6 +84,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--device',
                         default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--tta-augs', type=int, default=10,
+                        help='augmented views per sample for the TTA rule (pre-registered: 10)')
+    parser.add_argument('--tta-seed', type=int, default=0,
+                        help='seed for TTA view sampling, so the result is reproducible')
     parser.add_argument('--output', default=None,
                         help='JSON output path (default: checkpoints/test_evaluation.json)')
     args = parser.parse_args(argv)
@@ -122,12 +143,23 @@ def main(argv: list[str] | None = None) -> int:
     # ── the four frozen parameter-free rules ──
     print("\nFrozen parameter-free routing rules (pre-registered)")
     print(f"  {'rule':<14}{'BA':>8}{'Head':>8}{'Med':>8}{'Tail':>8}")
+
+    # Rules that are defined over view-averaged logits need the TTA pass. It is
+    # computed once, so every rule still sees the same single evaluation.
+    tta_rules = [n for n, k in ROUTERS.items() if getattr(k, 'requires_tta', False)]
+    logits_tta = None
+    if tta_rules:
+        print(f"  (computing TTA pass: {args.tta_augs} views, seed {args.tta_seed}, "
+              f"for {', '.join(tta_rules)})")
+        logits_tta, _ = pool.logits(loader, n_augs=args.tta_augs, tta_seed=args.tta_seed)
+
     for name, klass in ROUTERS.items():
         router = klass(expert_names=pool.loaded)
-        preds = router.predict_class(logits)
+        rule_logits = select_logits(klass, logits, logits_tta)
+        preds = router.predict_class(rule_logits)
         # ECE needs a probability proxy; use the routed experts' mean probs
-        weights = router.predict_proba(logits)
-        probs = np.einsum('ne,nec->nc', weights, softmax(logits))
+        weights = router.predict_proba(rule_logits)
+        probs = np.einsum('ne,nec->nc', weights, softmax(rule_logits))
         m = evaluate_predictions(targets, preds, probs, train_counts)
         results['routing'][name] = m
         print(f"  {name:<14}{m['ba']:>8.4f}{m['head']:>8.4f}{m['medium']:>8.4f}"

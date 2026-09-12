@@ -311,6 +311,35 @@ def test_access_log_detects_no_prior_access():
     print("  ✅ fresh log has no entries")
 
 
+def test_pool_rejects_cuda_when_the_gpu_is_unavailable():
+    """A cuda request with no working GPU must fail clearly, not deep in torch.
+
+    This happened for real: the NVIDIA driver wedged around a reboot,
+    ``torch.cuda.is_available()`` went False, and ``ExpertPool.load()`` died
+    inside ``torch.load`` with a 30-line traceback naming neither the cause nor
+    the remedy.
+    """
+    d = tempfile.mkdtemp(prefix='dsh_pool_')
+    for label in ['CE', 'LAL']:
+        _fake_checkpoint(d, label, 78)
+
+    real = torch.cuda.is_available
+    torch.cuda.is_available = lambda: False
+    try:
+        pool = ev.ExpertPool(['CE', 'LAL'], seeds=[78], checkpoint_dir=d, device='cuda')
+        try:
+            pool.load()
+        except ev.EvaluationError as e:
+            msg = str(e).lower()
+            assert 'cuda' in msg, f"message does not mention cuda: {e}"
+            assert 'cpu' in msg or 'nvidia-smi' in msg, f"message offers no remedy: {e}"
+            print(f"  ✅ clear error instead of a torch traceback: {str(e)[:65]}")
+            return
+        raise AssertionError("a cuda request without a working GPU was accepted")
+    finally:
+        torch.cuda.is_available = real
+
+
 TESTS = [
     ("Balanced accuracy", test_balanced_accuracy_is_mean_per_class_recall),
     ("Group accuracies", test_group_accuracies_splits_head_med_tail),
@@ -335,6 +364,7 @@ TESTS = [
     ("Access log content", test_access_log_records_command_and_timestamp),
     ("Access log unwritable safe", test_access_log_does_not_fail_the_run_when_unwritable),
     ("Access log starts empty", test_access_log_detects_no_prior_access),
+    ("Pool rejects cuda without GPU", test_pool_rejects_cuda_when_the_gpu_is_unavailable),
 ]
 
 

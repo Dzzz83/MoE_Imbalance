@@ -35,6 +35,12 @@ class BaseRouter(ABC):
     data is what makes these mechanisms honest, not the absence of a flag.
     """
 
+    #: Whether this rule must be fed TTA-averaged logits rather than plain
+    #: single-view logits. Declared here so the evaluator supplies the right
+    #: input structurally: an earlier version fed every rule the same plain
+    #: logits, which silently turned the TTA row into a duplicate of Confidence.
+    requires_tta: bool = False
+
     def __init__(self, expert_names: list[str]):
         if not expert_names:
             raise ValueError("expert_names must be a non-empty list")
