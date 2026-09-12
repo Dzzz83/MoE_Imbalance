@@ -8,7 +8,7 @@ long-tailed training set, so no honest held-out labels exist anywhere. Any
 mechanism that fitted parameters would be fitting on the test set. The five
 fitted routers (correctness trust meters, pairwise comparators, feature
 clustering, learned gates, selective thresholds) were therefore removed; their
-measured results are preserved in `docs/routing_mechanism.md`.
+measured results are preserved in `records/routing_mechanism.md`.
 
 Every router inherits from ``BaseRouter`` and implements:
   - predict(logits, features) → np.ndarray (expert index per sample)
@@ -22,7 +22,7 @@ Surviving registry — none of these fit anything:
     Confidence  : argmax of raw max-softmax confidence
     TTA         : a parameter-free router over TTA-averaged logits
 
-The candidate set is frozen in `docs/routing-preregistration.md` before any
+The candidate set is frozen in `records/routing-preregistration.md` before any
 test-set evaluation, so choosing among these rules cannot become
 selection-on-test.
 """

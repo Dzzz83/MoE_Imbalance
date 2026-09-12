@@ -4,7 +4,7 @@ Confidence-based routing — pick the expert with the highest max-softmax confid
 Parameter-free. The temperature-calibration path that previously fitted a
 per-expert temperature on held-out labels was removed along with the other
 fitted mechanisms: this project has no validation split to fit it on
-(see `docs/routing_mechanism.md`).
+(see `records/routing_mechanism.md`).
 """
 
 from __future__ import annotations

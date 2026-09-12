@@ -4,7 +4,7 @@ Evaluate the trained experts and measure routing headroom on the test set.
 
 **This is the only entry point that reads the CIFAR-100 test set**, and it
 appends an entry to `docs/test-access-log.md` before doing so. The candidate
-routing rules were frozen in `docs/routing-preregistration.md`; run this only
+routing rules were frozen in `records/routing-preregistration.md`; run this only
 after that file is fixed, and run it **once** so all rules are compared on the
 same look.
 

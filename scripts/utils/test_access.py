@@ -1,7 +1,7 @@
 """
 Test-set access logging.
 
-The routing candidate set is frozen in `docs/routing-preregistration.md` before
+The routing candidate set is frozen in `records/routing-preregistration.md` before
 any test-set number is seen. That discipline is only real if peeking is
 *visible*, so every evaluation entry point appends an entry here first.
 
@@ -23,7 +23,7 @@ class TestAccessLog:
         "# Test-Set Access Log\n\n"
         "> Append-only. Every entry is written automatically by the evaluation\n"
         "> entry points the moment they load the test set. The candidate routing\n"
-        "> rules were frozen in `docs/routing-preregistration.md`; this log exists\n"
+        "> rules were frozen in `records/routing-preregistration.md`; this log exists\n"
         "> so that any access *after* that freeze is visible.\n\n"
         "| timestamp (UTC) | git | command | note |\n"
         "|:--|:--|:--|:--|\n"

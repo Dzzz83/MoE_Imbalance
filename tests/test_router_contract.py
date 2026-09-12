@@ -41,10 +41,10 @@ REDUNDANT_MODULES = ['product']
 EXPECTED_REGISTRY = {'Uniform', 'Probability', 'Confidence', 'TTA'}
 
 #: The measured results of the deleted mechanisms live here. `docs/` is a
-#: local-only knowledge base and is NOT committed to the repository, so these
-#: checks skip (rather than fail) on a fresh clone that has no docs/ directory.
-RESULTS_RECORD = os.path.join(_proj_root, 'docs', 'routing_mechanism.md')
-PREREGISTRATION = os.path.join(_proj_root, 'docs', 'routing-preregistration.md')
+#: tracked in records/, which IS committed, so these normally run; the skip is a
+#: safety net for a local checkout that has deleted them.
+RESULTS_RECORD = os.path.join(_proj_root, 'records', 'routing_mechanism.md')
+PREREGISTRATION = os.path.join(_proj_root, 'records', 'routing-preregistration.md')
 
 
 def _skip_if_absent(path: str) -> bool:
