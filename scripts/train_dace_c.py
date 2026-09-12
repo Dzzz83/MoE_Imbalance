@@ -19,6 +19,7 @@ Usage:
 
 import os
 import sys
+import warnings
 
 _proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _proj_root not in sys.path:
@@ -168,7 +169,12 @@ class DACECTrainer(BaseTrainer):
         loss = loss_cls + self.lambda_routing * loss_contrastive
 
         if weights is not None:
-            loss = (loss * weights).mean()
+            # See DACE-B: `loss` is a scalar, so this can only rescale globally.
+            warnings.warn(
+                "per-sample weights are ignored by DACE-C: the loss is already "
+                "reduced, so weighting it can only rescale the batch loss",
+                RuntimeWarning, stacklevel=2,
+            )
 
         return loss, {
             'loss_cls': loss_cls.detach(),
@@ -195,11 +201,12 @@ class DACECTrainer(BaseTrainer):
         return metrics
 
     def train(self, train_loader, val_loader, class_counts=None):
-        # Use step LR schedule (like PaCo) instead of cosine for longer training
-        # Override the scheduler set in __init__
-        self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
-            self.optimiser, milestones=[320, 360], gamma=0.1,
-        )
+        # Long run (400 epochs) with a step schedule at 320/360. BaseTrainer
+        # derives the LR from step_lr(), so the milestones must be passed there:
+        # assigning a MultiStepLR that nothing ever calls step() on silently ran
+        # the shared 160/180 schedule instead, decaying ~220 epochs too early.
+        self.decay_epochs = (320, 360)
+        self.decay_factors = (0.1, 0.01)   # MultiStepLR(gamma=0.1) milestones
         return super().train(train_loader, val_loader, class_counts=class_counts)
 
 
@@ -309,6 +316,8 @@ def main():
         batch_size=args.batch_size,
         epochs=args.epochs,
         checkpoint_dir=args.checkpoint_dir,
+        seed=args.seed,   # BaseTrainer.train() reseeds; without this every
+                          # --seed run was identical (it defaulted to 0)
     )
     trainer.train(train_loader, val_loader, class_counts=class_counts)
     trainer.save_history()

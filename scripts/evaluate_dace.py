@@ -41,11 +41,14 @@ from data.cifar_lt import LongTailCIFAR100
 # ── Class groups ─────────────────────────────────────────────────────────
 
 def get_class_groups(class_counts: np.ndarray) -> dict[str, np.ndarray]:
-    return {
-        'Head': np.where(class_counts >= 100)[0],
-        'Med':  np.where((class_counts >= 20) & (class_counts < 100))[0],
-        'Tail': np.where(class_counts < 20)[0],
-    }
+    """Head / Med / Tail class indices, under the one frozen definition.
+
+    Delegates to ``scripts.utils.data.get_class_groups`` so this retired script
+    cannot drift away from ``AGENTs.md`` section 6 (Head >= 100, Medium 20-100,
+    Tail < 20) again.
+    """
+    from scripts.utils.data import get_class_groups as _canonical
+    return _canonical(class_counts)
 
 
 def balanced_accuracy(all_targets: np.ndarray, all_preds: np.ndarray) -> float:

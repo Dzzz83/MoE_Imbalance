@@ -8,11 +8,16 @@ than a convention someone has to remember.
 Data roles
 ----------
   all_train     10,847   The canonical long-tailed training set (IR=100). Experts
-                         train on these; nothing is held out for validation.
-  train_core    ~80%     of all_train — expert training (backbone + classifier)
-  routing_dev   ~20%     of all_train — routing-head training ONLY; source of
-                         honest correctness labels (samples the experts that
-                         predict on them were never trained on)
+                         trains on ALL of these; nothing is held out.
+  train_core    ~80%     of all_train — what the retired DACE line trained on
+  routing_dev   ~20%     of all_train — **NOT an honest label source.** Because
+                         experts train on all of all_train, a routing_dev sample
+                         is a sample every expert has already seen: its
+                         correctness label there is memorisation (final train
+                         accuracy is 96-98%), which is why no router may be
+                         fitted on it either. See docs/problem.md section 5.
+                         This split is kept only so the disjointness protocol
+                         (and its tests) has something to check.
   test          10,000   CIFAR-100 test set. FINAL reported numbers only.
 
 There is deliberately **no validation split**: the earlier `lt_val` set was
@@ -23,9 +28,9 @@ selection is therefore fixed by the published hyperparameters and epoch counts,
 and the reported model is the final-epoch model. ``verify_protocol_splits``
 rejects any attempt to reintroduce a 'val' key.
 
-``routing_dev`` is *not* a validation set: it is an internal carve of the
-training pool used only to obtain honest labels for routing heads, and it never
-selects a model or a checkpoint.
+``routing_dev`` is *not* a validation set, but it is not a source of honest
+labels either — no split of this pool can be. Nothing in the live training or
+evaluation path reads it.
 
 Usage:
     from data.protocol_splits import load_protocol_splits, load_lt_train_indices

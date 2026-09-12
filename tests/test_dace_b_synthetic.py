@@ -24,25 +24,30 @@ if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
 
 import torch
-import torch.nn.functional as F
-import numpy as np
 
 from models.resnet32 import ResNet32, ResNet32WithRouting
 from losses.ce_loss import CELoss
 from losses.kl_divergence import kl_divergence, compute_agreement_label
 from losses.contrastive_routing_loss import ContrastiveRoutingLoss
 
+# The shipped mixup, not a local copy: a re-implementation in the test file
+# would leave data/mixup.py — the module the trainer actually uses — unverified.
+from data.mixup import Mixup
+
+_MIXUP = Mixup(alpha=1.0)
+
 
 def mixup_data(images, targets, alpha=1.0):
-    lam = np.random.beta(alpha, alpha)
-    batch_size = images.size(0)
-    index = torch.randperm(batch_size, device=images.device)
-    mixed_images = lam * images + (1.0 - lam) * images[index]
-    return mixed_images, targets, targets[index], lam
+    """Shipped mixup (torch RNG, same contract as ``Mixup.__call__``)."""
+    if alpha != _MIXUP.alpha:
+        raise ValueError(f"only alpha={_MIXUP.alpha} is available from data/mixup.py")
+    mixed_images, targets_a, targets_b, lam = _MIXUP(images, targets)
+    return mixed_images, targets_a, targets_b, lam
 
 
 def mixup_criterion(criterion, pred, targets_a, targets_b, lam):
-    return lam * criterion(pred, targets_a) + (1.0 - lam) * criterion(pred, targets_b)
+    """Shipped mixup criterion."""
+    return Mixup.criterion(criterion, pred, targets_a, targets_b, lam)
 
 
 def test_resnet32_with_routing_shapes():

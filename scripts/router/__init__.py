@@ -18,9 +18,14 @@ There is deliberately **no** ``train()``/``fit()``/``calibrate()`` method.
 Surviving registry — none of these fit anything:
 
     Uniform     : mean of expert logits, then argmax
-    Product     : geometric mean of expert probabilities
+    Probability : mean of expert softmax probabilities, then argmax
     Confidence  : argmax of raw max-softmax confidence
     TTA         : a parameter-free router over TTA-averaged logits
+
+``Product`` was pre-registered, measured, then removed: ``prod_e softmax(z_e)``
+is proportional to ``exp(sum_e z_e)``, whose normaliser is class-independent, so
+its argmax is exactly the argmax of the mean logits — the same classifier as
+``Uniform`` (recorded as Amendment 2 in the pre-registration).
 
 The candidate set is frozen in `records/routing-preregistration.md` before any
 test-set evaluation, so choosing among these rules cannot become

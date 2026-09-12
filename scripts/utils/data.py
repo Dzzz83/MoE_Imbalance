@@ -2,22 +2,31 @@
 Data loading utilities for CIFAR-100-LT experiments.
 
 Provides:
-  - load_expert_checkpoint: Load any expert model from checkpoint
-  - create_cifar_loader: Create DataLoader for train/val/test
-  - get_class_groups: Head/medium/tail class grouping
+  - find_expert_checkpoint: resolve one run's final-epoch checkpoint
+  - load_expert_checkpoint: load any expert model from a checkpoint
+  - load_all_experts: load a pool of experts
+  - create_cifar_loader: DataLoader over the canonical train/test splits
+  - get_class_groups: Head/Medium/Tail class grouping (delegates to the one
+    frozen definition in ``scripts.base_trainer``)
+
+Protocol
+--------
+Splits come from :mod:`data.protocol_splits`, the single owner of the
+long-tailed index artifact. There is **no validation split**: asking for one
+raises. ``data/cifar_lt.py`` is the dataset; ``data/lt_datamodule.py`` is the
+training loader; this module exists for the evaluation-side helpers.
 """
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 from data.cifar_lt import LongTailCIFAR100
+from data.protocol_splits import ProtocolError, load_lt_train_indices
 from models.resnet32 import ResNet32, PaCoResNet32
 
 EPS = 1e-12
@@ -26,31 +35,86 @@ EPS = 1e-12
 DEFAULT_CHECKPOINT_DIR = Path(__file__).resolve().parent.parent.parent / "checkpoints"
 DEFAULT_DATA_ROOT = Path(__file__).resolve().parent.parent.parent / "data"
 
+#: Suffix of the final-epoch checkpoint written by ``scripts/base_trainer.py``.
+CHECKPOINT_SUFFIX = "_final.pt"
+
+#: The experts of the canonical pool (see ``scripts/evaluate_experts.py``).
+DEFAULT_EXPERTS: tuple[str, ...] = ("CE", "LAL", "BalancedSoftmax", "Mixup")
+
 
 # ── Model Loading ────────────────────────────────────────────────────────
+
+
+def _checkpoints_for(
+    expert_name: str,
+    checkpoint_dir: str | Path | None = None,
+    seed: int | None = None,
+) -> list[Path]:
+    """Every final-epoch checkpoint matching one expert (and optionally a seed)."""
+    directory = Path(checkpoint_dir) if checkpoint_dir else DEFAULT_CHECKPOINT_DIR
+    pattern = (f"{expert_name}_seed{seed}{CHECKPOINT_SUFFIX}" if seed is not None
+               else f"{expert_name}_seed*{CHECKPOINT_SUFFIX}")
+    return sorted(directory.glob(pattern))
+
+
+def find_expert_checkpoint(
+    expert_name: str,
+    checkpoint_dir: str | Path | None = None,
+    seed: int | None = None,
+) -> Path:
+    """Resolve one expert run's final-epoch checkpoint.
+
+    Checkpoints are named ``{expert}_seed{N}_final.pt`` by
+    :class:`scripts.base_trainer.BaseTrainer`. A directory holding several seeds
+    is an error, not a guess — the same rule ``ExpertPool`` enforces, so an
+    evaluation can never silently mix runs.
+
+    Raises:
+        FileNotFoundError: when no run, or more than one, matches.
+    """
+    matches = _checkpoints_for(expert_name, checkpoint_dir, seed)
+    directory = Path(checkpoint_dir) if checkpoint_dir else DEFAULT_CHECKPOINT_DIR
+    if not matches:
+        wanted = (f"{expert_name}_seed{seed}{CHECKPOINT_SUFFIX}" if seed is not None
+                  else f"{expert_name}_seed<N>{CHECKPOINT_SUFFIX}")
+        raise FileNotFoundError(
+            f"no {expert_name} checkpoint in {directory} (looked for {wanted})"
+        )
+    if len(matches) > 1:
+        seeds = sorted(m.name for m in matches)
+        raise FileNotFoundError(
+            f"{len(matches)} {expert_name} runs on disk ({seeds}); pass seed=... "
+            f"so the evaluation reports a single run"
+        )
+    return matches[0]
 
 
 def load_expert_checkpoint(
     expert_name: str,
     checkpoint_path: str | None = None,
     device: str = "cpu",
+    seed: int | None = None,
+    checkpoint_dir: str | Path | None = None,
 ) -> torch.nn.Module:
     """Load a trained expert model from checkpoint.
 
     Args:
-        expert_name: 'LAL', 'Mixup', 'PaCo', 'CE', or 'BalancedSoftmax'.
-        checkpoint_path: Path to .pt file. If None, uses
-            ``checkpoints/{expert_name}_best.pt``.
+        expert_name: 'CE', 'LAL', 'BalancedSoftmax', 'Mixup' (or retired 'PaCo').
+        checkpoint_path: Path to a .pt file. When None, the run's
+            ``{expert_name}_seed{seed}_final.pt`` is resolved from
+            ``checkpoint_dir``.
+        device: torch device string.
+        seed: which run to load when the directory holds several.
+        checkpoint_dir: checkpoint directory (defaults to ``./checkpoints``).
     Returns:
         Loaded model in eval mode on the specified device.
     """
     if checkpoint_path is None:
-        checkpoint_path = str(DEFAULT_CHECKPOINT_DIR / f"{expert_name}_best.pt")
+        checkpoint_path = str(find_expert_checkpoint(
+            expert_name, checkpoint_dir=checkpoint_dir, seed=seed))
 
-    if not os.path.exists(checkpoint_path):
-        raise FileNotFoundError(
-            f"Checkpoint not found: {checkpoint_path}"
-        )
+    if not Path(checkpoint_path).exists():
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
 
@@ -67,8 +131,8 @@ def load_expert_checkpoint(
     # Optionally attach metadata for convenience
     model._expert_name = expert_name
     model._checkpoint_epoch = ckpt.get("epoch", "?")
-    model._checkpoint_ba = ckpt.get("best_metric_val",
-                                     ckpt.get("log", {}).get("val_ba", None))
+    model._checkpoint_seed = ckpt.get("seed", seed)
+    model._checkpoint_path = str(checkpoint_path)
 
     return model
 
@@ -77,33 +141,39 @@ def load_all_experts(
     expert_names: list[str] | None = None,
     checkpoint_dir: str | None = None,
     device: str = "cpu",
+    seed: int | None = None,
 ) -> dict[str, torch.nn.Module]:
     """Load all expert models and return as a dict keyed by name.
 
     Args:
-        expert_names: List like ['LAL', 'Mixup', 'PaCo']. Defaults to all available.
-        checkpoint_dir: Override checkpoint directory.
+        expert_names: expert labels; defaults to the canonical pool.
+        checkpoint_dir: override the checkpoint directory.
+        device: torch device string.
+        seed: which run to load for every expert.
     Returns:
-        Dict mapping expert name → loaded model. Skips missing checkpoints with a warning.
+        Dict mapping expert name -> loaded model. An expert with no checkpoint is
+        skipped with a warning; an *ambiguous* expert (several seeds on disk while
+        ``seed`` is None) raises, because that is not a missing run.
     """
-    if expert_names is None:
-        expert_names = ["LAL", "Mixup", "PaCo", "CE", "BalancedSoftmax"]
+    names = list(expert_names) if expert_names else list(DEFAULT_EXPERTS)
+    directory = Path(checkpoint_dir) if checkpoint_dir else DEFAULT_CHECKPOINT_DIR
 
-    if checkpoint_dir is None:
-        checkpoint_dir = str(DEFAULT_CHECKPOINT_DIR)
-
-    models = {}
-    for name in expert_names:
-        ckpt_path = os.path.join(checkpoint_dir, f"{name}_best.pt")
-        if not os.path.exists(ckpt_path):
-            print(f"  [Warning] Checkpoint not found: {ckpt_path} — skipping {name}")
+    models: dict[str, torch.nn.Module] = {}
+    for name in names:
+        matches = _checkpoints_for(name, directory, seed)
+        if not matches:
+            print(f"  [Warning] no checkpoint for {name} in {directory} — skipping")
             continue
-        models[name] = load_expert_checkpoint(name, ckpt_path, device)
+        if len(matches) > 1:
+            raise FileNotFoundError(
+                f"{len(matches)} {name} runs on disk in {directory} "
+                f"({[m.name for m in matches]}); pass seed=... to choose one"
+            )
+        models[name] = load_expert_checkpoint(name, str(matches[0]), device)
 
     if not models:
         raise FileNotFoundError(
-            f"No expert checkpoints found in {checkpoint_dir}. "
-            f"Searched for: {expert_names}"
+            f"No expert checkpoints found in {directory}. Searched for: {names}"
         )
 
     return models
@@ -121,13 +191,14 @@ def create_cifar_loader(
     pin_memory: bool = True,
     expert_name: str | None = None,
 ) -> tuple[DataLoader, np.ndarray]:
-    """Create a DataLoader for CIFAR-100-LT splits.
+    """Create a DataLoader over a canonical protocol split.
 
     Args:
-        dataset_type: 'train' | 'val' | 'test'
-        data_root: Path to data directory (must contain ``processed/*.npy``).
+        dataset_type: ``'train'`` or ``'test'``. The protocol has **no** validation
+            split, so ``'val'`` raises :class:`~data.protocol_splits.ProtocolError`.
+        data_root: Path to data directory (must contain ``processed/``).
         batch_size: Batch size.
-        shuffle: Whether to shuffle. Auto-set for train/val/test if None.
+        shuffle: Whether to shuffle. Auto-set per split when None.
         num_workers: DataLoader workers.
         pin_memory: Pin memory for GPU transfer.
         expert_name: Optional — if 'PaCo', returns two-view augmentations.
@@ -135,35 +206,34 @@ def create_cifar_loader(
         (loader, class_counts_array)
     """
     root = Path(data_root)
-    processed = root / "processed"
+
+    if dataset_type == "val":
+        raise ProtocolError(
+            "the CIFAR-100-LT protocol has no validation split: experts train on the "
+            "full 10,847-sample long-tailed set and the final-epoch model is the "
+            "reported model. Use 'train' or 'test'."
+        )
+    if dataset_type not in ("train", "test"):
+        raise ValueError(
+            f"dataset_type must be 'train' or 'test', got {dataset_type!r}"
+        )
 
     if dataset_type == "test":
-        # Original CIFAR-100 test set (10K balanced)
+        # Original CIFAR-100 test set (10K balanced) — the only evaluation set
         dataset = LongTailCIFAR100(
             root=str(root),
             train=False,
             download=False,
             use_test_set=True,
         )
-    elif dataset_type == "val":
-        # LT validation set (held-out portion of LT indices)
-        val_idx = np.load(str(processed / "lt_val_indices.npy"))
-        dataset = LongTailCIFAR100(
-            root=str(root),
-            base_train_indices=val_idx,
-            imbalance_ratio=100.0,
-            train=False,
-            download=False,
-            already_subsampled=True,
-        )
     else:
-        # LT training set
-        train_idx = np.load(str(processed / "lt_train_indices.npy"))
+        # The canonical long-tailed training set, read through its one owner.
+        train_idx = load_lt_train_indices(str(root))
         dataset = LongTailCIFAR100(
             root=str(root),
             base_train_indices=train_idx,
             imbalance_ratio=100.0,
-            train=(dataset_type == "train"),
+            train=True,
             download=False,
             already_subsampled=True,
         )
@@ -196,21 +266,31 @@ def get_class_groups(
     many_thresh: int = 100,
     few_thresh: int = 20,
 ) -> dict[str, np.ndarray]:
-    """Group class indices into head / medium / tail by sample count.
+    """Group class indices into Head / Med / Tail by sample count.
+
+    A thin adapter over :func:`scripts.base_trainer.compute_class_groups`, which
+    owns the frozen definition (AGENTs.md section 6): Head >= 100 training
+    samples, Medium 20-100, Tail < 20 — so a class with exactly 20 samples is
+    Medium. Only the key names differ (``Head``/``Med``/``Tail`` here), and that
+    rename lives here so the thresholds exist in exactly one place.
 
     Args:
         class_counts: Per-class sample count array, shape (100,).
         many_thresh: Classes with >= this many samples are 'Head'.
-        few_thresh: Classes with <= this many samples are 'Tail'.
-                    Classes in between are 'Medium'.
+        few_thresh: Classes with < this many samples are 'Tail'; the classes with
+            exactly ``few_thresh`` samples are 'Med'.
     Returns:
         Dict with keys 'Head', 'Med', 'Tail' mapping to arrays of class indices.
     """
-    groups = {}
-    groups["Head"] = np.where(class_counts >= many_thresh)[0]
-    groups["Med"] = np.where((class_counts > few_thresh) & (class_counts < many_thresh))[0]
-    groups["Tail"] = np.where(class_counts <= few_thresh)[0]
-    return groups
+    from scripts.base_trainer import compute_class_groups
+
+    canonical = compute_class_groups(
+        np.asarray(class_counts), many_thresh=many_thresh, few_thresh=few_thresh)
+    return {
+        "Head": canonical["head"],
+        "Med": canonical["medium"],
+        "Tail": canonical["tail"],
+    }
 
 
 def print_data_info(

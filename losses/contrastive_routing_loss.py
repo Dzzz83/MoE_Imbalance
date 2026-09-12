@@ -5,12 +5,15 @@ The loss operates on binary agreement labels (0 = agree, 1 = disagree) instead
 of class labels.  Embeddings with the SAME agreement label are pulled together;
 embeddings with DIFFERENT agreement labels are pushed apart.
 
-Loss formulation (standard supervised NT-Xent / InfoNCE):
+Loss formulation (supervised contrastive, Khosla et al. 2020 — mean of the log
+probabilities over a sample's positives, scaled by τ/base_τ):
 
-    L_i = -log( Σ_{j: label_j = label_i} exp(sim(e_i, e_j)/τ_c)
-              / Σ_{k ≠ i} exp(sim(e_i, e_k)/τ_c) )
+    L = -(τ / τ_base) · (1/N) Σ_i (1/|P(i)|)
+            Σ_{j ∈ P(i)} log( exp(sim(e_i, e_j)/τ)
+                            / Σ_{k ≠ i} exp(sim(e_i, e_k)/τ) )
 
-Where sim(e_i, e_j) = cosine_similarity(e_i, e_j) and τ_c is the temperature.
+Where sim(e_i, e_j) = cosine_similarity(e_i, e_j), τ is the temperature, and
+P(i) is the set of samples sharing i's agreement label (self excluded).
 
 Reference:  Chen et al., "A Simple Framework for Contrastive Learning
 of Visual Representations" (SimCLR, ICML 2020).
@@ -54,7 +57,12 @@ class ContrastiveRoutingLoss(nn.Module):
         batch_size = embeddings.shape[0]
 
         if batch_size < 2:
-            return torch.tensor(0.0, device=device), {"contrastive_loss": 0.0}
+            # Same contract as the main path: a scalar tensor that carries a
+            # graph (so callers may backward() unconditionally) and a tensor in
+            # aux (so callers may .item() it). A plain float here used to break
+            # both.
+            zero = embeddings.sum() * 0.0
+            return zero, {"contrastive_loss": zero.detach()}
 
         # L2-normalize embeddings
         embeddings = F.normalize(embeddings, dim=1)  # (B, D)

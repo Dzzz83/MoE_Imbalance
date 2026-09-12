@@ -93,9 +93,13 @@ CIFAR-100 test (10,000, balanced)   →   the ONLY evaluation set
 
 | Group | Criterion | Classes |
 |:--|:--|:--:|
-| Head | ≥ 100 training samples | 30 |
-| Medium | 20 – 100 | 36 |
-| Tail | < 20 | 34 |
+| Head | ≥ 100 training samples | 35 |
+| Medium | 20 ≤ n < 100 | 35 |
+| Tail | < 20 | 30 |
+
+The boundary is half-open: a class with *exactly* 20 training samples is Medium
+(one class sits on it). The thresholds are frozen by `AGENTs.md` §6 and are
+implemented in exactly one place, `scripts/base_trainer.py::compute_class_groups`.
 
 There is deliberately **no validation set**: training uses the full long-tailed
 set and the **final-epoch model is the reported model**. Splitting off 20% of an

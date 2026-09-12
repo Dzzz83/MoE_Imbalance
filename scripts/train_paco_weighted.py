@@ -145,8 +145,11 @@ class InterleavedLoader:
             val_imgs, val_targets = val_batch
             val_weights = torch.ones(len(val_imgs))
 
-        # Interleave
-        n_train = len(train_imgs)
+        # Interleave. `train_imgs` is a two-view *list* of tensors for PaCo, so
+        # the batch size is the sample count inside a view, not len(list) == 2
+        # (which made n_val collapse to 0 and silenced the interleave entirely).
+        n_train = (train_imgs[0].shape[0]
+                   if isinstance(train_imgs, (list, tuple)) else len(train_imgs))
         n_val = int(n_train * self.val_fraction / (1 - self.val_fraction))
         n_val = min(n_val, len(val_imgs))
 
@@ -187,13 +190,13 @@ class PaCoWeightedTrainer(BaseTrainer):
     def __init__(self, sample_weights_val: np.ndarray | None = None,
                  val_fraction: float = 0.2, **kwargs):
         model = PaCoResNet32(num_classes=100, dim=32, K=2048)
-        self.loss_fn_paco = PaCoLoss(
+        loss_fn_paco = PaCoLoss(
             alpha=0.01, beta=1.0, gamma=1.0,
             supt=1.0, temperature=0.05, K=2048, num_classes=100,
         )
         super().__init__(
             model=model,
-            loss_fn=None,  # PaCo handles loss internally
+            loss_fn=loss_fn_paco,   # so BaseTrainer moves its buffers to the device
             expert_name='PaCo_Boost',
             **kwargs,
         )
@@ -201,13 +204,24 @@ class PaCoWeightedTrainer(BaseTrainer):
         self.val_fraction = val_fraction
         self.class_counts = None
 
+    @property
+    def loss_fn_paco(self) -> PaCoLoss:
+        """The PaCo criterion, kept device-correct by ``BaseTrainer``."""
+        return self.loss_fn
+
     def _compute_loss(self, images, targets, weights=None):
         # PaCo needs two views per image
         # For simplicity, we apply the regular augmentation twice
         # (the PaCo model expects two views during training)
         # This is a simplified version — full PaCo training uses different
         # augmentations for view1 and view2.
-        features, all_labels, logits = self.model(images, images, targets)
+        # `images` is the two-view list PaCo expects; passing the list itself as
+        # im_q raised TypeError on every batch.
+        if isinstance(images, (list, tuple)):
+            view_q, view_k = images[0], images[1]
+        else:
+            view_q = view_k = images
+        features, all_labels, logits = self.model(view_q, view_k, targets)
 
         loss, aux = self.loss_fn_paco(
             features, all_labels, logits, epoch=self.epoch

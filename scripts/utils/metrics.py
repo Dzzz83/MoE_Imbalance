@@ -98,16 +98,25 @@ def compute_routing_metrics(
     all_logits: np.ndarray,   # shape (N, num_experts, 100) — all expert logits
     expert_names: list[str],
     class_counts: np.ndarray | None = None,
+    class_predictions: np.ndarray | None = None,
+    routing_weights: np.ndarray | None = None,
 ) -> dict:
     """Compute comprehensive routing evaluation metrics.
 
     Args:
         predictions: Expert index (0..num_experts-1) chosen for each sample.
+            Combine-then-argmax rules (uniform, probability averaging) make no
+            such choice; they pass a sentinel and supply ``class_predictions``.
         labels: Ground-truth class labels.
         all_logits: All experts' logits [N, num_experts, num_classes].
         expert_names: Names of experts for readable output.
         class_counts: Per-class sample counts (for head/med/tail grouping).
                        If None, uses training set distribution.
+        class_predictions: Optional (N,) predicted labels. Overrides the argmax of
+            the chosen expert's logits; without it a sentinel ``predictions`` array
+            would be read as "every sample chose expert 0".
+        routing_weights: Optional (N, num_experts) contribution of each expert.
+            Used for the usage report when no single expert is selected.
     Returns:
         Dict with keys: ba, head_acc, med_acc, tail_acc, accuracy,
                         oracle_ba, oracle_gap, all_wrong_pct,
@@ -116,9 +125,12 @@ def compute_routing_metrics(
     num_experts = len(expert_names)
     N = len(labels)
 
-    # Predicted class from chosen expert
-    chosen_logits = all_logits[np.arange(N), predictions]  # (N, 100)
-    chosen_preds = chosen_logits.argmax(axis=1)
+    # Predicted class from the chosen expert, or from the rule's own decision
+    if class_predictions is None:
+        chosen_logits = all_logits[np.arange(N), predictions]  # (N, 100)
+        chosen_preds = chosen_logits.argmax(axis=1)
+    else:
+        chosen_preds = np.asarray(class_predictions)
 
     # Overall metrics
     ba = balanced_accuracy(labels, chosen_preds)
@@ -140,7 +152,6 @@ def compute_routing_metrics(
     # Oracle: at least one expert correct?
     expert_preds = all_logits.argmax(axis=2)  # (N, num_experts)
     any_correct = (expert_preds == labels[:, None]).any(axis=1)
-    oracle_ba = balanced_accuracy(labels, expert_preds[np.arange(N), 0])  # placeholder
     # Proper oracle: for each sample, use the best expert
     oracle_preds = np.zeros(N, dtype=np.int64)
     for i in range(N):
@@ -156,8 +167,19 @@ def compute_routing_metrics(
     # All-wrong percentage
     all_wrong = (~any_correct).mean() * 100
 
-    # Per-expert usage
-    expert_usage = np.array([(predictions == e).mean() * 100 for e in range(num_experts)])
+    # Per-expert usage: hard selection when the rule picks an expert, otherwise
+    # the weights the rule actually combined with.
+    if routing_weights is not None:
+        weights = np.asarray(routing_weights, dtype=np.float64)
+        if weights.shape != (N, num_experts):
+            raise ValueError(
+                f"routing_weights must be ({N}, {num_experts}), got {weights.shape}"
+            )
+        expert_usage = weights.mean(axis=0) * 100.0
+    else:
+        expert_usage = np.array(
+            [(predictions == e).mean() * 100 for e in range(num_experts)]
+        )
 
     # Per-expert BA
     expert_ba = []
@@ -189,6 +211,12 @@ def ece(
 ) -> float:
     """Expected Calibration Error.
 
+    Bins are right-closed, ``(lo, hi]``, so a prediction with confidence exactly
+    1.0 lands in the last bin instead of falling outside every bin. A max-softmax
+    confidence is always > 0, so no sample is lost at the low end. This matches
+    ``scripts/evaluation.expected_calibration_error``, the implementation the
+    reported numbers come from.
+
     Args:
         confidences: Predicted confidence (max softmax) per sample.
         correct: Boolean, whether each prediction was correct.
@@ -199,7 +227,7 @@ def ece(
     bin_boundaries = np.linspace(0, 1, num_bins + 1)
     ece_val = 0.0
     for i in range(num_bins):
-        in_bin = (confidences >= bin_boundaries[i]) & (confidences < bin_boundaries[i + 1])
+        in_bin = (confidences > bin_boundaries[i]) & (confidences <= bin_boundaries[i + 1])
         if in_bin.sum() == 0:
             continue
         bin_acc = correct[in_bin].mean()

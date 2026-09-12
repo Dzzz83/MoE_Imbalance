@@ -32,6 +32,10 @@ from scripts.utils.features import softmax
 class ProbabilityAverageRouter(BaseRouter):
     """Average expert softmax probabilities, then take the argmax."""
 
+    #: No single expert is selected, so ``predict`` returns a sentinel and
+    #: ``evaluate`` must score ``predict_class`` instead.
+    selects_single_expert = False
+
     def predict(
         self,
         logits: np.ndarray,

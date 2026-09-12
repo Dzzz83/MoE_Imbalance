@@ -158,14 +158,21 @@ def test_routing_decisions_valid():
 
 
 def test_class_groups_from_real_helper():
-    """get_class_groups splits 100 classes into Head/Med/Tail by frequency."""
+    """get_class_groups splits classes by frequency on a synthetic fixture.
+
+    The fixture below is 30/36/34 *by construction*, so it proves only that the
+    thresholds are applied as written — it says nothing about the real split,
+    which is 35/35/30 (asserted in tests/test_protocol_splits.py). Do not quote
+    these numbers as the project's class-group sizes.
+    """
     counts = np.array([410] * 30 + [50] * 36 + [5] * 34, dtype=np.int64)
     groups = get_class_groups(counts)
 
     assert len(groups['Head']) == 30, groups['Head']
     assert len(groups['Med']) == 36, groups['Med']
     assert len(groups['Tail']) == 34, groups['Tail']
-    print("  ✅ Class groups: Head=30, Med=36, Tail=34")
+    print("  ✅ synthetic fixture splits 30/36/34 by construction "
+          "(the real split is 35/35/30)")
 
 
 def test_metrics_computation():

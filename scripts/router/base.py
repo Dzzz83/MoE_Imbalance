@@ -41,6 +41,13 @@ class BaseRouter(ABC):
     #: logits, which silently turned the TTA row into a duplicate of Confidence.
     requires_tta: bool = False
 
+    #: Whether ``predict`` names one expert per sample. Combine-then-argmax rules
+    #: (uniform, probability averaging) make no such choice: their ``predict``
+    #: returns expert 0 as a sentinel, so ``evaluate`` must take the accuracy from
+    #: ``predict_class`` and the usage from ``predict_proba`` instead of reading
+    #: that sentinel as a decision.
+    selects_single_expert: bool = True
+
     def __init__(self, expert_names: list[str]):
         if not expert_names:
             raise ValueError("expert_names must be a non-empty list")
@@ -104,11 +111,23 @@ class BaseRouter(ABC):
         class_counts: np.ndarray | None = None,
         features: dict | None = None,
     ) -> dict:
-        """Compute routing metrics (BA, group accuracies, oracle, usage)."""
+        """Compute routing metrics (BA, group accuracies, oracle, usage).
+
+        The accuracy comes from ``predict_class`` — the rule's actual decision —
+        so a combine-then-argmax rule (whose ``predict`` returns a sentinel) is
+        not scored as if every sample had been routed to expert 0. Usage is the
+        hard selection histogram for rules that pick an expert, and the mean
+        routing weight for rules that combine all of them.
+        """
         expert_indices = self.predict(logits, features)
+        class_predictions = self.predict_class(logits, features)
+        weights = (None if self.selects_single_expert
+                   else self.predict_proba(logits, features))
         return compute_routing_metrics(
             expert_indices, labels, logits,
             self.expert_names, class_counts,
+            class_predictions=class_predictions,
+            routing_weights=weights,
         )
 
     def __repr__(self) -> str:

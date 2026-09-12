@@ -19,6 +19,11 @@ if _proj_root not in sys.path:
 
 from losses.contrastive_routing_loss import ContrastiveRoutingLoss
 
+# Two assertions below compare random embeddings against clustered ones, so the
+# fixture must be reproducible: without a seed the file's verdict changes from
+# run to run.
+torch.manual_seed(0)
+
 
 def test_single_sample_no_loss():
     """batch_size=1 should return 0 loss (no pairs to contrast)."""
@@ -27,6 +32,27 @@ def test_single_sample_no_loss():
     labels = torch.tensor([0])
     loss, aux = loss_fn(emb, labels)
     assert loss.item() == 0.0, f"Single sample should give 0 loss, got {loss.item()}"
+
+
+def test_single_sample_keeps_the_normal_path_contract():
+    """The B<2 shortcut must return the same *types* as the main path.
+
+    It used to return a plain float in ``aux`` and a loss with no graph, so a
+    caller doing ``aux['contrastive_loss'].item()`` (as the DACE trainers do)
+    crashed, and ``loss.backward()`` raised on a size-1 batch.
+    """
+    loss_fn = ContrastiveRoutingLoss(temperature=0.5)
+    emb = torch.randn(1, 32, requires_grad=True)
+    loss, aux = loss_fn(emb, torch.tensor([0]))
+
+    assert isinstance(aux['contrastive_loss'], torch.Tensor), (
+        f"aux['contrastive_loss'] is {type(aux['contrastive_loss']).__name__}, "
+        f"but the main path returns a tensor"
+    )
+    assert loss.requires_grad, "the zero loss must still carry a graph"
+    loss.backward()
+    assert emb.grad is not None, "gradient should flow on the B<2 path too"
+    print("  ✅ B<2 path returns a zero tensor with a graph")
 
 
 def test_four_samples_loss_finite():
@@ -107,6 +133,7 @@ def test_aux_dict_contains_loss():
 if __name__ == "__main__":
     tests = [
         ("Single sample no loss", test_single_sample_no_loss),
+        ("Single sample keeps contract", test_single_sample_keeps_the_normal_path_contract),
         ("Four samples finite loss", test_four_samples_loss_finite),
         ("Gradient flow", test_gradient_flow),
         ("Loss decreases with clustering", test_loss_decreases_with_clustering),

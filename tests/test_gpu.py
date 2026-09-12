@@ -38,8 +38,19 @@ EXPERT_CONFIGS = {
 }
 
 
+class _SkipTest(Exception):
+    """Raised when a check cannot run on this machine.
+
+    A distinct type, not a plain return: a test that returns normally is counted
+    as a pass by the runner, which is how eight CUDA checks came to report green
+    on a CPU-only box even though AGENTs.md section 11 relies on this file to
+    prove the GPU path.
+    """
+
+
 def _skip(reason: str) -> None:
-    print(f"  ⊘ skipped ({reason})")
+    """Skip the current test. The runner reports it separately from a pass."""
+    raise _SkipTest(reason)
 
 
 def _counts() -> np.ndarray:
@@ -310,6 +321,9 @@ def main() -> int:
         try:
             fn()
             passed += 1
+        except _SkipTest as e:
+            print(f"  ⊘ skipped {name} ({e})")
+            skipped += 1
         except AssertionError as e:
             print(f"  ❌ {name}: {e}")
             failed += 1
@@ -317,7 +331,10 @@ def main() -> int:
             print(f"  ❌ {name}: {type(e).__name__}: {e}")
             failed += 1
     print(f"\n{'=' * 60}")
-    print(f"  {passed} passed, {failed} failed")
+    print(f"  {len(TESTS)} tests: {passed} passed, {skipped} skipped, {failed} failed")
+    if skipped:
+        print(f"  NOTE: {skipped} check(s) did not run — that part of the GPU path "
+              f"is UNVERIFIED on this machine, not passing.")
     return 1 if failed else 0
 
 

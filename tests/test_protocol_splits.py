@@ -56,13 +56,92 @@ def test_canonical_artifact_exists():
 
 
 def test_no_validation_artifact():
-    """No validation artifact may exist: the protocol has no val split."""
-    for stale in ('lt_val_indices.npy',):
+    """No validation artifact the protocol could read may exist.
+
+    The protocol owns three legacy filenames (see ``protocol_splits``); all three
+    must be absent. Any *other* artifact whose name mentions a validation split is
+    reported, not failed: data files are never deleted by a test, and the retired
+    scripts that produced them are already documented as dead.
+    """
+    for stale in (ps.LEGACY_VAL_FILENAME, ps.LEGACY_TRAIN_FILENAME,
+                  ps.LEGACY_ALL_FILENAME):
         path = os.path.join(PROCESSED, stale)
         assert not os.path.exists(path), (
             f"validation artifact still present: {path} — the protocol has no val split"
         )
-    print("  ✅ no validation artifact on disk")
+
+    # No live module may read a validation artifact either. The training path is
+    # covered by tests/test_training_protocol.py; this covers the data layer.
+    # `protocol_splits` itself is exempt: it names the removed artifacts on
+    # purpose, to detect them.
+    banned = ('lt_val_indices', 'lt_all_indices', 'lt_train_indices.npy',
+              'balanced_val_indices', 'val_targets')
+    for rel in ('data/lt_datamodule.py', 'data/cifar_lt.py',
+                'scripts/utils/data.py', 'scripts/evaluate_experts.py',
+                'scripts/analyze_subsets.py'):
+        with open(os.path.join(_proj_root, rel)) as f:
+            hits = [token for token in banned if token in f.read()]
+        assert not hits, f"{rel} still references removed artifacts: {hits}"
+
+    leftovers = sorted(name for name in os.listdir(PROCESSED)
+                       if 'val' in name and name != ps.LT_TRAIN_FILENAME)
+    if leftovers:
+        print(f"  ⚠️  retired-split leftovers on disk (unread by the live path): "
+              f"{leftovers}")
+    print("  ✅ no validation artifact the protocol can read")
+
+
+def test_class_group_sizes_match_the_artifact():
+    """Head/Med/Tail sizes must describe the committed split, not a fixture.
+
+    README and docs state these counts. They were once copied from a synthetic
+    test fixture (30/36/34) instead of the real split, which is 35/35/30 under
+    the frozen thresholds (Head >= 100, Medium 20 <= n < 100, Tail < 20).
+    """
+    from scripts.base_trainer import compute_class_groups
+
+    counts = np.bincount(_targets()[ps.load_lt_train_indices(DATA_ROOT)],
+                         minlength=N_CLASSES)
+    groups = compute_class_groups(counts)
+    sizes = (len(groups['head']), len(groups['medium']), len(groups['tail']))
+    assert sizes == (35, 35, 30), (
+        f"the committed split gives Head/Med/Tail = {sizes}, but the documented "
+        f"counts are 35/35/30 — one of the two is wrong"
+    )
+    boundary = np.where(counts == 20)[0]
+    assert len(boundary) == 1, f"expected one class with exactly 20 samples, got {boundary}"
+    assert boundary[0] in groups['medium'], (
+        f"class {boundary[0]} has exactly 20 samples and must be Medium "
+        f"(Medium is 20 <= n < 100)"
+    )
+    print(f"  ✅ class groups: head={sizes[0]}, medium={sizes[1]}, tail={sizes[2]} "
+          f"(boundary class {int(boundary[0])} has 20 samples)")
+
+
+def test_legacy_loader_reads_the_canonical_artifact_and_refuses_val():
+    """``scripts/utils/data.create_cifar_loader`` must obey the protocol.
+
+    It used to read ``processed/lt_train_indices.npy`` (a removed artifact) and
+    to expose a ``'val'`` split, bypassing ``protocol_splits`` entirely — the one
+    place the no-leakage rule is meant to be structural.
+    """
+    from data.protocol_splits import load_lt_train_indices
+    from scripts.utils.data import create_cifar_loader
+
+    loader, counts = create_cifar_loader(
+        'train', data_root=DATA_ROOT, batch_size=64, num_workers=0, pin_memory=False)
+    expected = load_lt_train_indices(DATA_ROOT)
+    assert len(loader.dataset) == EXPECTED_TOTAL, len(loader.dataset)
+    assert np.array_equal(loader.dataset.sample_indices, expected), \
+        "the training loader is not serving the canonical artifact"
+    assert int(counts.sum()) == EXPECTED_TOTAL, counts.sum()
+
+    try:
+        create_cifar_loader('val', data_root=DATA_ROOT, num_workers=0, pin_memory=False)
+    except ps.ProtocolError as exc:
+        print(f"  ✅ legacy loader uses the canonical artifact; 'val' rejected: {exc}")
+        return
+    raise AssertionError("create_cifar_loader('val') must raise: no val split exists")
 
 
 def test_artifact_profile_matches_standard_protocol():
@@ -319,7 +398,9 @@ def test_index_range_guard():
 TESTS = [
     ("Canonical artifact exists", test_canonical_artifact_exists),
     ("No validation artifact", test_no_validation_artifact),
+    ("Legacy loader obeys the protocol", test_legacy_loader_reads_the_canonical_artifact_and_refuses_val),
     ("Artifact profile matches standard protocol", test_artifact_profile_matches_standard_protocol),
+    ("Class group sizes match the artifact", test_class_group_sizes_match_the_artifact),
     ("Artifact hygiene", test_artifact_hygiene),
     ("Artifact deterministic and regenerable", test_artifact_is_deterministic_and_regenerable),
     ("Imbalance factor -> IR mapping", test_imbalance_factor_mapping),

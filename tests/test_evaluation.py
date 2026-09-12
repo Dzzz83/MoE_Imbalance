@@ -90,6 +90,72 @@ def test_evaluate_predictions_reports_all_groups():
     print(f"  ✅ evaluate_predictions keys: {sorted(out)}")
 
 
+def test_group_definitions_agree_across_modules():
+    """Every Head/Med/Tail splitter must implement the one frozen definition.
+
+    AGENTs.md section 6 fixes the split immutably: Head >= 100 training samples,
+    Medium 20-100, Tail < 20. A class with exactly 20 samples is therefore
+    Medium. Three modules historically split classes, and one of them used
+    ``> 20`` for Medium, which moved that boundary class into Tail.
+    """
+    from scripts.base_trainer import compute_class_groups
+
+    utils_data = _safe('scripts.utils.data')
+    dace = _safe('scripts.evaluate_dace')
+    if utils_data is None or dace is None:
+        raise AssertionError("could not import the class-group helpers")
+
+    # class 99 holds exactly 20 samples: the boundary case, by construction
+    counts = np.array([500] * 30 + [50] * 36 + [19] * 33 + [20], dtype=np.int64)
+    canonical = compute_class_groups(counts)
+    variants = {
+        'scripts.utils.data': {
+            'head': utils_data.get_class_groups(counts)['Head'],
+            'medium': utils_data.get_class_groups(counts)['Med'],
+            'tail': utils_data.get_class_groups(counts)['Tail'],
+        },
+        'scripts.evaluate_dace': {
+            'head': dace.get_class_groups(counts)['Head'],
+            'medium': dace.get_class_groups(counts)['Med'],
+            'tail': dace.get_class_groups(counts)['Tail'],
+        },
+    }
+    for name, groups in variants.items():
+        for key in ('head', 'medium', 'tail'):
+            assert set(groups[key].tolist()) == set(canonical[key].tolist()), (
+                f"{name}.{key} disagrees with compute_class_groups: "
+                f"{sorted(groups[key].tolist())} != {sorted(canonical[key].tolist())}"
+            )
+    assert 99 in canonical['medium'], "a class with exactly 20 samples must be Medium"
+    print(f"  ✅ one definition: head={len(canonical['head'])} "
+          f"medium={len(canonical['medium'])} tail={len(canonical['tail'])}")
+
+
+def test_ece_includes_samples_at_full_confidence():
+    """A prediction with confidence exactly 1.0 must land in the last bin.
+
+    The live evaluator bins with ``(lo, hi]``; ``scripts/utils/metrics.ece``
+    binned with ``[lo, hi)``, which dropped every confidence equal to 1.0 from
+    all bins while still dividing by the full sample count — an understated ECE.
+    """
+    from scripts.utils.metrics import ece as routing_ece
+
+    confidences = np.concatenate([np.ones(50), np.full(50, 0.5)])
+    correct = np.zeros(100, dtype=bool)                 # every prediction wrong
+    probs = np.stack([confidences, 1.0 - confidences], axis=1)
+    targets = np.ones(100, dtype=np.int64)              # argmax is class 0 -> wrong
+
+    expected = 0.5 * abs(0.0 - 0.5) + 0.5 * abs(0.0 - 1.0)
+    live = ev.expected_calibration_error(probs, targets)
+    legacy = routing_ece(confidences, correct)
+    assert abs(live - expected) < 1e-9, f"live ECE {live} != {expected}"
+    assert abs(legacy - expected) < 1e-9, (
+        f"scripts.utils.metrics.ece = {legacy}, expected {expected}: the "
+        f"confidence==1.0 samples were dropped from every bin"
+    )
+    print(f"  ✅ ECE counts full-confidence samples ({live:.4f} == {legacy:.4f})")
+
+
 # ---------------------------------------------------------------------------
 # Expert pool loading
 # ---------------------------------------------------------------------------
@@ -107,6 +173,39 @@ def _fake_checkpoint(directory, label, seed, epoch=200):
         'log': {},
     }, path)
     return path
+
+
+def test_legacy_checkpoint_loader_resolves_the_run_naming_convention():
+    """Checkpoints are ``{expert}_seed{N}_final.pt``; the loader must resolve them.
+
+    ``scripts/utils/data.load_expert_checkpoint`` looked for ``{expert}_best.pt``,
+    a filename the trainer has never written, so every legacy caller died on a
+    path that could not exist. A multi-seed directory must be refused rather than
+    guessed, matching ExpertPool's rule.
+    """
+    utils_data = _safe('scripts.utils.data')
+    if utils_data is None:
+        raise AssertionError("scripts.utils.data could not be imported")
+
+    d = tempfile.mkdtemp(prefix='dsh_legacy_ckpt_')
+    _fake_checkpoint(d, 'CE', 78)
+    try:
+        model = utils_data.load_expert_checkpoint(
+            'CE', checkpoint_dir=d, seed=78, device='cpu')
+    except TypeError as exc:
+        raise AssertionError(
+            f"load_expert_checkpoint does not accept checkpoint_dir/seed: {exc}"
+        ) from exc
+    assert model is not None and not model.training
+
+    _fake_checkpoint(d, 'CE', 88)
+    try:
+        utils_data.load_expert_checkpoint('CE', checkpoint_dir=d, device='cpu')
+    except FileNotFoundError as exc:
+        assert 'seed' in str(exc), f"ambiguous-seed error must name the fix: {exc}"
+        print("  ✅ legacy checkpoint loader resolves _final.pt and refuses ambiguity")
+        return
+    raise AssertionError("an ambiguous multi-seed checkpoint dir must be refused")
 
 
 def test_expert_pool_finds_checkpoints_by_naming_convention():
@@ -502,8 +601,11 @@ TESTS = [
     ("Group accuracies", test_group_accuracies_splits_head_med_tail),
     ("ECE calibrated", test_ece_is_zero_for_perfectly_calibrated_binary_confidences),
     ("ECE overconfident", test_ece_is_high_for_overconfident_predictor),
+    ("Group definitions agree", test_group_definitions_agree_across_modules),
+    ("ECE counts confidence 1.0", test_ece_includes_samples_at_full_confidence),
     ("evaluate_predictions keys", test_evaluate_predictions_reports_all_groups),
     ("Pool finds checkpoints", test_expert_pool_finds_checkpoints_by_naming_convention),
+    ("Legacy checkpoint loader naming", test_legacy_checkpoint_loader_resolves_the_run_naming_convention),
     ("Pool keeps all seeds", test_pool_does_not_silently_drop_seeds),
     ("Pool refuses ambiguous seed", test_pool_load_refuses_an_ambiguous_multi_seed_pool),
     ("Pool loads explicit seed", test_pool_load_with_explicit_seed_works),

@@ -153,7 +153,8 @@ def main():
             # simple ridge-regularised least squares probe, 2-fold
             X = torch.cat([emb, torch.ones(len(emb), 1)], 1).numpy()
             y = lab.numpy()
-            idx = np.arange(len(y)); np.random.shuffle(idx)
+            # seeded: the probe split is a reported result, not noise
+            idx = np.arange(len(y)); np.random.default_rng(0).shuffle(idx)
             half = len(y) // 2
             tr, te = idx[:half], idx[half:]
             w = np.linalg.solve(X[tr].T @ X[tr] + 1e-2 * np.eye(X.shape[1]),

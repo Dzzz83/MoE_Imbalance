@@ -23,6 +23,10 @@ from losses.kl_divergence import (
     compute_agreement_label,
 )
 
+# Fixtures below are random; seed them so a threshold assertion cannot
+# flip between runs.
+torch.manual_seed(0)
+
 
 def test_kl_identical_distributions():
     """KL(P || P) should be ~0 for any distribution."""

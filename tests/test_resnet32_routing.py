@@ -20,6 +20,10 @@ if _proj_root not in sys.path:
 
 from models.resnet32 import RoutingHead, ResNet32WithRouting, ResNet32
 
+# Fixtures below are random; seed them so a threshold assertion cannot
+# flip between runs.
+torch.manual_seed(0)
+
 
 def test_routing_head_shape():
     """RoutingHead produces (B, 32) embedding from (B, 64) features."""

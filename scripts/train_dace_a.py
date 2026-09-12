@@ -168,6 +168,8 @@ def main():
         batch_size=args.batch_size,
         epochs=args.epochs,
         checkpoint_dir=args.checkpoint_dir,
+        seed=args.seed,   # BaseTrainer.train() reseeds; without this every
+                          # --seed run was identical (it defaulted to 0)
     )
     trainer.train(train_loader, val_loader, class_counts=class_counts)
     trainer.save_history()

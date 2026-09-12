@@ -20,6 +20,7 @@ Usage:
 
 import os
 import sys
+import warnings
 
 _proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _proj_root not in sys.path:
@@ -171,7 +172,15 @@ class DACEBTrainer(BaseTrainer):
         loss = loss_cls + self.lambda_routing * loss_contrastive
 
         if weights is not None:
-            loss = (loss * weights).mean()
+            # `loss` is already a scalar here, so (loss * weights).mean() is just
+            # loss * weights.mean() -- a global rescale, not per-sample weighting.
+            # Per-sample weighting requires an unreduced classification term (as
+            # train_dace_a does); silent pseudo-weighting is worse than a warning.
+            warnings.warn(
+                "per-sample weights are ignored by DACE-B: the loss is already "
+                "reduced, so weighting it can only rescale the batch loss",
+                RuntimeWarning, stacklevel=2,
+            )
 
         return loss, {
             'loss_cls': loss_cls.detach(),
@@ -307,6 +316,8 @@ def main():
         batch_size=args.batch_size,
         epochs=args.epochs,
         checkpoint_dir=args.checkpoint_dir,
+        seed=args.seed,   # BaseTrainer.train() reseeds; without this every
+                          # --seed run was identical (it defaulted to 0)
     )
     trainer.train(train_loader, val_loader, class_counts=class_counts)
     trainer.save_history()

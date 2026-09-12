@@ -15,6 +15,10 @@ from scripts.router.base import BaseRouter
 class UniformRouter(BaseRouter):
     """Route by averaging logits across all experts (the standard baseline)."""
 
+    #: No single expert is selected, so ``predict`` returns a sentinel and
+    #: ``evaluate`` must score ``predict_class`` instead.
+    selects_single_expert = False
+
     def predict(
         self,
         logits: np.ndarray,

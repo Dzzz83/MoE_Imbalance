@@ -47,13 +47,22 @@ RESULTS_RECORD = os.path.join(_proj_root, 'records', 'routing_mechanism.md')
 PREREGISTRATION = os.path.join(_proj_root, 'records', 'routing-preregistration.md')
 
 
+class _SkipTest(Exception):
+    """Raised when a check cannot run in this checkout.
+
+    A distinct type, not a return value: the runner counts a normal return as a
+    pass, so returning here would report the pre-registration check as green
+    even when the record is missing.
+    """
+
+
 def _skip_if_absent(path: str) -> bool:
-    """True when a local-only doc is missing and the check should be skipped."""
+    """False when the doc is present; otherwise skip the test explicitly."""
     if os.path.exists(path):
         return False
-    print(f"  \u2298 skipped (local-only doc not present: "
-          f"{os.path.relpath(path, _proj_root)})")
-    return True
+    raise _SkipTest(
+        f"local-only doc not present: {os.path.relpath(path, _proj_root)}"
+    )
 
 
 def _synthetic_logits(n=16, k=3, c=100, seed=0):
@@ -341,6 +350,104 @@ def test_probability_average_needs_no_tta():
     print("  ✅ requires_tta False")
 
 
+def _expert_0_is_wrong_logits(seed=0):
+    """(logits, labels) where experts 1-2 are right and expert 0 is wrong."""
+    rng = np.random.default_rng(seed)
+    n, c = 300, 100
+    labels = rng.integers(0, c, n)
+    logits = (rng.normal(size=(n, 3, c)) * 0.1).astype(np.float32)
+    logits[np.arange(n), 1, labels] += 10.0
+    logits[np.arange(n), 2, labels] += 10.0
+    logits[np.arange(n), 0, (labels + 1) % c] += 10.0
+    return logits, labels
+
+
+def test_every_registered_rule_evaluates_its_own_predictions():
+    """evaluate() must score the rule's real decisions — for every registered rule.
+
+    Uniform and Probability averaging make no per-sample expert choice: their
+    ``predict()`` returns expert 0 as a sentinel, and ``compute_routing_metrics``
+    read that sentinel literally, so both reported expert 0's accuracy under the
+    rule's name (plus "100% usage of expert A").
+
+    Iterating the whole registry — rather than the two rules known to be
+    affected — is the point: a future combine-then-argmax rule that forgets
+    ``selects_single_expert = False`` fails here instead of silently reporting
+    expert 0's numbers.
+    """
+    from scripts.evaluation import balanced_accuracy
+    from scripts.router import ROUTERS
+
+    logits, labels = _expert_0_is_wrong_logits()
+    for name, klass in ROUTERS.items():
+        rule = klass(expert_names=['A', 'B', 'C'])
+        expected = balanced_accuracy(labels, rule.predict_class(logits))
+        report = rule.evaluate(logits, labels)
+        assert abs(report['ba'] - expected) < 1e-12, (
+            f"{name}.evaluate() reported BA {report['ba']:.4f}, but the rule's own "
+            f"predictions score {expected:.4f} — a sentinel predict() was read as a "
+            f"decision (combine-then-argmax rules must set "
+            f"selects_single_expert = False)"
+        )
+    print(f"  ✅ all {len(ROUTERS)} registered rules evaluate their own predictions")
+
+
+def test_combine_then_argmax_rules_report_equal_usage():
+    """Combine-then-argmax rules must declare themselves and report equal usage.
+
+    ``selects_single_expert`` only affects the *usage* report (accuracy is always
+    taken from ``predict_class``), so a rule that forgets it would look right on
+    BA while reporting "100% usage of expert A". The registry check below forces a
+    deliberate decision whenever a rule is added or removed.
+    """
+    from scripts.router import ProbabilityAverageRouter, ROUTERS, UniformRouter
+
+    combining = {name for name, klass in ROUTERS.items()
+                 if not klass.selects_single_expert}
+    assert combining == {'Uniform', 'Probability'}, (
+        f"the set of combining rules is {sorted(combining)}; a new "
+        f"combine-then-argmax rule must set selects_single_expert = False (and a "
+        f"new selecting rule must keep it True) — update this test deliberately"
+    )
+
+    logits, labels = _expert_0_is_wrong_logits()
+    for klass in (UniformRouter, ProbabilityAverageRouter):
+        rule = klass(expert_names=['A', 'B', 'C'])
+        usage = list(rule.evaluate(logits, labels)['expert_usage'].values())
+        # predict_proba returns float32 weights, so the tolerance is 1e-5, not
+        # 1e-9: the bug this pins produced 100.0/0.0/0.0, a 66-point error.
+        assert all(abs(u - 100.0 / 3) < 1e-5 for u in usage), (
+            f"{klass.__name__} reports usage {usage}; a combine-then-argmax rule "
+            f"draws on every expert equally"
+        )
+    print("  ✅ combine-then-argmax rules declared and report equal usage")
+
+
+def test_confidence_and_tta_select_the_most_confident_expert():
+    """Exact decision values, not just 'the index is in range'."""
+    from scripts.router import ConfidenceRouter, TTARouter
+
+    n, c = 4, 5
+    winners = [2, 0, 1, 0]
+    logits = np.zeros((n, 3, c), dtype=np.float32)
+    for i, expert in enumerate(winners):
+        logits[i, expert, 0] = 5.0        # that expert is confidently class 0
+        logits[i, expert, 1] = 1.0
+
+    confidence = ConfidenceRouter(expert_names=['A', 'B', 'C'])
+    tta = TTARouter(expert_names=['A', 'B', 'C'])
+    assert confidence.predict(logits).tolist() == winners, confidence.predict(logits)
+    assert tta.predict(logits).tolist() == winners, tta.predict(logits)
+    assert confidence.predict_class(logits).tolist() == [0] * n
+
+    # A single-expert rule reports hard usage, so collapse stays visible.
+    usage = confidence.evaluate(logits, np.zeros(n, dtype=np.int64))['expert_usage']
+    expected = {'A': 50.0, 'B': 25.0, 'C': 25.0}
+    for name, value in expected.items():
+        assert abs(usage[name] - value) < 1e-9, f"{name}: {usage} != {expected}"
+    print(f"  ✅ confidence/TTA decisions exact; usage {usage}")
+
+
 TESTS = [
     ("No held-out labels in routers", test_no_router_mentions_held_out_labels),
     ("BaseRouter has no train()", test_base_router_has_no_train_method),
@@ -356,6 +463,9 @@ TESTS = [
     ("Probability != logit average", test_probability_average_is_not_a_duplicate_of_logit_average),
     ("Probability weights uniform", test_probability_average_predict_proba_is_uniform),
     ("Probability needs no TTA", test_probability_average_needs_no_tta),
+    ("Combine rules evaluate() correctly", test_every_registered_rule_evaluates_its_own_predictions),
+    ("Combine rules report equal usage", test_combine_then_argmax_rules_report_equal_usage),
+    ("Confidence/TTA decisions exact", test_confidence_and_tta_select_the_most_confident_expert),
     ("Product is the logit average", test_product_is_provably_the_logit_average),
     ("Redundant module removed", test_redundant_router_module_is_removed),
     ("Routers deterministic", test_routers_are_deterministic),
@@ -365,11 +475,14 @@ TESTS = [
 
 
 def main() -> int:
-    passed = failed = 0
+    passed = failed = skipped = 0
     for name, fn in TESTS:
         try:
             fn()
             passed += 1
+        except _SkipTest as e:
+            print(f"  ⊘ skipped {name} ({e})")
+            skipped += 1
         except AssertionError as e:
             print(f"  ❌ {name}: {e}")
             failed += 1
@@ -377,7 +490,10 @@ def main() -> int:
             print(f"  ❌ {name}: {type(e).__name__}: {e}")
             failed += 1
     print(f"\n{'=' * 62}")
-    print(f"  {passed} passed, {failed} failed")
+    print(f"  {len(TESTS)} tests: {passed} passed, {skipped} skipped, {failed} failed")
+    if skipped:
+        print(f"  NOTE: {skipped} check(s) did not run — reported as skipped, "
+              f"never as passed.")
     return 1 if failed else 0
 
 

@@ -280,9 +280,14 @@ class PaCoTrainer(BaseTrainer):
 
             # Checkpoint by val BA
             current_val_ba = val_metrics.get('ba', 0.0)
-            if current_val_ba > self.best_metric_val + 1e-3:
+            # best_metric_val was read before it was ever assigned, so the
+            # first improving epoch raised AttributeError.
+            if current_val_ba > getattr(self, 'best_metric_val', 0.0) + 1e-3:
                 self.best_metric_val = current_val_ba
-                self._save_checkpoint(log, is_best=True)
+                # NOTE: selecting a checkpoint by validation BA is a
+                # practice the current protocol removed (no val split).
+                # This script is retired; the call is kept runnable.
+                self._save_checkpoint(log, is_final=False)
 
             # Print
             if epoch == 1 or epoch % 50 == 0 or epoch == self.epochs:

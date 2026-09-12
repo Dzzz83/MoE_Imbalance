@@ -23,19 +23,33 @@ from data.partitioned_dataset import PartitionedDataset, PartitionedSampler
 
 
 class SyntheticDataset:
-    """Minimal dataset with sample_targets for testing."""
-    def __init__(self, n_samples: int, n_classes: int):
+    """Minimal dataset with sample_targets for testing.
+
+    Seeded: the class ratio the sampler tests assert is a property of the data,
+    so an unseeded fixture made those assertions re-roll on every run.
+    """
+    def __init__(self, n_samples: int, n_classes: int, seed: int = 0):
+        rng = np.random.default_rng(seed)
         self.n_samples = n_samples
         self.n_classes = n_classes
         # Create imbalanced targets: first 30 classes have most samples
-        self.sample_targets = np.random.randint(0, n_classes, size=n_samples)
-        self.data = np.random.randn(n_samples, 32, 32, 3)
+        self.sample_targets = rng.integers(0, n_classes, size=n_samples)
+        self.data = rng.standard_normal((n_samples, 32, 32, 3))
 
     def __len__(self):
         return self.n_samples
 
     def __getitem__(self, idx):
         return torch.tensor(self.data[idx], dtype=torch.float32), int(self.sample_targets[idx])
+
+
+def _generator(seed: int = 0) -> torch.Generator:
+    """A seeded generator, so a sampler draw is reproducible.
+
+    Without one, ``PartitionedSampler`` falls back to the process-wide default
+    generator and every assertion about the drawn class mix becomes a coin flip.
+    """
+    return torch.Generator().manual_seed(seed)
 
 
 def test_partitioned_dataset_len():
@@ -60,7 +74,7 @@ def test_sampler_length():
     primary_groups = {'group1': np.array([0, 1, 2])}
     sampler = PartitionedSampler(
         base, primary_groups=primary_groups, full_ratio=0.2,
-        num_samples=50, primary_name='Test',
+        num_samples=50, primary_name='Test', generator=_generator(),
     )
     assert len(sampler) == 50, f"Expected 50, got {len(sampler)}"
 
@@ -77,6 +91,7 @@ def test_sampler_class_ratio():
     sampler = PartitionedSampler(
         base, primary_groups=primary_groups, full_ratio=0.2,
         num_samples=2000,  # large sample for stable ratio
+        generator=_generator(),
     )
 
     indices = list(iter(sampler))
@@ -104,7 +119,7 @@ def test_sampler_full_ratio_zero():
     primary_groups = {'group1': np.array([0, 1, 2])}
     sampler = PartitionedSampler(
         base, primary_groups=primary_groups, full_ratio=0.0,
-        num_samples=500,
+        num_samples=500, generator=_generator(),
     )
 
     indices = list(iter(sampler))
@@ -116,17 +131,35 @@ def test_sampler_full_ratio_zero():
 
 
 def test_sampler_full_ratio_one():
-    """With full_ratio=1.0, all samples come from all classes."""
+    """With full_ratio=1.0 the primary pool is bypassed.
+
+    The old assertion only checked that indices were in range, which a sampler
+    ignoring ``full_ratio`` entirely would also pass. The property that actually
+    separates the two regimes is the share of draws landing in the primary
+    classes: drawing uniformly from the whole dataset reproduces the primary
+    *fraction of the data*, not 100%.
+    """
     base = SyntheticDataset(1000, 10)
     primary_groups = {'group1': np.array([0, 1, 2])}
     sampler = PartitionedSampler(
         base, primary_groups=primary_groups, full_ratio=1.0,
-        num_samples=500,
+        num_samples=500, generator=_generator(),
     )
 
     indices = list(iter(sampler))
-    # All indices should be valid (within range)
-    assert all(0 <= idx < 1000 for idx in indices)
+    assert all(0 <= idx < 1000 for idx in indices), "index out of range"
+
+    primary_mask = np.isin(base.sample_targets, [0, 1, 2])
+    primary_indices = set(np.where(primary_mask)[0].tolist())
+    share = sum(1 for idx in indices if idx in primary_indices) / len(indices)
+    data_share = float(primary_mask.mean())
+    assert abs(share - data_share) < 0.08, (
+        f"with full_ratio=1.0 the draws must be uniform over the whole dataset "
+        f"(primary share {data_share:.3f}), got {share:.3f} — the primary pool "
+        f"was still dominating"
+    )
+    print(f"  ✅ full_ratio=1.0 draws from all classes (share {share:.3f} "
+          f"vs data share {data_share:.3f})")
 
 
 def test_sampler_multiple_primary_groups():
@@ -138,7 +171,7 @@ def test_sampler_multiple_primary_groups():
     }
     sampler = PartitionedSampler(
         base, primary_groups=primary_groups, full_ratio=0.2,
-        num_samples=1000,
+        num_samples=1000, generator=_generator(),
     )
 
     indices = list(iter(sampler))

@@ -29,6 +29,7 @@ if _proj_root not in sys.path:
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 # Import the REAL shipped functions (not a copy)
@@ -129,6 +130,52 @@ def test_prototypes_are_on_cpu():
         for kind in ['agree', 'disagree']:
             dev = protos[name][kind].device
             assert dev.type == 'cpu', f"{name}.{kind} on {dev}, expected cpu"
+
+
+def test_routing_scores_vary_when_the_threshold_splits_the_batch():
+    """The routing scorer must actually route, not return a constant.
+
+    With randomly initialised experts every sample sits far above the default
+    ``kl_threshold=0.1``, so both prototypes are the mean of the *same* samples:
+    they come out identical, every score is 0, and ``best_expert`` is always 0.
+    Every other assertion in this file passes in that state, which is exactly how
+    a broken scorer stays green — so this test forces a threshold that splits the
+    batch (the median KL) and then requires varied scores and decisions.
+    """
+    ea, eb, ec, loader, imgs = _build()
+
+    kl_values = []
+    with torch.no_grad():
+        for images, _ in loader:
+            probs_a = F.softmax(ea(images), dim=1)
+            logits_b, _emb_b = eb(images)
+            probs_b = F.softmax(logits_b, dim=1)
+            kl_values.append(
+                (probs_a * (torch.log(probs_a + 1e-12)
+                            - torch.log(probs_b + 1e-12))).sum(dim=1))
+    threshold = float(torch.cat(kl_values).median())
+
+    protos = compute_prototypes(ea, eb, ec, loader, kl_threshold=threshold,
+                               device='cpu')
+    assert not torch.allclose(protos['B']['agree'], protos['B']['disagree']), (
+        "B's agree and disagree prototypes are identical — the fixture is "
+        "degenerate and the scorer below is not being exercised"
+    )
+
+    with torch.no_grad():
+        logits_a = ea(imgs)
+        logits_b, emb_b = eb(imgs)
+        logits_c, emb_c = ec(imgs)
+
+    _final, scores, _agree, best_expert = prototype_routing(
+        logits_a, logits_b, logits_c, emb_b, emb_c, protos, threshold_agree=0.7,
+    )
+    assert float(scores.abs().max()) > 0.0, "every routing score is 0 (inert scorer)"
+    assert len(set(best_expert.tolist())) > 1, (
+        f"routing always selects the same expert: {best_expert.tolist()}"
+    )
+    print(f"  ✅ scores vary (max |score| {float(scores.abs().max()):.2e}), "
+          f"experts chosen {sorted(set(best_expert.tolist()))}")
 
 
 def test_prototype_indexing_device_invariant():
@@ -233,6 +280,8 @@ if __name__ == "__main__":
         ("Prototypes are on CPU", test_prototypes_are_on_cpu),
         ("Prototype indexing device invariant",
          test_prototype_indexing_device_invariant),
+        ("Routing scores vary with a splitting threshold",
+         test_routing_scores_vary_when_the_threshold_splits_the_batch),
         ("Real prototype_routing shapes", test_real_prototype_routing_shapes),
         ("Real prototype routing uniform fallback",
          test_real_prototype_routing_uniform_fallback),
