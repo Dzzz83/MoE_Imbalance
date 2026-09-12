@@ -34,14 +34,26 @@ ROUTER_DIR = os.path.join(_proj_root, 'scripts', 'router')
 #: Mechanisms removed because their fitting step needed a validation split.
 DELETED_MODULES = ['correctness', 'pairwise', 'cluster', 'gate', 'selective']
 
-#: The full surviving registry. Parameter-free, or parameter-free by construction.
-EXPECTED_REGISTRY = {'Uniform', 'Product', 'Confidence', 'TTA'}
+#: Removed as mathematically redundant: the same classifier as logit averaging.
+REDUNDANT_MODULES = ['product']
 
-#: The measured results of the deleted mechanisms live here.
-RESULTS_RECORD = os.path.join(
-    _proj_root, 'docs', 'routing-results-record.md')
-PREREGISTRATION = os.path.join(
-    _proj_root, 'docs', 'routing-preregistration.md')
+#: The full surviving registry. Parameter-free, or parameter-free by construction.
+EXPECTED_REGISTRY = {'Uniform', 'Probability', 'Confidence', 'TTA'}
+
+#: The measured results of the deleted mechanisms live here. `docs/` is a
+#: local-only knowledge base and is NOT committed to the repository, so these
+#: checks skip (rather than fail) on a fresh clone that has no docs/ directory.
+RESULTS_RECORD = os.path.join(_proj_root, 'docs', 'routing_mechanism.md')
+PREREGISTRATION = os.path.join(_proj_root, 'docs', 'routing-preregistration.md')
+
+
+def _skip_if_absent(path: str) -> bool:
+    """True when a local-only doc is missing and the check should be skipped."""
+    if os.path.exists(path):
+        return False
+    print(f"  \u2298 skipped (local-only doc not present: "
+          f"{os.path.relpath(path, _proj_root)})")
+    return True
 
 
 def _synthetic_logits(n=16, k=3, c=100, seed=0):
@@ -180,18 +192,41 @@ def test_uniform_router_equals_logit_averaging():
     print("  ✅ UniformRouter == logit averaging")
 
 
-def test_product_router_equals_geometric_mean():
-    """Product routing must be the geometric mean of expert probabilities."""
-    from scripts.router import ProductRouter
+def test_product_is_provably_the_logit_average():
+    """Why ProductRouter was removed: it is the same classifier as UniformRouter.
+
+        prod_e softmax(z_e)_c = exp(sum_e z_{e,c}) / prod_e sum_c' exp(z_{e,c'})
+
+    The denominator does not depend on the class c, so the argmax over c equals
+    the argmax of the mean logits — exactly what UniformRouter computes. This is
+    the justification for deleting the rule, kept as a test rather than a note.
+    """
     from scripts.utils.features import softmax
 
-    logits = _synthetic_logits(seed=4)
-    r = ProductRouter(expert_names=['A', 'B', 'C'])
-    probs = softmax(logits)
-    expected = np.prod(probs, axis=1).argmax(axis=1)
-    assert np.array_equal(r.predict_class(logits), expected), \
-        "product router is not the geometric mean"
-    print("  ✅ ProductRouter == geometric mean of probabilities")
+    logits = _synthetic_logits(n=64, seed=21)
+    product = np.prod(softmax(logits), axis=1).argmax(axis=1)
+    logit_average = logits.mean(axis=1).argmax(axis=1)
+    agree = float((product == logit_average).mean())
+    assert agree == 1.0, (
+        f"product and logit averaging disagreed on {(1-agree)*100:.1f}% of samples — "
+        f"the redundancy claim is wrong"
+    )
+    print(f"  OK product == logit average on 64/64 samples (identical classifier)")
+
+
+def test_redundant_router_module_is_removed():
+    """The redundant module must be gone from disk and unimportable."""
+    import importlib
+
+    for name in REDUNDANT_MODULES:
+        path = os.path.join(ROUTER_DIR, f'{name}.py')
+        assert not os.path.exists(path), f"{path} still on disk"
+        try:
+            importlib.import_module(f'scripts.router.{name}')
+        except ImportError:
+            continue
+        raise AssertionError(f"scripts.router.{name} is still importable")
+    print(f"  OK removed as redundant: {REDUNDANT_MODULES}")
 
 
 def test_routers_are_deterministic():
@@ -212,7 +247,8 @@ def test_routers_are_deterministic():
 
 def test_results_record_exists_and_names_every_deleted_mechanism():
     """The results of every deleted mechanism must be recorded before deletion."""
-    assert os.path.exists(RESULTS_RECORD), f"missing {RESULTS_RECORD}"
+    if _skip_if_absent(RESULTS_RECORD):
+        return
     with open(RESULTS_RECORD) as f:
         text = f.read().lower()
     missing = [m for m in DELETED_MODULES if m not in text]
@@ -224,13 +260,85 @@ def test_results_record_exists_and_names_every_deleted_mechanism():
 
 def test_preregistration_exists_before_any_test_evaluation():
     """The candidate set must be frozen before the test set is touched."""
-    assert os.path.exists(PREREGISTRATION), f"missing {PREREGISTRATION}"
+    if _skip_if_absent(PREREGISTRATION):
+        return
     with open(PREREGISTRATION) as f:
         text = f.read()
-    for rule in ('UniformRouter', 'ProductRouter', 'ConfidenceRouter', 'TTARouter'):
+    for rule in ('UniformRouter', 'ProbabilityAverageRouter',
+                 'ConfidenceRouter', 'TTARouter'):
         assert rule in text, f"preregistration does not name {rule}"
+    assert 'Amendment' in text, "the post-hoc baseline addition is not recorded"
     assert 'Tail' in text, "preregistration must state the Tail-accuracy criterion"
     print("  ✅ pre-registration names the frozen candidate set")
+
+
+# ---------------------------------------------------------------------------
+# Probability averaging — the standard soft-vote ensemble
+# ---------------------------------------------------------------------------
+
+def test_probability_average_equals_mean_of_softmax():
+    """The rule must be argmax of the mean softmax probability (a soft vote)."""
+    from scripts.router import ProbabilityAverageRouter
+    from scripts.utils.features import softmax
+
+    logits = _synthetic_logits(seed=11)
+    r = ProbabilityAverageRouter(expert_names=['A', 'B', 'C'])
+    expected = softmax(logits).mean(axis=1).argmax(axis=1)
+    assert np.array_equal(r.predict_class(logits), expected), \
+        "probability averaging is not the mean of softmax probabilities"
+    print("  ✅ ProbabilityAverage == argmax(mean softmax)")
+
+
+def test_probability_average_resists_a_dominant_expert():
+    """Why the two baselines differ: a logit average can be captured by one
+    high-magnitude expert; a probability average cannot.
+
+    Expert A is a confident outlier with huge logits; experts B and C agree with
+    each other on a different class. The logit average follows the outlier
+    because its magnitudes dominate the sum. The probability average follows the
+    two experts who agree, because each contributes a distribution bounded by 1.
+    """
+    from scripts.router import ProbabilityAverageRouter, UniformRouter
+
+    logits = np.zeros((1, 3, 3), dtype=np.float32)
+    logits[0, 0, 0] = 100.0        # expert A: huge magnitude, says class 0
+    logits[0, 1, 1] = 10.0         # expert B says class 1
+    logits[0, 2, 1] = 10.0         # expert C says class 1
+
+    logit_pred = UniformRouter(expert_names=['A', 'B', 'C']).predict_class(logits)[0]
+    prob_pred = ProbabilityAverageRouter(expert_names=['A', 'B', 'C']).predict_class(logits)[0]
+
+    assert logit_pred == 0, f"expected the outlier to capture the logit average, got {logit_pred}"
+    assert prob_pred == 1, f"expected the majority to win the probability average, got {prob_pred}"
+    print("  OK logit average captured by the outlier; probability average follows the majority")
+
+
+def test_probability_average_is_not_a_duplicate_of_logit_average():
+    """The two must be genuinely different rules, unlike Product == Uniform."""
+    from scripts.router import ProbabilityAverageRouter, UniformRouter
+
+    logits = _synthetic_logits(n=200, seed=13)
+    logits[:, 0] *= 5.0            # mimic the real pool's 2.3x scale disparity
+    a = UniformRouter(expert_names=['A', 'B', 'C']).predict_class(logits)
+    b = ProbabilityAverageRouter(expert_names=['A', 'B', 'C']).predict_class(logits)
+    differing = int((a != b).sum())
+    assert differing > 0, "probability and logit averaging gave identical predictions"
+    print(f"  ✅ the two baselines differ on {differing}/200 samples")
+
+
+def test_probability_average_predict_proba_is_uniform():
+    from scripts.router import ProbabilityAverageRouter
+    r = ProbabilityAverageRouter(expert_names=['A', 'B', 'C'])
+    w = r.predict_proba(_synthetic_logits())
+    assert w.shape == (16, 3), w.shape
+    assert np.allclose(w, 1 / 3), "equal-weight average should report uniform weights"
+    print("  ✅ equal weights reported")
+
+
+def test_probability_average_needs_no_tta():
+    from scripts.router import ProbabilityAverageRouter
+    assert ProbabilityAverageRouter.requires_tta is False
+    print("  ✅ requires_tta False")
 
 
 TESTS = [
@@ -243,7 +351,13 @@ TESTS = [
     ("ConfidenceRouter uncalibrated", test_confidence_router_has_no_calibration),
     ("All routers predict without fitting", test_every_router_predicts_without_fitting),
     ("Uniform == logit averaging", test_uniform_router_equals_logit_averaging),
-    ("Product == geometric mean", test_product_router_equals_geometric_mean),
+    ("Probability == mean softmax", test_probability_average_equals_mean_of_softmax),
+    ("Probability resists a dominant expert", test_probability_average_resists_a_dominant_expert),
+    ("Probability != logit average", test_probability_average_is_not_a_duplicate_of_logit_average),
+    ("Probability weights uniform", test_probability_average_predict_proba_is_uniform),
+    ("Probability needs no TTA", test_probability_average_needs_no_tta),
+    ("Product is the logit average", test_product_is_provably_the_logit_average),
+    ("Redundant module removed", test_redundant_router_module_is_removed),
     ("Routers deterministic", test_routers_are_deterministic),
     ("Results record complete", test_results_record_exists_and_names_every_deleted_mechanism),
     ("Pre-registration exists", test_preregistration_exists_before_any_test_evaluation),

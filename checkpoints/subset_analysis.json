@@ -1,0 +1,660 @@
+{
+  "seeds": [
+    78,
+    88,
+    1034
+  ],
+  "rules": {
+    "Uniform": {
+      "1": {
+        "best_ba": {
+          "mean": 0.42773333333333335,
+          "std": 0.010075878787149672,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.40038333333333337,
+          "std": 0.0052506150433386045,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02309850058200903,
+          "std": 0.005489056351298138,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.3766333333333334,
+          "std": 0.006961561127601591,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "2": {
+        "best_ba": {
+          "mean": 0.4644,
+          "std": 0.010311643903859375,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4418777777777778,
+          "std": 0.00499539602849279,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.020608253339730463,
+          "std": 0.005080961991745888,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4038666666666666,
+          "std": 0.006986653944008761,
+          "n": 3
+        },
+        "n_subsets": 6,
+        "optimistic": true
+      },
+      "3": {
+        "best_ba": {
+          "mean": 0.47586666666666666,
+          "std": 0.009108969938106863,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4597416666666667,
+          "std": 0.0056739720067456425,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.014366734174012385,
+          "std": 0.0034464968339699433,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4453666666666667,
+          "std": 0.0024214320831551558,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "4": {
+        "best_ba": {
+          "mean": 0.4698333333333333,
+          "std": 0.006880649194177383,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4698333333333333,
+          "std": 0.006880649194177383,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4698333333333333,
+          "std": 0.006880649194177383,
+          "n": 3
+        },
+        "n_subsets": 1,
+        "optimistic": false
+      }
+    },
+    "Probability": {
+      "1": {
+        "best_ba": {
+          "mean": 0.42773333333333335,
+          "std": 0.010075878787149672,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.40038333333333337,
+          "std": 0.0052506150433386045,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02309850058200903,
+          "std": 0.005489056351298138,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.3766333333333334,
+          "std": 0.006961561127601591,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "2": {
+        "best_ba": {
+          "mean": 0.4544333333333334,
+          "std": 0.009588708637420009,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4320888888888889,
+          "std": 0.00496040806266463,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.0210952467400662,
+          "std": 0.00537539277296011,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.39653333333333335,
+          "std": 0.007617304860207012,
+          "n": 3
+        },
+        "n_subsets": 6,
+        "optimistic": true
+      },
+      "3": {
+        "best_ba": {
+          "mean": 0.46433333333333326,
+          "std": 0.0059467077726531314,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4479,
+          "std": 0.004939825401772747,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.013742318111452746,
+          "std": 0.0026058663406735897,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4333666666666667,
+          "std": 0.005221430199986614,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "4": {
+        "best_ba": {
+          "mean": 0.4595333333333333,
+          "std": 0.00553383531859533,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4595333333333333,
+          "std": 0.00553383531859533,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4595333333333333,
+          "std": 0.00553383531859533,
+          "n": 3
+        },
+        "n_subsets": 1,
+        "optimistic": false
+      }
+    },
+    "Confidence": {
+      "1": {
+        "best_ba": {
+          "mean": 0.42773333333333335,
+          "std": 0.010075878787149672,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.40038333333333337,
+          "std": 0.0052506150433386045,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02309850058200903,
+          "std": 0.005489056351298138,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.3766333333333334,
+          "std": 0.006961561127601591,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "2": {
+        "best_ba": {
+          "mean": 0.44826666666666665,
+          "std": 0.009215385685544168,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.42645,
+          "std": 0.004708060464069446,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02070878293451126,
+          "std": 0.005236121088835088,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.39143333333333324,
+          "std": 0.007786098723580025,
+          "n": 3
+        },
+        "n_subsets": 6,
+        "optimistic": true
+      },
+      "3": {
+        "best_ba": {
+          "mean": 0.4542,
+          "std": 0.008335466393669914,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4370583333333333,
+          "std": 0.004762964762974143,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.01348793216925733,
+          "std": 0.0048966599530977485,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4227666666666667,
+          "std": 0.006757465007925199,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "4": {
+        "best_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "n_subsets": 1,
+        "optimistic": false
+      }
+    },
+    "TTA": {
+      "1": {
+        "best_ba": {
+          "mean": 0.42773333333333335,
+          "std": 0.010075878787149672,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.40038333333333337,
+          "std": 0.0052506150433386045,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02309850058200903,
+          "std": 0.005489056351298138,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.3766333333333334,
+          "std": 0.006961561127601591,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "2": {
+        "best_ba": {
+          "mean": 0.44826666666666665,
+          "std": 0.009215385685544168,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.42645,
+          "std": 0.004708060464069446,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.02070878293451126,
+          "std": 0.005236121088835088,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.39143333333333324,
+          "std": 0.007786098723580025,
+          "n": 3
+        },
+        "n_subsets": 6,
+        "optimistic": true
+      },
+      "3": {
+        "best_ba": {
+          "mean": 0.4542,
+          "std": 0.008335466393669914,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4370583333333333,
+          "std": 0.004762964762974143,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.01348793216925733,
+          "std": 0.0048966599530977485,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4227666666666667,
+          "std": 0.006757465007925199,
+          "n": 3
+        },
+        "n_subsets": 4,
+        "optimistic": true
+      },
+      "4": {
+        "best_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "mean_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "std_ba": {
+          "mean": 0.0,
+          "std": 0.0,
+          "n": 3
+        },
+        "worst_ba": {
+          "mean": 0.4426666666666667,
+          "std": 0.0045763886781318725,
+          "n": 3
+        },
+        "n_subsets": 1,
+        "optimistic": false
+      }
+    }
+  },
+  "best_subsets_per_seed": {
+    "Uniform": {
+      "1": [
+        [
+          "LAL"
+        ],
+        [
+          "LAL"
+        ],
+        [
+          "BalancedSoftmax"
+        ]
+      ],
+      "2": [
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ]
+      ],
+      "3": [
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ],
+      "4": [
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ]
+    },
+    "Probability": {
+      "1": [
+        [
+          "LAL"
+        ],
+        [
+          "LAL"
+        ],
+        [
+          "BalancedSoftmax"
+        ]
+      ],
+      "2": [
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ]
+      ],
+      "3": [
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ],
+      "4": [
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ]
+    },
+    "Confidence": {
+      "1": [
+        [
+          "LAL"
+        ],
+        [
+          "LAL"
+        ],
+        [
+          "BalancedSoftmax"
+        ]
+      ],
+      "2": [
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ]
+      ],
+      "3": [
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ],
+      "4": [
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ]
+    },
+    "TTA": {
+      "1": [
+        [
+          "LAL"
+        ],
+        [
+          "LAL"
+        ],
+        [
+          "BalancedSoftmax"
+        ]
+      ],
+      "2": [
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax"
+        ]
+      ],
+      "3": [
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ],
+      "4": [
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ],
+        [
+          "CE",
+          "LAL",
+          "BalancedSoftmax",
+          "Mixup"
+        ]
+      ]
+    }
+  },
+  "selection_warning": "best_ba is the maximum over subsets chosen on the test set, so it is selection-on-test and optimistically biased; quote mean_ba as the result"
+}

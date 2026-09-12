@@ -8,7 +8,7 @@ long-tailed training set, so no honest held-out labels exist anywhere. Any
 mechanism that fitted parameters would be fitting on the test set. The five
 fitted routers (correctness trust meters, pairwise comparators, feature
 clustering, learned gates, selective thresholds) were therefore removed; their
-measured results are preserved in `docs/routing-results-record.md`.
+measured results are preserved in `docs/routing_mechanism.md`.
 
 Every router inherits from ``BaseRouter`` and implements:
   - predict(logits, features) → np.ndarray (expert index per sample)
@@ -33,14 +33,20 @@ from collections import OrderedDict
 
 from scripts.router.base import BaseRouter
 from scripts.router.uniform import UniformRouter
-from scripts.router.product import ProductRouter
+from scripts.router.probability import ProbabilityAverageRouter
 from scripts.router.confidence import ConfidenceRouter
 from scripts.router.tta import TTARouter
 
 #: The complete, frozen set of parameter-free routers, in reporting order.
+#: `Uniform` averages logits; `Probability` averages softmax probabilities.
+#: Both are reported because logit and probability ensembling are known to
+#: differ on imbalanced data (Buchanan et al., NeurIPS 2023 Heavy Tails).
+#: `ProductRouter` was removed: `prod_e softmax(z_e)` is proportional to
+#: `exp(sum_e z_e)` whose normaliser is class-independent, so its argmax is
+#: exactly the argmax of the mean logits — the same classifier as `Uniform`.
 ROUTERS: 'OrderedDict[str, type[BaseRouter]]' = OrderedDict([
     ('Uniform', UniformRouter),
-    ('Product', ProductRouter),
+    ('Probability', ProbabilityAverageRouter),
     ('Confidence', ConfidenceRouter),
     ('TTA', TTARouter),
 ])
@@ -48,7 +54,7 @@ ROUTERS: 'OrderedDict[str, type[BaseRouter]]' = OrderedDict([
 __all__ = [
     'BaseRouter',
     'UniformRouter',
-    'ProductRouter',
+    'ProbabilityAverageRouter',
     'ConfidenceRouter',
     'TTARouter',
     'ROUTERS',

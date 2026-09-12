@@ -4,7 +4,7 @@ Confidence-based routing — pick the expert with the highest max-softmax confid
 Parameter-free. The temperature-calibration path that previously fitted a
 per-expert temperature on held-out labels was removed along with the other
 fitted mechanisms: this project has no validation split to fit it on
-(see `docs/routing-results-record.md`).
+(see `docs/routing_mechanism.md`).
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ class ConfidenceRouter(BaseRouter):
 
         Note (recorded, not fixed here): in savable samples the correct expert
         is systematically the *least* confident one — the lone-dissenter
-        paradox, `research-findings.md` §1.3 — so this rule is expected to
+        paradox, `docs/problem.md` §2 — so this rule is expected to
         underperform uniform averaging.
         """
         return self.confidences(logits).argmax(axis=1)

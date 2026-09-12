@@ -1,7 +1,9 @@
-# ── Project docs — we track key context files, not auto-generated planning notes ──
-# docs/AGENTs.md, docs/project-context.md, docs/final-report.md are tracked
-# docs/research.md, docs/experiments.md, docs/problem.md, docs/PLAN.md are tracked
-# Edit this pattern if you add new doc files you want to ignore
+# ── Project docs — local-only knowledge base, NOT pushed to GitHub ──
+# docs/ holds the project's context, results, literature and routing records.
+# It is kept locally and deliberately excluded from the repository.
+# Note: after untracking, these files remain in git history; removing them from
+# history requires a rewrite (git filter-repo / BFG).
+docs/
 
 # ── Python virtual environment ──
 .venv/

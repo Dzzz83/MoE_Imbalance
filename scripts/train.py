@@ -12,7 +12,7 @@ Usage:
 
 The final-epoch checkpoint is the reported model; checkpoints at every 20th epoch
 from epoch 160 exist for inspection only and must never be selected on test
-accuracy. There is no validation split (see docs/specs/training-protocol.md).
+accuracy. There is no validation split (see docs/project-context.md section 2).
 """
 
 from __future__ import annotations
