@@ -9,3 +9,4 @@
 |:--|:--|:--|:--|
 | 2026-09-12 01:15:31 | e2ed779 | `scripts/evaluate_experts.py --seeds 78 --device cuda` | experts=CE,LAL,BalancedSoftmax,Mixup seeds=78 |
 | 2026-09-12 01:15:46 | e2ed779 | `scripts/evaluate_experts.py --seeds 78` | experts=CE,LAL,BalancedSoftmax,Mixup seeds=78 |
+| 2026-09-12 03:02:29 | 1a2cc76 | `scripts/evaluate_experts.py --seeds 78 --device cuda --tta-augs 10` | experts=CE,LAL,BalancedSoftmax,Mixup seeds=78 |

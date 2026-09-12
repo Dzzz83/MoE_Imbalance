@@ -115,7 +115,8 @@ def test_expert_pool_finds_checkpoints_by_naming_convention():
         _fake_checkpoint(d, label, 78)
     pool = ev.ExpertPool(EXPERT_LABELS, seeds=[78], checkpoint_dir=d)
     found = pool.available()
-    assert set(found) == set(EXPERT_LABELS), f"found {sorted(found)}"
+    labels = {name for (name, _seed) in found}
+    assert labels == set(EXPERT_LABELS), f"found {sorted(found)}"
     print(f"  ✅ ExpertPool located {len(found)} checkpoints")
 
 
@@ -123,8 +124,9 @@ def test_expert_pool_reports_missing_checkpoints():
     d = tempfile.mkdtemp(prefix='dsh_pool_')
     _fake_checkpoint(d, 'CE', 78)
     pool = ev.ExpertPool(['CE', 'LAL'], seeds=[78], checkpoint_dir=d)
-    found = pool.available()
-    assert 'CE' in found and 'LAL' not in found, found
+    assert pool.seeds_for('CE') == [78], pool.seeds_for('CE')
+    assert pool.seeds_for('LAL') == [], pool.seeds_for('LAL')
+    assert pool.missing() == ['LAL'], pool.missing()
     print("  ✅ ExpertPool reports which checkpoints are missing")
 
 
@@ -340,6 +342,161 @@ def test_pool_rejects_cuda_when_the_gpu_is_unavailable():
         torch.cuda.is_available = real
 
 
+def test_pool_does_not_silently_drop_seeds():
+    """With three seeds on disk, available() must expose all six runs.
+
+    Regression test: `found[name] = path` was assigned inside the seed loop, so
+    every seed overwrote the previous one and a 3-seed evaluation silently
+    reported a single seed's numbers.
+    """
+    d = tempfile.mkdtemp(prefix='dsh_pool_')
+    for label in ['CE', 'LAL']:
+        for seed in (78, 88, 1034):
+            _fake_checkpoint(d, label, seed)
+
+    pool = ev.ExpertPool(['CE', 'LAL'], seeds=[78, 88, 1034], checkpoint_dir=d)
+    found = pool.available()
+    assert len(found) == 6, (
+        f"expected 6 (expert, seed) entries, got {len(found)}: {found} - "
+        f"seeds are being silently dropped"
+    )
+    assert ('CE', 1034) in found and ('CE', 78) in found, sorted(found)
+    assert ('LAL', 88) in found, sorted(found)
+    print(f"  \u2705 all {len(found)} expert/seed checkpoints visible")
+
+
+def test_pool_load_refuses_an_ambiguous_multi_seed_pool():
+    """Loading must not guess which seed to use."""
+    d = tempfile.mkdtemp(prefix='dsh_pool_')
+    for label in ['CE', 'LAL']:
+        for seed in (78, 88):
+            _fake_checkpoint(d, label, seed)
+
+    pool = ev.ExpertPool(['CE', 'LAL'], seeds=[78, 88], checkpoint_dir=d)
+    try:
+        pool.load()
+    except ev.EvaluationError as e:
+        assert 'seed' in str(e).lower(), f"message does not mention seed: {e}"
+        print(f"  \u2705 ambiguous multi-seed load refused: {str(e)[:60]}")
+        return
+    raise AssertionError("an ambiguous multi-seed pool was loaded without a seed")
+
+
+def test_pool_load_with_explicit_seed_works():
+    """Passing a seed loads exactly that seed's experts."""
+    d = tempfile.mkdtemp(prefix='dsh_pool_')
+    for label in ['CE', 'LAL']:
+        for seed in (78, 88):
+            _fake_checkpoint(d, label, seed)
+
+    pool = ev.ExpertPool(['CE', 'LAL'], seeds=[78, 88], checkpoint_dir=d)
+    pool.load(seed=88)
+    assert len(pool.loaded) == 2, pool.loaded
+    print(f"  \u2705 explicit seed loads {pool.loaded}")
+
+
+def test_aggregate_across_seeds_reports_mean_and_std():
+    """3-seed reporting needs mean and spread, per AGENTs.md section 6."""
+    per_seed = [
+        {'ba': 0.40, 'tail': 0.10},
+        {'ba': 0.42, 'tail': 0.14},
+        {'ba': 0.44, 'tail': 0.12},
+    ]
+    agg = ev.aggregate_across_seeds(per_seed)
+    assert abs(agg['ba']['mean'] - 0.42) < 1e-9, agg
+    assert abs(agg['tail']['mean'] - 0.12) < 1e-9, agg
+    assert abs(agg['ba']['std'] - 0.02) < 1e-9, agg
+    assert agg['ba']['n'] == 3, agg
+    print(f"  \u2705 aggregation: ba={agg['ba']['mean']:.4f}+-{agg['ba']['std']:.4f}")
+
+
+def test_aggregate_across_seeds_handles_a_single_seed():
+    agg = ev.aggregate_across_seeds([{'ba': 0.4}])
+    assert abs(agg['ba']['mean'] - 0.4) < 1e-9
+    assert agg['ba']['std'] == 0.0, agg
+    print("  \u2705 single-seed aggregation gives std 0")
+
+
+def test_cli_evaluates_every_seed_and_aggregates():
+    """The CLI must evaluate each seed and report mean +- std, not one seed.
+
+    Uses a faked test loader and a temporary access log, so this exercises the
+    multi-seed path without reading the real test set.
+    """
+    import importlib
+    from torch.utils.data import DataLoader, TensorDataset
+    evr = importlib.import_module('scripts.evaluate_experts')
+
+    d = tempfile.mkdtemp(prefix='dsh_cli_')
+    for label in ['CE', 'LAL']:
+        for seed in (78, 88):
+            _fake_checkpoint(d, label, seed)
+
+    g = torch.Generator().manual_seed(0)
+    n = 64
+    fake_loader = DataLoader(
+        TensorDataset(torch.randn(n, 3, 32, 32, generator=g),
+                      torch.randint(0, 100, (n,), generator=g)),
+        batch_size=32,
+    )
+    original = evr.build_test_loader
+    evr.build_test_loader = lambda *a, **k: fake_loader
+    log_path = os.path.join(tempfile.mkdtemp(prefix='dsh_log_'), 'access.md')
+    out = os.path.join(d, 'results.json')
+    try:
+        rc = evr.main([
+            '--checkpoint-dir', d, '--experts', 'CE', 'LAL',
+            '--seeds', '78', '88', '--device', 'cpu',
+            '--tta-augs', '2', '--access-log', log_path, '--output', out,
+        ])
+    finally:
+        evr.build_test_loader = original
+
+    assert rc == 0, f"CLI returned {rc}"
+    payload = json.load(open(out))
+    assert payload['seeds'] == [78, 88], payload['seeds']
+    assert set(payload['per_seed']) == {'78', '88'}, sorted(payload['per_seed'])
+    # aggregated metrics must carry a mean and an std over the two seeds
+    ba = payload['experts_aggregate']['CE']['ba']
+    assert ba['n'] == 2, ba
+    assert 'mean' in ba and 'std' in ba, ba
+    print(f"  \u2705 CLI evaluated {payload['seeds']} and aggregated "
+          f"(CE BA {ba['mean']:.4f}+-{ba['std']:.4f})")
+
+
+def test_cli_access_log_is_written_once_per_run():
+    """One evaluation = one access-log entry, regardless of seed count."""
+    import importlib
+    from torch.utils.data import DataLoader, TensorDataset
+    evr = importlib.import_module('scripts.evaluate_experts')
+
+    d = tempfile.mkdtemp(prefix='dsh_cli_')
+    for label in ['CE', 'LAL']:
+        for seed in (78, 88):
+            _fake_checkpoint(d, label, seed)
+
+    g = torch.Generator().manual_seed(0)
+    fake_loader = DataLoader(
+        TensorDataset(torch.randn(32, 3, 32, 32, generator=g),
+                      torch.randint(0, 100, (32,), generator=g)),
+        batch_size=32,
+    )
+    original = evr.build_test_loader
+    evr.build_test_loader = lambda *a, **k: fake_loader
+    log_path = os.path.join(tempfile.mkdtemp(prefix='dsh_log_'), 'access.md')
+    try:
+        evr.main(['--checkpoint-dir', d, '--experts', 'CE', 'LAL',
+                  '--seeds', '78', '88', '--device', 'cpu', '--tta-augs', '1',
+                  '--access-log', log_path,
+                  '--output', os.path.join(d, 'r.json')])
+    finally:
+        evr.build_test_loader = original
+
+    entries = TestAccessLog(log_path).entries()
+    assert len(entries) == 1, f"expected 1 access entry, got {len(entries)}"
+    print("  \u2705 one access-log entry for the whole multi-seed run")
+
+
 TESTS = [
     ("Balanced accuracy", test_balanced_accuracy_is_mean_per_class_recall),
     ("Group accuracies", test_group_accuracies_splits_head_med_tail),
@@ -347,6 +504,13 @@ TESTS = [
     ("ECE overconfident", test_ece_is_high_for_overconfident_predictor),
     ("evaluate_predictions keys", test_evaluate_predictions_reports_all_groups),
     ("Pool finds checkpoints", test_expert_pool_finds_checkpoints_by_naming_convention),
+    ("Pool keeps all seeds", test_pool_does_not_silently_drop_seeds),
+    ("Pool refuses ambiguous seed", test_pool_load_refuses_an_ambiguous_multi_seed_pool),
+    ("Pool loads explicit seed", test_pool_load_with_explicit_seed_works),
+    ("Aggregate across seeds", test_aggregate_across_seeds_reports_mean_and_std),
+    ("Aggregate single seed", test_aggregate_across_seeds_handles_a_single_seed),
+    ("CLI evaluates every seed", test_cli_evaluates_every_seed_and_aggregates),
+    ("CLI logs access once", test_cli_access_log_is_written_once_per_run),
     ("Pool reports missing", test_expert_pool_reports_missing_checkpoints),
     ("Pool rejects single expert", test_expert_pool_rejects_duplicate_seed_only_pool),
     ("Pool stacks logits", test_expert_pool_logits_shape),

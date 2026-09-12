@@ -65,6 +65,32 @@ def tta_average_log_probs(
     return np.log(np.maximum(mean_prob, eps))
 
 
+def aggregate_across_seeds(per_seed_metrics: list[dict]) -> dict:
+    """Summarise per-seed metric dicts as mean / std / n per key.
+
+    AGENTs.md section 6 requires every reported number to be averaged over at
+    least 3 seeds, so the spread has to travel with the mean.
+    """
+    if not per_seed_metrics:
+        raise EvaluationError("no per-seed metrics to aggregate")
+    keys: set[str] = set()
+    for m in per_seed_metrics:
+        keys |= set(m)
+    out: dict[str, dict] = {}
+    for key in sorted(keys):
+        values = [m[key] for m in per_seed_metrics
+                  if isinstance(m.get(key), (int, float)) and not isinstance(m.get(key), bool)]
+        if not values:
+            continue
+        arr = np.asarray(values, dtype=np.float64)
+        out[key] = {
+            'mean': float(arr.mean()),
+            'std': float(arr.std(ddof=1)) if len(arr) > 1 else 0.0,
+            'n': int(len(arr)),
+        }
+    return out
+
+
 def balanced_accuracy(targets: np.ndarray, preds: np.ndarray) -> float:
     """Mean per-class recall over the classes present in `targets`."""
     targets = np.asarray(targets)
@@ -146,20 +172,33 @@ class ExpertPool:
         self.device = device
         self._models: dict[str, torch.nn.Module] = {}
 
-    def available(self) -> dict[str, Path]:
-        """Map each expert label to its final checkpoint, skipping absent runs."""
-        found: dict[str, Path] = {}
+    def available(self) -> dict[tuple[str, int], Path]:
+        """Map each (expert label, seed) to its final checkpoint.
+
+        Keyed by both, because a 3-seed pool has three checkpoints per expert.
+        An earlier version keyed by label alone and the seed loop overwrote
+        itself, so a 3-seed evaluation silently reported a single seed.
+        """
+        found: dict[tuple[str, int], Path] = {}
         for name in self.expert_names:
             for seed in self.seeds:
                 path = self.checkpoint_dir / f'{name}_seed{seed}_final.pt'
                 if path.exists():
-                    found[name] = path
+                    found[(name, seed)] = path
         return found
 
+    def seeds_present(self) -> list[int]:
+        """Every seed that has at least one checkpoint on disk."""
+        return sorted({seed for (_, seed) in self.available()})
+
+    def seeds_for(self, expert: str) -> list[int]:
+        """Seeds available for one expert."""
+        return sorted(seed for (name, seed) in self.available() if name == expert)
+
     def missing(self) -> list[str]:
-        """Expert labels with no checkpoint on disk."""
-        found = self.available()
-        return [n for n in self.expert_names if n not in found]
+        """Expert labels with no checkpoint for any requested seed."""
+        present = {name for (name, _) in self.available()}
+        return [n for n in self.expert_names if n not in present]
 
     def _check_device(self) -> None:
         """Fail clearly when a CUDA device is requested but unusable.
@@ -180,16 +219,37 @@ class ExpertPool:
                 f"driver, a reboot (or `sudo modprobe nvidia`) usually clears it"
             )
 
-    def load(self) -> 'ExpertPool':
-        """Load every available expert. Needs at least two to be a pool."""
+    def load(self, seed: int | None = None) -> 'ExpertPool':
+        """Load the experts for one seed. Needs at least two to be a pool.
+
+        Args:
+            seed: which seed to load. Required when more than one seed is on
+                disk — guessing would silently drop or mix runs.
+        """
         from models.resnet32 import ResNet32
 
         self._check_device()
-        paths = self.available()
+        available = self.available()
+        if not available:
+            raise EvaluationError(
+                f"no expert checkpoints found in {self.checkpoint_dir} for "
+                f"{self.expert_names} x seeds {self.seeds}"
+            )
+
+        if seed is None:
+            seeds = self.seeds_present()
+            if len(seeds) > 1:
+                raise EvaluationError(
+                    f"multiple seeds present ({seeds}); pass seed=<one of them> "
+                    f"so this evaluation reports a single seed's numbers"
+                )
+            seed = seeds[0]
+
+        paths = {name: p for (name, s), p in available.items() if s == seed}
         if len(paths) < 2:
             raise EvaluationError(
-                f"routing needs at least 2 experts; found {sorted(paths)} "
-                f"(missing: {self.missing()})"
+                f"routing needs at least 2 experts for seed {seed}; found "
+                f"{sorted(paths)} (missing: {self.missing()})"
             )
         for name, path in paths.items():
             state = torch.load(path, map_location=self.device, weights_only=False)
@@ -198,6 +258,7 @@ class ExpertPool:
             model.to(self.device).eval()
             self._models[name] = model
         self.expert_names = list(self._models)
+        self.loaded_seed = seed
         return self
 
     @torch.no_grad()

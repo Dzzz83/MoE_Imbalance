@@ -38,7 +38,8 @@ from torch.utils.data import DataLoader
 from data.cifar_lt import LongTailCIFAR100
 from data.lt_datamodule import LongTailDataModule
 from scripts.evaluation import (
-    EvaluationError, ExpertPool, HeadroomAnalyzer, evaluate_predictions,
+    EvaluationError, ExpertPool, HeadroomAnalyzer, aggregate_across_seeds as ev_aggregate,
+    evaluate_predictions,
 )
 from scripts.router import ROUTERS
 from scripts.utils.test_access import TestAccessLog
@@ -90,80 +91,119 @@ def main(argv: list[str] | None = None) -> int:
                         help='seed for TTA view sampling, so the result is reproducible')
     parser.add_argument('--output', default=None,
                         help='JSON output path (default: checkpoints/test_evaluation.json)')
+    parser.add_argument('--access-log', default='docs/test-access-log.md',
+                        help='where to append the test-set access record')
     args = parser.parse_args(argv)
 
     # ── log the access BEFORE reading the test set ──
-    logged = TestAccessLog().record(
+    logged = TestAccessLog(args.access_log).record(
         ' '.join(sys.argv),
         note=f"experts={','.join(args.experts)} seeds={','.join(map(str, args.seeds))}",
     )
     if not logged:
         print("WARNING: could not write the test-access log; continuing anyway")
 
-    pool = ExpertPool(args.experts, args.seeds,
-                      checkpoint_dir=args.checkpoint_dir, device=args.device)
-    absent = pool.missing()
-    if absent:
-        print(f"Note: no checkpoint for {absent} at seeds {args.seeds} — skipped")
-    pool.load()
-    print(f"Loaded experts: {pool.loaded}\n")
-
+    # The test set is read ONCE; every seed is evaluated on that same read, so
+    # the access log records a single evaluation and all rules share one look.
     loader = build_test_loader(args.data_root, args.batch_size)
-    logits, targets = pool.logits(loader)          # (N, E, C)
-    print(f"Test set: {len(targets)} samples, logits {logits.shape}\n")
-
-    # class groups come from the TRAINING counts (the split is immutable)
     train_counts = LongTailDataModule(root=args.data_root).class_counts()
 
-    results: dict = {'experts': {}, 'routing': {}, 'headroom': {}}
+    probe = ExpertPool(args.experts, args.seeds,
+                       checkpoint_dir=args.checkpoint_dir, device=args.device)
+    absent = probe.missing()
+    if absent:
+        print(f"Note: no checkpoint for {absent} — skipped")
+    seeds = probe.seeds_present()
+    if not seeds:
+        raise EvaluationError(
+            f"no checkpoints found in {args.checkpoint_dir} for {args.experts}"
+        )
+    print(f"Seeds found: {seeds}\n")
 
-    # ── per-expert metrics ──
-    print("Per-expert performance on the balanced test set")
-    print(f"  {'expert':<18}{'BA':>8}{'Head':>8}{'Med':>8}{'Tail':>8}{'ECE':>8}")
-    for i, name in enumerate(pool.loaded):
-        probs = softmax(logits[:, i])
-        preds = probs.argmax(axis=1)
-        m = evaluate_predictions(targets, preds, probs, train_counts)
-        results['experts'][name] = m
-        print(f"  {name:<18}{m['ba']:>8.4f}{m['head']:>8.4f}{m['medium']:>8.4f}"
-              f"{m['tail']:>8.4f}{m['ece']:>8.4f}")
+    per_seed: dict[int, dict] = {}
+    targets = None
 
-    # ── headroom ──
-    headroom = HeadroomAnalyzer(logits, targets, expert_names=pool.loaded)
-    summary = headroom.summary()
-    results['headroom'] = summary
-    print("\nRouting headroom")
-    print(f"  all-wrong floor      : {summary['all_wrong_fraction']:.4f}")
-    print(f"  oracle ceiling       : {summary['oracle_accuracy']:.4f}")
-    print(f"  correctness counts   : {summary['correctness_counts']}")
-    print("  pairwise Cohen's kappa:")
-    for pair, kappa in summary['pairwise_kappa'].items():
-        print(f"    {pair:<34}{kappa:>8.3f}")
+    for seed in seeds:
+        pool = ExpertPool(args.experts, seeds=[seed],
+                          checkpoint_dir=args.checkpoint_dir,
+                          device=args.device).load(seed=seed)
+        logits, targets = pool.logits(loader)          # (N, E, C)
+        print(f"seed {seed}: {len(targets)} samples, logits {logits.shape}, "
+              f"experts {pool.loaded}")
 
-    # ── the four frozen parameter-free rules ──
-    print("\nFrozen parameter-free routing rules (pre-registered)")
-    print(f"  {'rule':<14}{'BA':>8}{'Head':>8}{'Med':>8}{'Tail':>8}")
+        entry: dict = {'experts': {}, 'routing': {}, 'headroom': {}}
 
-    # Rules that are defined over view-averaged logits need the TTA pass. It is
-    # computed once, so every rule still sees the same single evaluation.
-    tta_rules = [n for n, k in ROUTERS.items() if getattr(k, 'requires_tta', False)]
-    logits_tta = None
-    if tta_rules:
-        print(f"  (computing TTA pass: {args.tta_augs} views, seed {args.tta_seed}, "
-              f"for {', '.join(tta_rules)})")
-        logits_tta, _ = pool.logits(loader, n_augs=args.tta_augs, tta_seed=args.tta_seed)
+        for i, name in enumerate(pool.loaded):
+            probs = softmax(logits[:, i])
+            entry['experts'][name] = evaluate_predictions(
+                targets, probs.argmax(axis=1), probs, train_counts)
 
-    for name, klass in ROUTERS.items():
-        router = klass(expert_names=pool.loaded)
-        rule_logits = select_logits(klass, logits, logits_tta)
-        preds = router.predict_class(rule_logits)
-        # ECE needs a probability proxy; use the routed experts' mean probs
-        weights = router.predict_proba(rule_logits)
-        probs = np.einsum('ne,nec->nc', weights, softmax(rule_logits))
-        m = evaluate_predictions(targets, preds, probs, train_counts)
-        results['routing'][name] = m
-        print(f"  {name:<14}{m['ba']:>8.4f}{m['head']:>8.4f}{m['medium']:>8.4f}"
-              f"{m['tail']:>8.4f}")
+        headroom = HeadroomAnalyzer(logits, targets, expert_names=pool.loaded)
+        entry['headroom'] = headroom.summary()
+
+        # Rules defined over view-averaged logits need the TTA pass; it is
+        # computed per seed so every rule sees a consistent input.
+        tta_rules = [n for n, k in ROUTERS.items() if getattr(k, 'requires_tta', False)]
+        logits_tta = None
+        if tta_rules:
+            logits_tta, _ = pool.logits(loader, n_augs=args.tta_augs,
+                                        tta_seed=args.tta_seed)
+        for name, klass in ROUTERS.items():
+            router = klass(expert_names=pool.loaded)
+            rule_logits = select_logits(klass, logits, logits_tta)
+            preds = router.predict_class(rule_logits)
+            weights = router.predict_proba(rule_logits)
+            probs = np.einsum('ne,nec->nc', weights, softmax(rule_logits))
+            entry['routing'][name] = evaluate_predictions(
+                targets, preds, probs, train_counts)
+
+        per_seed[seed] = entry
+        m = entry['headroom']
+        print(f"  all-wrong {m['all_wrong_fraction']:.4f}  oracle {m['oracle_accuracy']:.4f}")
+
+    # ── aggregate across seeds (AGENTs.md section 6) ──
+    def agg(section: str, name: str) -> dict:
+        return ev_aggregate([per_seed[s][section][name] for s in seeds])
+
+    print("\n" + "=" * 62)
+    print(f"Per-expert performance (mean ± std over {len(seeds)} seed(s))")
+    print(f"  {'expert':<18}{'BA':>16}{'Head':>16}{'Tail':>16}")
+    expert_table = {}
+    for name in per_seed[seeds[0]]['experts']:
+        a = agg('experts', name)
+        expert_table[name] = a
+        print(f"  {name:<18}{a['ba']['mean']:>9.4f}±{a['ba']['std']:<6.4f}"
+              f"{a['head']['mean']:>9.4f}±{a['head']['std']:<6.4f}"
+              f"{a['tail']['mean']:>9.4f}±{a['tail']['std']:<6.4f}")
+
+    print(f"\nFrozen parameter-free routing rules (pre-registered)")
+    print(f"  {'rule':<14}{'BA':>16}{'Tail':>16}")
+    routing_table = {}
+    for name in per_seed[seeds[0]]['routing']:
+        a = agg('routing', name)
+        routing_table[name] = a
+        print(f"  {name:<14}{a['ba']['mean']:>9.4f}±{a['ba']['std']:<6.4f}"
+              f"{a['tail']['mean']:>9.4f}±{a['tail']['std']:<6.4f}")
+
+    print("\nPre-registered decision rule (BA and Tail both above Uniform, "
+          "consistently across seeds)")
+    uniform = routing_table.get('Uniform')
+    if uniform:
+        for name, a in routing_table.items():
+            if name == 'Uniform':
+                continue
+            ba_ok = a['ba']['mean'] > uniform['ba']['mean']
+            tail_ok = a['tail']['mean'] > uniform['tail']['mean']
+            verdict = 'PASSES' if (ba_ok and tail_ok) else 'no gain'
+            print(f"  {name:<14} BA {'>' if ba_ok else '≤'} uniform, "
+                  f"Tail {'>' if tail_ok else '≤'} uniform  -> {verdict}")
+
+    results = {
+        'seeds': seeds,
+        'per_seed': per_seed,
+        'experts_aggregate': expert_table,
+        'routing_aggregate': routing_table,
+    }
 
     out_path = Path(args.output or Path(args.checkpoint_dir) / 'test_evaluation.json')
     out_path.parent.mkdir(parents=True, exist_ok=True)
