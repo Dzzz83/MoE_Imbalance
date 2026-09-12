@@ -34,6 +34,17 @@ differ only by a class-independent constant, so they are the *same objective*.
 The pool therefore contains at most **3 distinct experts**, and κ(LAL, BS) is
 expected to be ≈ 1.0. Any diversity claim from this pool must account for that.
 
+> **Outcome (added 2026-09-12, prediction left standing as recorded):
+> measured κ(LAL, BS) = 0.458 ±0.012 — the ≈1.0 prediction was wrong.**
+> The two losses are identical in *value*, but the balanced-softmax form adds
+> `log(10847) ≈ 9.29` to every logit: that cancels exactly in the forward pass yet
+> perturbs floating-point rounding in the backward pass, and the difference
+> amplifies chaotically over ~85 SGD steps per epoch. So the two experts diverge
+> despite implementing the same objective. Measured κ across all six pairs spans
+> only 0.42–0.49 — *lower* than the prediction for the same-objective pair — which
+> is itself the finding: the pool's diversity is largely initialisation noise
+> rather than paradigm difference.
+
 ## Candidate routing rules (frozen — four)
 
 | # | Rule | Combination | Parameters |

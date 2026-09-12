@@ -3,15 +3,17 @@
 > Complete inventory of every routing / combination mechanism this project has
 > evaluated, with a one-line description and its measured result.
 >
-> Results are labelled by the split they were measured on. **"Current"** = the
+> Results are labelled by the protocol they were measured on. **"Current"** = the
 > canonical protocol (10,847-sample long-tailed training set, balanced 10,000
-> test set, 3 seeds). **"Old split"** = the discarded protocol that held out a
-> balanced validation set before long-tail subsampling (uniform averaging sat at
-> 51.12 there); those numbers are historical and not comparable.
+> test set, 3 seeds). **"Old split"** = the discarded *flawed* protocol that held out a
+> balanced validation set before long-tail subsampling, where 3-expert uniform
+> averaging sat at **51.12**; those numbers are historical and not comparable.
+> (A second superseded protocol, the non-standard 80/20 split, had a uniform of
+> 45.68 — do not confuse the two.)
 >
-> Related: [`results.md`](../docs/results.md) · [`problem.md`](../docs/problem.md) ·
+> Related: `results.md` · `problem.md` ·
 > [`routing-preregistration.md`](routing-preregistration.md) (the frozen
-> candidate set) · [`research.md`](../docs/research.md) (literature)
+> candidate set) · `research.md` (literature)
 
 ---
 
@@ -32,7 +34,7 @@ of tuning on the test set. The interface enforces this — `BaseRouter` has **no
 **None beats Uniform on both BA and Tail**, which is the pre-registered success
 condition. Confidence and TTA are *significantly worse* on BA (paired difference
 exceeds its own std, negative in all 3 seeds). TTA's Tail is nominally higher
-(+0.62) but not consistent across seeds. See [`results.md`](../docs/results.md) §3.
+(+0.62) but not consistent across seeds. See `results.md` §3.
 
 *Rendering the images 10 augmented ways (TTA) is implemented for real: per-view
 softmax probabilities are averaged, then the logits are recovered as
@@ -81,8 +83,14 @@ none of these numbers are comparable with §1.
 | 3-way classifier | 26.25 | −24.87 |
 | Disagreement routing | 40.72 | −10.40 |
 | Gated mixture (24-d, NLL) | 43.98 | −7.14 |
-| Trust-weighted product (36-d) | 52.43 | +1.19 |
+| Trust-weighted product (36-d) | 52.43 | +1.31 |
 | Optimal fixed weights | 52.58 | +1.46 |
+
+*Deltas are recomputed against the stated baseline of 51.12. The original record
+showed **+1.19** for the trust-weighted product, which matches no baseline in the
+table (52.43 − 51.12 = 1.31); the same record also claimed a "+0.29% routing
+contribution" that its own rows do not support. The BAs are as measured; only the
+derived deltas were recomputed.*
 
 **Round 2 — enriched features**
 
@@ -154,7 +162,7 @@ likely to be wrong, so learning the label better made routing worse. Secondary
 defects: incomparable score scales across experts, and a fallback threshold so
 high it never fired. Separately, partitioning weakened every expert (each
 near-zero on its non-target groups; expert B had **0.0000** tail recall — no
-tail specialist existed at all). See [`problem.md`](../docs/problem.md) §4.
+tail specialist existed at all). See `problem.md` §4.
 
 ## 5. Verdict
 
@@ -166,5 +174,5 @@ tail specialist existed at all). See [`problem.md`](../docs/problem.md) §4.
   been captured by any rule.
 - Two independent conditions must hold for routing to win, and neither does:
   the signal must **exist** (it largely does not — see the lone-dissenter
-  paradox, [`problem.md`](../docs/problem.md) §2) and it must be **comparable across
+  paradox, `problem.md` §2) and it must be **comparable across
   experts** (it is not — the routing score was anti-predictive).
