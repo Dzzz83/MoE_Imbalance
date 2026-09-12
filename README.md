@@ -131,7 +131,7 @@ Identical for all four experts (verified against the config each run wrote):
 | Optimiser | SGD, momentum 0.9, weight decay 2e-4, **nesterov = False** |
 | Learning rate | 0.1 |
 | Warmup | linear over 5 epochs |
-| LR decay | ×0.01 at epoch 161, ×0.0001 at epoch 181 |
+| LR decay | ×0.01 after epoch 160; ×0.0001 after epoch 180 |
 | Epochs | 200 |
 | Batch size | 128 |
 | Loss — CE | cross-entropy |
@@ -142,8 +142,11 @@ Identical for all four experts (verified against the config each run wrote):
 | Checkpoints | final epoch only |
 | Hardware | Kaggle T4 GPU, ≈20 min per run |
 
-The schedule (200 epochs, lr 0.1, no nesterov, decay at 160/180) is the reference
-CIFAR-LT recipe from LDAM-DRW `cifar_train.py`.
+The schedule (200 epochs, lr 0.1, no nesterov, decay after epochs 160 and 180) is
+the reference CIFAR-LT recipe from LDAM-DRW `cifar_train.py`. Decay milestones are
+epochs **160** and **180** — the last epochs at the full rate, matching
+`decay_epochs` in `configs/*.yaml` — so the reduced rate first **applies** at
+epochs 161 and 181.
 
 **Source of truth.** [`configs/*.yaml`](configs) defines each run, and every run
 also writes the config it resolved to as
