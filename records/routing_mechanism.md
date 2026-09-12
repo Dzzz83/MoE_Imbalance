@@ -32,7 +32,7 @@ of tuning on the test set. The interface enforces this — `BaseRouter` has **no
 **None beats Uniform on both BA and Tail**, which is the pre-registered success
 condition. Confidence and TTA are *significantly worse* on BA (paired difference
 exceeds its own std, negative in all 3 seeds). TTA's Tail is nominally higher
-(+0.62) but not consistent across seeds. See [`results.md`](../docs/results.md) §2.
+(+0.62) but not consistent across seeds. See [`results.md`](../docs/results.md) §3.
 
 *Rendering the images 10 augmented ways (TTA) is implemented for real: per-view
 softmax probabilities are averaged, then the logits are recovered as
