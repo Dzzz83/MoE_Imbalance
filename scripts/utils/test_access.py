@@ -21,6 +21,25 @@ class TestAccessError(RuntimeError):
     """Raised when a protected test-set read cannot be audited."""
 
 
+class TestAccessGrant:
+    """Single-use capability returned after a successful audit-log write."""
+
+    def __init__(self, owner: 'TestAccessLog', token: object) -> None:
+        if token is not owner._grant_token:
+            raise TestAccessError('invalid test-set access authorization grant')
+        self._owner = owner
+        self._token = token
+        self._consumed = False
+
+    def consume(self) -> None:
+        """Consume this grant, refusing reuse or grants from another log."""
+        if self._consumed or self._token is not self._owner._grant_token:
+            raise TestAccessError(
+                'test-set access authorization grant is invalid or already used'
+            )
+        self._consumed = True
+
+
 class TestAccessLog:
     """Append-only record of every read of the CIFAR-100 test set."""
 
@@ -36,6 +55,7 @@ class TestAccessLog:
 
     def __init__(self, path: str | Path = 'docs/test-access-log.md') -> None:
         self.path = Path(path)
+        self._grant_token = object()
 
     def entries(self) -> list[str]:
         """Return the table rows currently recorded (empty when no log exists)."""
@@ -65,10 +85,10 @@ class TestAccessLog:
         except OSError:
             return False
 
-    def authorize(self, command: str, note: str = '') -> None:
-        """Record one access and refuse the protected read if recording fails."""
+    def authorize(self, command: str, note: str = '') -> TestAccessGrant:
+        """Record one access and return a grant for the protected read."""
         if self.record(command, note=note):
-            return
+            return TestAccessGrant(self, self._grant_token)
         raise TestAccessError(
             f"test-set access denied: could not write the access log at {self.path}; "
             "evaluation stopped before reading the test set"

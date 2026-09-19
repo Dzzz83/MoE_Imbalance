@@ -57,13 +57,15 @@ def main(argv: list[str] | None = None) -> int:
                        checkpoint_dir=args.checkpoint_dir, device=args.device)
     probe.validate_complete()
 
-    TestAccessLog(args.access_log).authorize(
+    authorization = TestAccessLog(args.access_log).authorize(
         ' '.join(sys.argv),
         note=f"subset analysis experts={','.join(args.experts)} "
              f"seeds={','.join(map(str, args.seeds))}",
     )
 
-    loader = build_test_loader(args.data_root, args.batch_size, access_log=None)
+    loader = build_test_loader(
+        args.data_root, args.batch_size, authorization=authorization,
+    )
     train_counts = LongTailDataModule(root=args.data_root).class_counts()
 
     seeds = list(probe.seeds)
@@ -72,9 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     results: dict = {'seeds': seeds, 'rules': {}}
 
     for seed in seeds:
-        pool = ExpertPool(args.experts, seeds=[seed],
-                          checkpoint_dir=args.checkpoint_dir,
-                          device=args.device).load(seed=seed)
+        pool = probe.load(seed=seed)
         logits, targets = pool.logits(loader)
         print(f"seed {seed}: {len(targets)} samples, experts {pool.loaded}")
         analysis = SubsetEnsembleAnalysis(

@@ -42,7 +42,9 @@ from scripts.evaluation import (
     evaluate_predictions, passes_success_criterion,
 )
 from scripts.router import ROUTERS
-from scripts.utils.test_access import TestAccessError, TestAccessLog
+from scripts.utils.test_access import (
+    TestAccessError, TestAccessGrant, TestAccessLog,
+)
 
 DEFAULT_EXPERTS = ['CE', 'LAL', 'BalancedSoftmax', 'Mixup']
 
@@ -51,18 +53,19 @@ def build_test_loader(
     data_root: str,
     batch_size: int = 256,
     *,
-    access_log: str | Path | None = 'docs/test-access-log.md',
+    authorization: TestAccessGrant | None = None,
 ) -> DataLoader:
-    """Build the balanced test loader after a single authorization.
-
-    ``access_log=None`` is reserved for callers that have already authorized
-    the enclosing evaluation, preventing duplicate rows for one read.
-    """
-    if access_log is not None:
-        TestAccessLog(access_log).authorize(
-            ' '.join(sys.argv),
-            note='build_test_loader direct test-set reader',
+    """Build the balanced test loader using a successful scoped authorization."""
+    if authorization is None:
+        raise TestAccessError(
+            'protected test loader requires a successful TestAccessLog '
+            'authorization grant'
         )
+    if not isinstance(authorization, TestAccessGrant):
+        raise TestAccessError(
+            'protected test loader requires a TestAccessGrant, not a bypass flag'
+        )
+    authorization.consume()
     dataset = LongTailCIFAR100(root=data_root, train=False, use_test_set=True)
     return DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
@@ -116,14 +119,16 @@ def main(argv: list[str] | None = None) -> int:
     probe.validate_complete()
 
     # ── log the access BEFORE reading the test set ──
-    TestAccessLog(args.access_log).authorize(
+    authorization = TestAccessLog(args.access_log).authorize(
         ' '.join(sys.argv),
         note=f"experts={','.join(args.experts)} seeds={','.join(map(str, args.seeds))}",
     )
 
     # The test set is read ONCE; every seed is evaluated on that same read, so
     # the access log records a single evaluation and all rules share one look.
-    loader = build_test_loader(args.data_root, args.batch_size, access_log=None)
+    loader = build_test_loader(
+        args.data_root, args.batch_size, authorization=authorization,
+    )
     train_counts = LongTailDataModule(root=args.data_root).class_counts()
 
     seeds = list(probe.seeds)
@@ -133,9 +138,7 @@ def main(argv: list[str] | None = None) -> int:
     targets = None
 
     for seed in seeds:
-        pool = ExpertPool(args.experts, seeds=[seed],
-                          checkpoint_dir=args.checkpoint_dir,
-                          device=args.device).load(seed=seed)
+        pool = probe.load(seed=seed)
         logits, targets = pool.logits(loader)          # (N, E, C)
         print(f"seed {seed}: {len(targets)} samples, logits {logits.shape}, "
               f"experts {pool.loaded}")

@@ -303,6 +303,7 @@ class ExpertPool:
         self.checkpoint_dir = Path(checkpoint_dir)
         self.device = device
         self._models: dict[str, torch.nn.Module] = {}
+        self._validated_states: dict[tuple[str, int], dict] = {}
 
     def available(self) -> dict[tuple[str, int], Path]:
         """Map each (expert label, seed) to its final checkpoint.
@@ -333,23 +334,77 @@ class ExpertPool:
         ]
 
     def validate_complete(self) -> None:
-        """Require a final checkpoint for every requested expert and seed.
+        """Require and validate every requested expert/seed checkpoint.
 
         Evaluation must never reduce the requested matrix to the files that
-        happen to be present.  This check is deliberately separate from model
-        loading so callers can run it before constructing an evaluation loader.
+        happen to be present.  The checkpoint contents are validated here so
+        callers can run the complete preflight before constructing an
+        evaluation loader.
         """
         missing = self.missing_combinations()
-        if not missing:
-            return
-        details = '; '.join(
-            f'{name} seed={seed} ({path})'
-            for name, seed, path in missing
-        )
-        raise EvaluationError(
-            'incomplete expert pool: missing final checkpoints for every '
-            f'requested expert/seed combination: {details}'
-        )
+        if missing:
+            details = '; '.join(
+                f'{name} seed={seed} ({path})'
+                for name, seed, path in missing
+            )
+            raise EvaluationError(
+                'incomplete expert pool: missing final checkpoints for every '
+                f'requested expert/seed combination: {details}'
+            )
+
+        for name in self.expert_names:
+            for seed in self.seeds:
+                path = self.checkpoint_dir / f'{name}_seed{seed}_final.pt'
+                self._validated_checkpoint(name, seed, path)
+
+    def _validated_checkpoint(
+        self,
+        name: str,
+        seed: int,
+        path: Path,
+    ) -> dict:
+        """Load and validate one checkpoint, caching it for the later model load."""
+        key = (name, seed)
+        if key in self._validated_states:
+            return self._validated_states[key]
+
+        context = f'{name} seed={seed} ({path})'
+        try:
+            state = torch.load(path, map_location='cpu', weights_only=False)
+        except Exception as exc:  # noqa: BLE001 - add requested entry context
+            raise EvaluationError(
+                f'{context}: could not load checkpoint: {exc}'
+            ) from exc
+
+        try:
+            validate_checkpoint_metadata(
+                state,
+                path=path,
+                expected_expert=name,
+                expected_seed=seed,
+                expected_epoch=200,
+                require_final=True,
+            )
+        except CheckpointValidationError as exc:
+            raise EvaluationError(f'{context}: {exc}') from exc
+
+        from models.resnet32 import ResNet32
+
+        try:
+            # Compatibility probing must not perturb the RNG used by the
+            # evaluation process; the temporary model is discarded.
+            with torch.random.fork_rng(devices=[]):
+                ResNet32(num_classes=100).load_state_dict(
+                    state['model_state_dict']
+                )
+        except Exception as exc:  # noqa: BLE001 - report architecture mismatch
+            raise EvaluationError(
+                f'{context}: incompatible model state for ResNet-32 with 100 '
+                f'classes: {exc}'
+            ) from exc
+
+        self._validated_states[key] = state
+        return state
 
     def seeds_present(self) -> list[int]:
         """Return requested seeds only after the complete matrix is verified."""
@@ -391,10 +446,8 @@ class ExpertPool:
             seed: which seed to load. Required when more than one seed is on
                 disk — guessing would silently drop or mix runs.
         """
-        from models.resnet32 import ResNet32
-
-        self.validate_complete()
         self._check_device()
+        self.validate_complete()
         available = self.available()
 
         if seed is None:
@@ -418,21 +471,9 @@ class ExpertPool:
             )
         self._models.clear()
         for name, path in paths.items():
-            try:
-                state = torch.load(path, map_location=self.device, weights_only=False)
-            except Exception as exc:  # noqa: BLE001 - add path context to load errors
-                raise EvaluationError(f'{path}: could not load checkpoint: {exc}') from exc
-            try:
-                validate_checkpoint_metadata(
-                    state,
-                    path=path,
-                    expected_expert=name,
-                    expected_seed=seed,
-                    expected_epoch=200,
-                    require_final=True,
-                )
-            except CheckpointValidationError as exc:
-                raise EvaluationError(str(exc)) from exc
+            state = self._validated_states[(name, seed)]
+            from models.resnet32 import ResNet32
+
             model = ResNet32(num_classes=100)
             try:
                 model.load_state_dict(state['model_state_dict'])

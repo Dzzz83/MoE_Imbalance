@@ -205,6 +205,72 @@ def test_subset_analysis_rejects_incomplete_pool_before_loading_the_dataset():
         assert called == []
 
 
+def test_invalid_checkpoint_rejects_evaluation_before_loading_the_dataset():
+    """Checkpoint contents must be validated before the test loader is built."""
+    import scripts.evaluate_experts as evaluate_experts
+
+    with tempfile.TemporaryDirectory(prefix="evaluation_pool_") as directory:
+        _write_invalid_metadata_checkpoint(directory, expert_name="LAL")
+        called = []
+
+        def unexpected_loader(*args, **kwargs):
+            called.append(True)
+            raise AssertionError("test/evaluation loader was accessed")
+
+        original_loader = evaluate_experts.build_test_loader
+        evaluate_experts.build_test_loader = unexpected_loader
+        try:
+            message = _assert_raises(
+                ev.EvaluationError,
+                evaluate_experts.main,
+                [
+                    "--checkpoint-dir", directory,
+                    "--experts", "CE", "LAL",
+                    "--seeds", "78",
+                    "--device", "cpu",
+                    "--access-log", str(Path(directory) / "access.md"),
+                    "--output", str(Path(directory) / "results.json"),
+                ],
+            )
+        finally:
+            evaluate_experts.build_test_loader = original_loader
+        assert "CE" in message and "seed=78" in message
+        assert called == []
+
+
+def test_invalid_checkpoint_rejects_subset_analysis_before_loading_the_dataset():
+    """Subset analysis must use the same checkpoint preflight as evaluation."""
+    import scripts.analyze_subsets as analyze_subsets
+
+    with tempfile.TemporaryDirectory(prefix="evaluation_pool_") as directory:
+        _write_invalid_metadata_checkpoint(directory, epoch=199)
+        called = []
+
+        def unexpected_loader(*args, **kwargs):
+            called.append(True)
+            raise AssertionError("test/evaluation loader was accessed")
+
+        original_loader = analyze_subsets.build_test_loader
+        analyze_subsets.build_test_loader = unexpected_loader
+        try:
+            message = _assert_raises(
+                ev.EvaluationError,
+                analyze_subsets.main,
+                [
+                    "--checkpoint-dir", directory,
+                    "--experts", "CE", "LAL",
+                    "--seeds", "78",
+                    "--device", "cpu",
+                    "--access-log", str(Path(directory) / "access.md"),
+                    "--output", str(Path(directory) / "results.json"),
+                ],
+            )
+        finally:
+            analyze_subsets.build_test_loader = original_loader
+        assert "epoch" in message and "CE" in message
+        assert called == []
+
+
 def test_seeds_present_rejects_a_partial_requested_matrix():
     with tempfile.TemporaryDirectory(prefix="evaluation_pool_") as directory:
         _write_pool(directory, experts=["CE", "LAL"], seeds=[78],
@@ -515,6 +581,93 @@ def test_failed_test_access_authorization_is_a_clear_error():
     assert "test-set" in message.lower() and "log" in message.lower()
 
 
+def test_protected_test_loader_requires_explicit_authorization():
+    import scripts.evaluate_experts as evaluate_experts
+    from scripts.utils.test_access import TestAccessError
+
+    class ExplodingDataset:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("test dataset was constructed")
+
+    original_dataset = evaluate_experts.LongTailCIFAR100
+    evaluate_experts.LongTailCIFAR100 = ExplodingDataset
+    try:
+        message = _assert_raises(
+            TestAccessError,
+            evaluate_experts.build_test_loader,
+            tempfile.mkdtemp(prefix="evaluation_access_loader_"),
+            authorization=None,
+        )
+    finally:
+        evaluate_experts.LongTailCIFAR100 = original_dataset
+    assert "authoriz" in message.lower()
+
+
+def test_authorized_test_loader_uses_one_scoped_grant():
+    import scripts.evaluate_experts as evaluate_experts
+    from scripts.utils.test_access import TestAccessLog
+
+    class SyntheticTestDataset:
+        def __init__(self, *args, **kwargs):
+            self.targets = [0, 1]
+
+        def __len__(self):
+            return len(self.targets)
+
+        def __getitem__(self, index):
+            return torch.zeros(3, 32, 32), self.targets[index]
+
+    with tempfile.TemporaryDirectory(prefix="evaluation_access_loader_") as directory:
+        log = TestAccessLog(Path(directory) / "access.md")
+        grant = log.authorize("synthetic evaluation", note="loader")
+        original_dataset = evaluate_experts.LongTailCIFAR100
+        evaluate_experts.LongTailCIFAR100 = SyntheticTestDataset
+        try:
+            loader = evaluate_experts.build_test_loader(
+                directory, batch_size=2, authorization=grant,
+            )
+        finally:
+            evaluate_experts.LongTailCIFAR100 = original_dataset
+        assert len(loader.dataset) == 2
+        assert len(log.entries()) == 1
+
+
+def test_test_loader_grant_cannot_be_reused_or_duplicate_the_log():
+    import scripts.evaluate_experts as evaluate_experts
+    from scripts.utils.test_access import TestAccessError, TestAccessLog
+
+    class SyntheticTestDataset:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __len__(self):
+            return 1
+
+        def __getitem__(self, index):
+            return torch.zeros(3, 32, 32), 0
+
+    with tempfile.TemporaryDirectory(prefix="evaluation_access_loader_") as directory:
+        log = TestAccessLog(Path(directory) / "access.md")
+        grant = log.authorize("synthetic evaluation", note="loader")
+        original_dataset = evaluate_experts.LongTailCIFAR100
+        evaluate_experts.LongTailCIFAR100 = SyntheticTestDataset
+        try:
+            evaluate_experts.build_test_loader(
+                directory, batch_size=1, authorization=grant,
+            )
+            message = _assert_raises(
+                TestAccessError,
+                evaluate_experts.build_test_loader,
+                directory,
+                batch_size=1,
+                authorization=grant,
+            )
+        finally:
+            evaluate_experts.LongTailCIFAR100 = original_dataset
+        assert "grant" in message.lower() or "authoriz" in message.lower()
+        assert len(log.entries()) == 1
+
+
 def test_failed_evaluation_logging_prevents_dataset_access():
     import scripts.evaluate_experts as evaluate_experts
 
@@ -616,6 +769,8 @@ TESTS = [
     ("multiple missing combinations", test_multiple_missing_matrix_entries_are_all_reported),
     ("pool validation precedes dataset", test_evaluation_rejects_incomplete_pool_before_loading_the_dataset),
     ("subset validation precedes dataset", test_subset_analysis_rejects_incomplete_pool_before_loading_the_dataset),
+    ("invalid checkpoint precedes evaluation dataset", test_invalid_checkpoint_rejects_evaluation_before_loading_the_dataset),
+    ("invalid checkpoint precedes subset dataset", test_invalid_checkpoint_rejects_subset_analysis_before_loading_the_dataset),
     ("partial seeds rejected", test_seeds_present_rejects_a_partial_requested_matrix),
     ("legacy pool missing expert", test_legacy_load_all_experts_does_not_skip_a_missing_expert),
     ("valid checkpoint metadata", test_valid_checkpoint_identity_and_final_metadata_loads),
@@ -643,6 +798,9 @@ TESTS = [
     ("aggregation membership", test_named_aggregation_rejects_inconsistent_expert_membership),
     ("successful access authorization", test_successful_test_access_authorization_records_one_entry),
     ("failed access authorization", test_failed_test_access_authorization_is_a_clear_error),
+    ("loader requires authorization", test_protected_test_loader_requires_explicit_authorization),
+    ("authorized loader grant", test_authorized_test_loader_uses_one_scoped_grant),
+    ("loader grant is single-use", test_test_loader_grant_cannot_be_reused_or_duplicate_the_log),
     ("failed logging blocks evaluation", test_failed_evaluation_logging_prevents_dataset_access),
     ("legacy loader guard", test_legacy_loader_cannot_read_test_data_when_logging_fails),
     ("training loader avoids test guard", test_training_loader_does_not_trigger_test_access_logging),
