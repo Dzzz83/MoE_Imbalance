@@ -30,6 +30,7 @@ from scripts.utils.metrics import (
     confidence_metrics,
 )
 from scripts.utils.features import extract_logits, softmax
+from scripts.utils.test_access import TestAccessError
 
 
 def main():
@@ -137,4 +138,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except TestAccessError as exc:
+        print(f"evaluation failed: {exc}", file=sys.stderr)
+        raise SystemExit(2)

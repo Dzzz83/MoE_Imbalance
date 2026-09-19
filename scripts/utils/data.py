@@ -19,6 +19,7 @@ training loader; this module exists for the evaluation-side helpers.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,11 @@ from torch.utils.data import DataLoader
 
 from data.cifar_lt import LongTailCIFAR100
 from data.protocol_splits import ProtocolError, load_lt_train_indices
+from scripts.base_trainer import (
+    CheckpointValidationError,
+    validate_checkpoint_metadata,
+)
+from scripts.utils.test_access import TestAccessLog
 from models.resnet32 import ResNet32, PaCoResNet32
 
 EPS = 1e-12
@@ -122,8 +128,21 @@ def load_expert_checkpoint(
         model = PaCoResNet32(num_classes=100, dim=32, K=1024)
         model.load_state_dict(ckpt["model_state_dict"], strict=False)
     else:
+        validate_checkpoint_metadata(
+            ckpt,
+            path=checkpoint_path,
+            expected_expert=expert_name,
+            expected_seed=seed,
+            expected_epoch=200,
+            require_final=True,
+        )
         model = ResNet32(num_classes=100)
-        model.load_state_dict(ckpt["model_state_dict"])
+        try:
+            model.load_state_dict(ckpt["model_state_dict"])
+        except RuntimeError as exc:
+            raise CheckpointValidationError(
+                f"{checkpoint_path}: incompatible model state for ResNet-32: {exc}"
+            ) from exc
 
     model = model.to(device)
     model.eval()
@@ -151,9 +170,9 @@ def load_all_experts(
         device: torch device string.
         seed: which run to load for every expert.
     Returns:
-        Dict mapping expert name -> loaded model. An expert with no checkpoint is
-        skipped with a warning; an *ambiguous* expert (several seeds on disk while
-        ``seed`` is None) raises, because that is not a missing run.
+        Dict mapping expert name -> loaded model. A missing requested expert or
+        an *ambiguous* expert (several seeds on disk while ``seed`` is None)
+        raises rather than silently changing the pool.
     """
     names = list(expert_names) if expert_names else list(DEFAULT_EXPERTS)
     directory = Path(checkpoint_dir) if checkpoint_dir else DEFAULT_CHECKPOINT_DIR
@@ -162,14 +181,22 @@ def load_all_experts(
     for name in names:
         matches = _checkpoints_for(name, directory, seed)
         if not matches:
-            print(f"  [Warning] no checkpoint for {name} in {directory} — skipping")
-            continue
+            requested = (
+                f"{name}_seed{seed}_final.pt" if seed is not None
+                else f"{name}_seed<N>_final.pt"
+            )
+            raise FileNotFoundError(
+                f"no checkpoint for requested expert {name} in {directory} "
+                f"(looked for {requested})"
+            )
         if len(matches) > 1:
             raise FileNotFoundError(
                 f"{len(matches)} {name} runs on disk in {directory} "
                 f"({[m.name for m in matches]}); pass seed=... to choose one"
             )
-        models[name] = load_expert_checkpoint(name, str(matches[0]), device)
+        models[name] = load_expert_checkpoint(
+            name, str(matches[0]), device, seed=seed
+        )
 
     if not models:
         raise FileNotFoundError(
@@ -190,6 +217,7 @@ def create_cifar_loader(
     num_workers: int = 2,
     pin_memory: bool = True,
     expert_name: str | None = None,
+    test_access_log: str | Path = 'docs/test-access-log.md',
 ) -> tuple[DataLoader, np.ndarray]:
     """Create a DataLoader over a canonical protocol split.
 
@@ -202,6 +230,7 @@ def create_cifar_loader(
         num_workers: DataLoader workers.
         pin_memory: Pin memory for GPU transfer.
         expert_name: Optional — if 'PaCo', returns two-view augmentations.
+        test_access_log: Audit-log path for a protected test-set read.
     Returns:
         (loader, class_counts_array)
     """
@@ -219,6 +248,10 @@ def create_cifar_loader(
         )
 
     if dataset_type == "test":
+        TestAccessLog(test_access_log).authorize(
+            ' '.join(sys.argv),
+            note='legacy create_cifar_loader test-set read',
+        )
         # Original CIFAR-100 test set (10K balanced) — the only evaluation set
         dataset = LongTailCIFAR100(
             root=str(root),

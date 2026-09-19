@@ -62,6 +62,9 @@ def main(argv: list[str] | None = None) -> int:
                 history = load_history(find_history_file(checkpoint_dir, expert, seed))
             except EvaluationError as exc:
                 print(f"  · {expert} seed={seed}: not found — {exc}")
+                expected_checkpoint = checkpoint_dir / f'{expert}_seed{seed}_final.pt'
+                if not expected_checkpoint.exists():
+                    print(f"           - missing final checkpoint: {expected_checkpoint}")
                 missing += 1
                 continue
 
@@ -79,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
                 failed += 1
 
     print(f"\n{checked} run(s) checked, {failed} with problems, {missing} not found")
-    return 1 if failed else 0
+    return 1 if (failed or missing) else 0
 
 
 if __name__ == '__main__':

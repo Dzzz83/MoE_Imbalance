@@ -29,6 +29,7 @@ from scripts.utils.metrics import (
     balanced_accuracy, per_class_accuracy, group_accuracies, confidence_metrics, ece,
 )
 from scripts.utils.features import extract_all_experts, softmax
+from scripts.utils.test_access import TestAccessError
 
 
 def main():
@@ -307,4 +308,8 @@ def _analyze_calibration(
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except TestAccessError as exc:
+        print(f"analysis failed: {exc}", file=sys.stderr)
+        raise SystemExit(2)

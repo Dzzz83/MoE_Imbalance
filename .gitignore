@@ -4,7 +4,7 @@
 # Note: after untracking, these files remain in git history; removing them from
 # history requires a rewrite (git filter-repo / BFG).
 docs/
-
+/AGENTS.md
 # ── Python virtual environment ──
 .venv/
 

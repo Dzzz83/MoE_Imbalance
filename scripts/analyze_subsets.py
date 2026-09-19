@@ -35,7 +35,7 @@ from scripts.router import ROUTERS
 from scripts.subsets import (
     SELECTION_WARNING, SubsetEnsembleAnalysis, aggregate_size_tables,
 )
-from scripts.utils.test_access import TestAccessLog
+from scripts.utils.test_access import TestAccessError, TestAccessLog
 
 DEFAULT_EXPERTS = ['CE', 'LAL', 'BalancedSoftmax', 'Mixup']
 
@@ -53,20 +53,20 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--output', default='checkpoints/subset_analysis.json')
     args = parser.parse_args(argv)
 
-    TestAccessLog(args.access_log).record(
+    probe = ExpertPool(args.experts, args.seeds,
+                       checkpoint_dir=args.checkpoint_dir, device=args.device)
+    probe.validate_complete()
+
+    TestAccessLog(args.access_log).authorize(
         ' '.join(sys.argv),
         note=f"subset analysis experts={','.join(args.experts)} "
              f"seeds={','.join(map(str, args.seeds))}",
     )
 
-    loader = build_test_loader(args.data_root, args.batch_size)
+    loader = build_test_loader(args.data_root, args.batch_size, access_log=None)
     train_counts = LongTailDataModule(root=args.data_root).class_counts()
 
-    probe = ExpertPool(args.experts, args.seeds,
-                       checkpoint_dir=args.checkpoint_dir, device=args.device)
-    seeds = probe.seeds_present()
-    if not seeds:
-        raise EvaluationError(f"no checkpoints in {args.checkpoint_dir}")
+    seeds = list(probe.seeds)
 
     per_rule: dict[str, list[dict]] = {name: [] for name in ROUTERS}
     results: dict = {'seeds': seeds, 'rules': {}}
@@ -126,6 +126,6 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except EvaluationError as exc:
+    except (EvaluationError, TestAccessError) as exc:
         print(f"analysis failed: {exc}", file=sys.stderr)
         sys.exit(2)

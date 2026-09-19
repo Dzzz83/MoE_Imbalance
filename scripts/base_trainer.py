@@ -29,6 +29,90 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 
+class CheckpointValidationError(RuntimeError):
+    """Raised when checkpoint provenance or contents are not self-consistent."""
+
+
+def validate_checkpoint_metadata(
+    state: object,
+    *,
+    path: str | Path = '<checkpoint>',
+    expected_expert: str | None = None,
+    expected_seed: int | None = None,
+    expected_epoch: int | None = None,
+    require_final: bool = False,
+) -> None:
+    """Validate metadata shared by trainer and canonical evaluation loaders.
+
+    ``expected_epoch`` and ``require_final`` are opt-in so the trainer can still
+    resume a well-formed intermediate checkpoint, while canonical evaluation
+    can require the final epoch-200 artifact.
+    """
+    label = str(path)
+    if not isinstance(state, dict):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint must be a mapping, got {type(state).__name__}'
+        )
+
+    required = ('expert_name', 'seed', 'epoch', 'is_final', 'model_state_dict')
+    missing = [key for key in required if key not in state]
+    if missing:
+        raise CheckpointValidationError(
+            f'{label}: missing required checkpoint metadata: {", ".join(missing)}'
+        )
+
+    expert_name = state['expert_name']
+    if not isinstance(expert_name, str):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint expert_name must be a string, got '
+            f'{type(expert_name).__name__}'
+        )
+    if expected_expert is not None and expert_name != expected_expert:
+        raise CheckpointValidationError(
+            f'{label}: checkpoint expert_name={expert_name!r} does not match '
+            f'requested expert {expected_expert!r}'
+        )
+
+    seed = state['seed']
+    if isinstance(seed, bool) or not isinstance(seed, (int, np.integer)):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint seed must be an integer, got {seed!r}'
+        )
+    if expected_seed is not None and int(seed) != int(expected_seed):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint seed={seed} does not match requested seed '
+            f'{expected_seed}'
+        )
+
+    epoch = state['epoch']
+    if isinstance(epoch, bool) or not isinstance(epoch, (int, np.integer)):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint epoch must be an integer, got {epoch!r}'
+        )
+    if expected_epoch is not None and int(epoch) != int(expected_epoch):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint epoch={epoch} does not match required epoch '
+            f'{expected_epoch}'
+        )
+
+    if not isinstance(state['is_final'], bool):
+        raise CheckpointValidationError(
+            f'{label}: checkpoint is_final must be boolean, got '
+            f'{state["is_final"]!r}'
+        )
+    if require_final and state['is_final'] is not True:
+        raise CheckpointValidationError(
+            f'{label}: canonical evaluation requires is_final=True, got '
+            f'{state["is_final"]!r}'
+        )
+
+    if not isinstance(state['model_state_dict'], dict):
+        raise CheckpointValidationError(
+            f'{label}: model_state_dict must be a mapping, got '
+            f'{type(state["model_state_dict"]).__name__}'
+        )
+
+
 # ---------------------------------------------------------------------------
 # Reproducibility
 # ---------------------------------------------------------------------------
@@ -318,7 +402,22 @@ class BaseTrainer:
 
     def load_checkpoint(self, path: str) -> None:
         state = torch.load(path, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(state['model_state_dict'])
+        validate_checkpoint_metadata(
+            state,
+            path=path,
+            expected_expert=self.expert_name,
+            expected_seed=self.seed,
+        )
+        if 'optimiser_state_dict' not in state:
+            raise CheckpointValidationError(
+                f'{path}: missing optimiser_state_dict required to resume training'
+            )
+        try:
+            self.model.load_state_dict(state['model_state_dict'])
+        except RuntimeError as exc:
+            raise CheckpointValidationError(
+                f'{path}: model state is incompatible with the trainer model: {exc}'
+            ) from exc
         self.optimiser.load_state_dict(state['optimiser_state_dict'])
         self.epoch = state['epoch']
         self.seed = state.get('seed', self.seed)

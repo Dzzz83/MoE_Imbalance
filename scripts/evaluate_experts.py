@@ -38,17 +38,31 @@ from torch.utils.data import DataLoader
 from data.cifar_lt import LongTailCIFAR100
 from data.lt_datamodule import LongTailDataModule
 from scripts.evaluation import (
-    EvaluationError, ExpertPool, HeadroomAnalyzer, aggregate_across_seeds as ev_aggregate,
-    evaluate_predictions,
+    EvaluationError, ExpertPool, HeadroomAnalyzer, aggregate_named_metrics,
+    evaluate_predictions, passes_success_criterion,
 )
 from scripts.router import ROUTERS
-from scripts.utils.test_access import TestAccessLog
+from scripts.utils.test_access import TestAccessError, TestAccessLog
 
 DEFAULT_EXPERTS = ['CE', 'LAL', 'BalancedSoftmax', 'Mixup']
 
 
-def build_test_loader(data_root: str, batch_size: int = 256) -> DataLoader:
-    """The balanced 10K CIFAR-100 test set. The only test-set reader."""
+def build_test_loader(
+    data_root: str,
+    batch_size: int = 256,
+    *,
+    access_log: str | Path | None = 'docs/test-access-log.md',
+) -> DataLoader:
+    """Build the balanced test loader after a single authorization.
+
+    ``access_log=None`` is reserved for callers that have already authorized
+    the enclosing evaluation, preventing duplicate rows for one read.
+    """
+    if access_log is not None:
+        TestAccessLog(access_log).authorize(
+            ' '.join(sys.argv),
+            note='build_test_loader direct test-set reader',
+        )
     dataset = LongTailCIFAR100(root=data_root, train=False, use_test_set=True)
     return DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
@@ -95,29 +109,24 @@ def main(argv: list[str] | None = None) -> int:
                         help='where to append the test-set access record')
     args = parser.parse_args(argv)
 
+    # Validate the requested matrix before reading the test set.  A partial
+    # pool must never become an implicit change to the experiment.
+    probe = ExpertPool(args.experts, args.seeds,
+                       checkpoint_dir=args.checkpoint_dir, device=args.device)
+    probe.validate_complete()
+
     # ── log the access BEFORE reading the test set ──
-    logged = TestAccessLog(args.access_log).record(
+    TestAccessLog(args.access_log).authorize(
         ' '.join(sys.argv),
         note=f"experts={','.join(args.experts)} seeds={','.join(map(str, args.seeds))}",
     )
-    if not logged:
-        print("WARNING: could not write the test-access log; continuing anyway")
 
     # The test set is read ONCE; every seed is evaluated on that same read, so
     # the access log records a single evaluation and all rules share one look.
-    loader = build_test_loader(args.data_root, args.batch_size)
+    loader = build_test_loader(args.data_root, args.batch_size, access_log=None)
     train_counts = LongTailDataModule(root=args.data_root).class_counts()
 
-    probe = ExpertPool(args.experts, args.seeds,
-                       checkpoint_dir=args.checkpoint_dir, device=args.device)
-    absent = probe.missing()
-    if absent:
-        print(f"Note: no checkpoint for {absent} — skipped")
-    seeds = probe.seeds_present()
-    if not seeds:
-        raise EvaluationError(
-            f"no checkpoints found in {args.checkpoint_dir} for {args.experts}"
-        )
+    seeds = list(probe.seeds)
     print(f"Seeds found: {seeds}\n")
 
     per_seed: dict[int, dict] = {}
@@ -162,41 +171,50 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  all-wrong {m['all_wrong_fraction']:.4f}  oracle {m['oracle_accuracy']:.4f}")
 
     # ── aggregate across seeds (AGENTs.md section 6) ──
-    def agg(section: str, name: str) -> dict:
-        return ev_aggregate([per_seed[s][section][name] for s in seeds])
-
     print("\n" + "=" * 62)
     print(f"Per-expert performance (mean ± std over {len(seeds)} seed(s))")
     print(f"  {'expert':<18}{'BA':>16}{'Head':>16}{'Tail':>16}")
-    expert_table = {}
-    for name in per_seed[seeds[0]]['experts']:
-        a = agg('experts', name)
-        expert_table[name] = a
+    expert_table = aggregate_named_metrics(
+        {seed: per_seed[seed]['experts'] for seed in seeds},
+        requested_seeds=seeds,
+        label='expert',
+    )
+    for name, a in expert_table.items():
         print(f"  {name:<18}{a['ba']['mean']:>9.4f}±{a['ba']['std']:<6.4f}"
               f"{a['head']['mean']:>9.4f}±{a['head']['std']:<6.4f}"
               f"{a['tail']['mean']:>9.4f}±{a['tail']['std']:<6.4f}")
 
     print(f"\nFrozen parameter-free routing rules (pre-registered)")
     print(f"  {'rule':<14}{'BA':>16}{'Tail':>16}")
-    routing_table = {}
-    for name in per_seed[seeds[0]]['routing']:
-        a = agg('routing', name)
-        routing_table[name] = a
+    routing_table = aggregate_named_metrics(
+        {seed: per_seed[seed]['routing'] for seed in seeds},
+        requested_seeds=seeds,
+        label='routing method',
+    )
+    for name, a in routing_table.items():
         print(f"  {name:<14}{a['ba']['mean']:>9.4f}±{a['ba']['std']:<6.4f}"
               f"{a['tail']['mean']:>9.4f}±{a['tail']['std']:<6.4f}")
 
     print("\nPre-registered decision rule (BA and Tail both above Uniform, "
           "consistently across seeds)")
     uniform = routing_table.get('Uniform')
-    if uniform:
-        for name, a in routing_table.items():
-            if name == 'Uniform':
-                continue
-            ba_ok = a['ba']['mean'] > uniform['ba']['mean']
-            tail_ok = a['tail']['mean'] > uniform['tail']['mean']
-            verdict = 'PASSES' if (ba_ok and tail_ok) else 'no gain'
-            print(f"  {name:<14} BA {'>' if ba_ok else '≤'} uniform, "
-                  f"Tail {'>' if tail_ok else '≤'} uniform  -> {verdict}")
+    if uniform is None:
+        raise EvaluationError("routing results do not contain the Uniform baseline")
+    uniform_by_seed = {
+        seed: per_seed[seed]['routing']['Uniform'] for seed in seeds
+    }
+    for name, a in routing_table.items():
+        if name == 'Uniform':
+            continue
+        candidate_by_seed = {
+            seed: per_seed[seed]['routing'][name] for seed in seeds
+        }
+        passes = passes_success_criterion(candidate_by_seed, uniform_by_seed)
+        ba_ok = a['ba']['mean'] > uniform['ba']['mean']
+        tail_ok = a['tail']['mean'] > uniform['tail']['mean']
+        verdict = 'PASSES' if passes else 'no gain'
+        print(f"  {name:<14} BA {'>' if ba_ok else '≤'} uniform, "
+              f"Tail {'>' if tail_ok else '≤'} uniform  -> {verdict}")
 
     results = {
         'seeds': seeds,
@@ -216,6 +234,6 @@ def main(argv: list[str] | None = None) -> int:
 if __name__ == '__main__':
     try:
         sys.exit(main())
-    except EvaluationError as exc:
+    except (EvaluationError, TestAccessError) as exc:
         print(f"evaluation failed: {exc}", file=sys.stderr)
         sys.exit(2)

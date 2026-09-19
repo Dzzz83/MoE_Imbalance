@@ -5,8 +5,9 @@ The routing candidate set is frozen in `records/routing-preregistration.md` befo
 any test-set number is seen. That discipline is only real if peeking is
 *visible*, so every evaluation entry point appends an entry here first.
 
-The log exists to make access auditable, never to block work: if the log cannot
-be written, the caller continues and the failure is reported, not raised.
+The low-level ``record`` method remains a best-effort compatibility API. All
+protected readers use ``authorize`` instead, which fails closed when the audit
+entry cannot be written.
 """
 
 from __future__ import annotations
@@ -14,6 +15,10 @@ from __future__ import annotations
 import datetime as _dt
 import subprocess
 from pathlib import Path
+
+
+class TestAccessError(RuntimeError):
+    """Raised when a protected test-set read cannot be audited."""
 
 
 class TestAccessLog:
@@ -45,7 +50,8 @@ class TestAccessLog:
     def record(self, command: str, note: str = '') -> bool:
         """Append one entry. Returns True when written, False when it could not be.
 
-        Never raises: an unwritable log must not break an evaluation run.
+        Never raises: this low-level compatibility method reports failure via
+        ``False``. Protected readers must call :meth:`authorize`.
         """
         stamp = _dt.datetime.now(_dt.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         row = f"| {stamp} | {self._git_hash()} | `{command}` | {note} |\n"
@@ -58,6 +64,15 @@ class TestAccessLog:
             return True
         except OSError:
             return False
+
+    def authorize(self, command: str, note: str = '') -> None:
+        """Record one access and refuse the protected read if recording fails."""
+        if self.record(command, note=note):
+            return
+        raise TestAccessError(
+            f"test-set access denied: could not write the access log at {self.path}; "
+            "evaluation stopped before reading the test set"
+        )
 
     @staticmethod
     def _git_hash() -> str:

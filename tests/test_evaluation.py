@@ -399,10 +399,10 @@ def test_access_log_records_command_and_timestamp():
     print("  ✅ access log records the command and note")
 
 
-def test_access_log_does_not_fail_the_run_when_unwritable():
+def test_access_log_low_level_record_remains_backward_compatible_when_unwritable():
     log = TestAccessLog('/proc/nonexistent_dir/access.md')
-    log.record('anything')          # must not raise
-    print("  ✅ unwritable log path does not break the run")
+    assert log.record('anything') is False
+    print("  ✅ low-level record reports an unwritable path without raising")
 
 
 def test_access_log_detects_no_prior_access():
@@ -628,7 +628,7 @@ TESTS = [
     ("Health accepts present ckpt", test_health_checker_accepts_present_final_checkpoint),
     ("Access log appends", test_access_log_appends_and_never_truncates),
     ("Access log content", test_access_log_records_command_and_timestamp),
-    ("Access log unwritable safe", test_access_log_does_not_fail_the_run_when_unwritable),
+    ("Access log low-level unwritable", test_access_log_low_level_record_remains_backward_compatible_when_unwritable),
     ("Access log starts empty", test_access_log_detects_no_prior_access),
     ("Pool rejects cuda without GPU", test_pool_rejects_cuda_when_the_gpu_is_unavailable),
 ]

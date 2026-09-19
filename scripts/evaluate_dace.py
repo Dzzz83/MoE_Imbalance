@@ -36,6 +36,7 @@ from torch.utils.data import DataLoader
 
 from models.resnet32 import ResNet32, ResNet32WithRouting
 from data.cifar_lt import LongTailCIFAR100
+from scripts.utils.test_access import TestAccessError, TestAccessLog
 
 
 # ── Class groups ─────────────────────────────────────────────────────────
@@ -348,6 +349,7 @@ def main():
     parser.add_argument('--kl-threshold', type=float, default=0.1,
                         help='KL threshold for prototype computation')
     parser.add_argument('--device', default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--access-log', default='docs/test-access-log.md')
     args = parser.parse_args()
 
     ckpt_dir = args.checkpoint_dir
@@ -367,6 +369,10 @@ def main():
 
     # ── data ──────────────────────────────────────────────────────────
     val_idx = np.load(f'{args.data_root}/processed/lt_val_indices.npy')
+    TestAccessLog(args.access_log).authorize(
+        ' '.join(sys.argv),
+        note='legacy DACE test-set evaluation',
+    )
     test_set = LongTailCIFAR100(
         root=args.data_root,
         train=False, download=False,
@@ -519,4 +525,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except TestAccessError as exc:
+        print(f"evaluation failed: {exc}", file=sys.stderr)
+        raise SystemExit(2)

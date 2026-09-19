@@ -18,13 +18,20 @@ matching the router interface.
 from __future__ import annotations
 
 import json
+import numbers
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Mapping
 
 import numpy as np
 import torch
 
-from scripts.base_trainer import compute_class_groups, group_accuracies
+from scripts.base_trainer import (
+    CheckpointValidationError,
+    compute_class_groups,
+    group_accuracies,
+    validate_checkpoint_metadata,
+)
 
 
 class EvaluationError(RuntimeError):
@@ -73,15 +80,35 @@ def aggregate_across_seeds(per_seed_metrics: list[dict]) -> dict:
     """
     if not per_seed_metrics:
         raise EvaluationError("no per-seed metrics to aggregate")
-    keys: set[str] = set()
-    for m in per_seed_metrics:
-        keys |= set(m)
+    if any(not isinstance(metrics, Mapping) for metrics in per_seed_metrics):
+        raise EvaluationError("every per-seed metric entry must be a mapping")
+
+    keys = set(per_seed_metrics[0])
+    for index, metrics in enumerate(per_seed_metrics[1:], start=1):
+        metric_keys = set(metrics)
+        if metric_keys != keys:
+            missing = sorted(keys - metric_keys)
+            extra = sorted(metric_keys - keys)
+            raise EvaluationError(
+                f"inconsistent metric keys at seed index {index}: "
+                f"missing={missing}, extra={extra}"
+            )
+
     out: dict[str, dict] = {}
     for key in sorted(keys):
-        values = [m[key] for m in per_seed_metrics
-                  if isinstance(m.get(key), (int, float)) and not isinstance(m.get(key), bool)]
-        if not values:
-            continue
+        values = []
+        for index, metrics in enumerate(per_seed_metrics):
+            value = metrics[key]
+            if isinstance(value, bool) or not isinstance(value, numbers.Real):
+                raise EvaluationError(
+                    f"metric '{key}' at seed index {index} must be a finite scalar, "
+                    f"got {value!r}"
+                )
+            if not np.isfinite(value):
+                raise EvaluationError(
+                    f"metric '{key}' at seed index {index} is not finite: {value!r}"
+                )
+            values.append(value)
         arr = np.asarray(values, dtype=np.float64)
         out[key] = {
             'mean': float(arr.mean()),
@@ -89,6 +116,111 @@ def aggregate_across_seeds(per_seed_metrics: list[dict]) -> dict:
             'n': int(len(arr)),
         }
     return out
+
+
+def aggregate_named_metrics(
+    per_seed_metrics: Mapping[int, Mapping[str, Mapping[str, object]]],
+    *,
+    requested_seeds: list[int] | None = None,
+    label: str = 'expert/method',
+) -> dict[str, dict]:
+    """Aggregate named metric bundles after validating seed membership.
+
+    The names (experts or routing methods) must be identical for every seed.
+    The first seed's insertion order is retained in the returned mapping.
+    """
+    if not per_seed_metrics:
+        raise EvaluationError(f'no per-seed {label} metrics to aggregate')
+
+    seeds = list(per_seed_metrics) if requested_seeds is None else list(requested_seeds)
+    if len(set(seeds)) != len(seeds):
+        raise EvaluationError(f'requested {label} seeds contain duplicates: {seeds}')
+    if set(per_seed_metrics) != set(seeds):
+        raise EvaluationError(
+            f'{label} seed membership mismatch: requested={seeds}, '
+            f'provided={list(per_seed_metrics)}'
+        )
+
+    first = per_seed_metrics[seeds[0]]
+    if not isinstance(first, Mapping):
+        raise EvaluationError(f'{label} metrics for seed {seeds[0]} must be a mapping')
+    names = list(first)
+    expected_names = set(names)
+    if not names:
+        raise EvaluationError(f'no {label} entries were provided')
+
+    for seed in seeds[1:]:
+        current = per_seed_metrics[seed]
+        if not isinstance(current, Mapping):
+            raise EvaluationError(f'{label} metrics for seed {seed} must be a mapping')
+        current_names = set(current)
+        if current_names != expected_names:
+            raise EvaluationError(
+                f'inconsistent {label} membership for seed {seed}: '
+                f'missing={sorted(expected_names - current_names)}, '
+                f'extra={sorted(current_names - expected_names)}'
+            )
+
+    return {
+        name: aggregate_across_seeds([
+            per_seed_metrics[seed][name] for seed in seeds
+        ])
+        for name in names
+    }
+
+
+def passes_success_criterion(
+    candidate_by_seed: Mapping[int, Mapping[str, object]],
+    uniform_by_seed: Mapping[int, Mapping[str, object]],
+) -> bool:
+    """Return whether a candidate beats Uniform under the frozen criterion.
+
+    The comparison is paired by seed.  Both aggregate means must improve, and
+    both BA and Tail must improve strictly for every configured seed.
+    """
+    candidate_seeds = set(candidate_by_seed)
+    uniform_seeds = set(uniform_by_seed)
+    if candidate_seeds != uniform_seeds:
+        raise EvaluationError(
+            f'success-criterion seed mismatch: candidate={sorted(candidate_seeds)}, '
+            f'uniform={sorted(uniform_seeds)}'
+        )
+    if not candidate_seeds:
+        raise EvaluationError('success criterion requires at least one seed')
+
+    seeds = list(candidate_by_seed)
+    for seed in seeds:
+        for label, metrics in (
+            ('candidate', candidate_by_seed[seed]),
+            ('Uniform', uniform_by_seed[seed]),
+        ):
+            if not isinstance(metrics, Mapping):
+                raise EvaluationError(
+                    f'{label} metrics for seed {seed} must be a mapping'
+                )
+            missing = [key for key in ('ba', 'tail') if key not in metrics]
+            if missing:
+                raise EvaluationError(
+                    f'{label} metrics for seed {seed} missing required keys: {missing}'
+                )
+
+    candidate_aggregate = aggregate_across_seeds(
+        [candidate_by_seed[seed] for seed in seeds]
+    )
+    uniform_aggregate = aggregate_across_seeds(
+        [uniform_by_seed[seed] for seed in seeds]
+    )
+
+    means_improve = all(
+        candidate_aggregate[key]['mean'] > uniform_aggregate[key]['mean']
+        for key in ('ba', 'tail')
+    )
+    per_seed_improves = all(
+        candidate_by_seed[seed]['ba'] > uniform_by_seed[seed]['ba']
+        and candidate_by_seed[seed]['tail'] > uniform_by_seed[seed]['tail']
+        for seed in seeds
+    )
+    return bool(means_improve and per_seed_improves)
 
 
 def balanced_accuracy(targets: np.ndarray, preds: np.ndarray) -> float:
@@ -187,9 +319,42 @@ class ExpertPool:
                     found[(name, seed)] = path
         return found
 
+    def missing_combinations(self) -> list[tuple[str, int, Path]]:
+        """Return every requested expert/seed entry without a final checkpoint."""
+        return [
+            (
+                name,
+                seed,
+                self.checkpoint_dir / f'{name}_seed{seed}_final.pt',
+            )
+            for name in self.expert_names
+            for seed in self.seeds
+            if not (self.checkpoint_dir / f'{name}_seed{seed}_final.pt').exists()
+        ]
+
+    def validate_complete(self) -> None:
+        """Require a final checkpoint for every requested expert and seed.
+
+        Evaluation must never reduce the requested matrix to the files that
+        happen to be present.  This check is deliberately separate from model
+        loading so callers can run it before constructing an evaluation loader.
+        """
+        missing = self.missing_combinations()
+        if not missing:
+            return
+        details = '; '.join(
+            f'{name} seed={seed} ({path})'
+            for name, seed, path in missing
+        )
+        raise EvaluationError(
+            'incomplete expert pool: missing final checkpoints for every '
+            f'requested expert/seed combination: {details}'
+        )
+
     def seeds_present(self) -> list[int]:
-        """Every seed that has at least one checkpoint on disk."""
-        return sorted({seed for (_, seed) in self.available()})
+        """Return requested seeds only after the complete matrix is verified."""
+        self.validate_complete()
+        return list(self.seeds)
 
     def seeds_for(self, expert: str) -> list[int]:
         """Seeds available for one expert."""
@@ -228,13 +393,9 @@ class ExpertPool:
         """
         from models.resnet32 import ResNet32
 
+        self.validate_complete()
         self._check_device()
         available = self.available()
-        if not available:
-            raise EvaluationError(
-                f"no expert checkpoints found in {self.checkpoint_dir} for "
-                f"{self.expert_names} x seeds {self.seeds}"
-            )
 
         if seed is None:
             seeds = self.seeds_present()
@@ -244,6 +405,10 @@ class ExpertPool:
                     f"so this evaluation reports a single seed's numbers"
                 )
             seed = seeds[0]
+        elif seed not in self.seeds:
+            raise EvaluationError(
+                f"seed {seed} was not requested; requested seeds are {self.seeds}"
+            )
 
         paths = {name: p for (name, s), p in available.items() if s == seed}
         if len(paths) < 2:
@@ -251,13 +416,33 @@ class ExpertPool:
                 f"routing needs at least 2 experts for seed {seed}; found "
                 f"{sorted(paths)} (missing: {self.missing()})"
             )
+        self._models.clear()
         for name, path in paths.items():
-            state = torch.load(path, map_location=self.device, weights_only=False)
+            try:
+                state = torch.load(path, map_location=self.device, weights_only=False)
+            except Exception as exc:  # noqa: BLE001 - add path context to load errors
+                raise EvaluationError(f'{path}: could not load checkpoint: {exc}') from exc
+            try:
+                validate_checkpoint_metadata(
+                    state,
+                    path=path,
+                    expected_expert=name,
+                    expected_seed=seed,
+                    expected_epoch=200,
+                    require_final=True,
+                )
+            except CheckpointValidationError as exc:
+                raise EvaluationError(str(exc)) from exc
             model = ResNet32(num_classes=100)
-            model.load_state_dict(state['model_state_dict'])
+            try:
+                model.load_state_dict(state['model_state_dict'])
+            except RuntimeError as exc:
+                raise EvaluationError(
+                    f'{path}: incompatible model state for ResNet-32 with 100 '
+                    f'classes: {exc}'
+                ) from exc
             model.to(self.device).eval()
             self._models[name] = model
-        self.expert_names = list(self._models)
         self.loaded_seed = seed
         return self
 
