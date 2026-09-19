@@ -314,6 +314,40 @@ Dry run (2 batches, CPU-safe) to check the code without a GPU:
 python scripts/train.py --config configs/ce.yaml --epochs 1 --max-batches 2
 ```
 
+### Task 3C Kaggle preflight
+
+Clone the repository into `/kaggle/working/MoE_Imbalance`, place the extracted
+CIFAR-100 files under `data/cifar-100-python/`, and verify both the dataset and
+the committed split before any OOF execution:
+
+```bash
+git clone https://github.com/Dzzz83/MoE_Imbalance.git /kaggle/working/MoE_Imbalance
+cd /kaggle/working/MoE_Imbalance
+test -f data/cifar-100-python/data_batch_1
+test -f data/cifar-100-python/test
+test -f data/processed/lt_ir100_train_indices.npy
+```
+
+The read-only preflight keeps the existing CE pilot in place and writes any
+new Task 3C artifacts inside the clone:
+
+```bash
+python scripts/run_task3c.py \
+    --dry-run \
+    --device cuda \
+    --data-root ./data \
+    --artifact-root ./artifacts/oof \
+    --pilot-root ./artifacts/oof/task3b_pilot_ce_s78_o0_i0
+```
+
+The expected inventory is 16 required jobs, 1 validated existing pilot, 15
+missing jobs, and zero partial or invalid jobs. `--validate-only` returns a
+nonzero status while jobs are missing; use the dry-run inventory to distinguish
+that intentional state from corrupted artifacts. After each authorized batch,
+validate the results, inspect `git status`, stage only
+`artifacts/oof/task3c_oof/`, commit and push, and verify the remote contains
+the artifacts. The runner never commits or pushes automatically.
+
 Run the whole test suite:
 
 ```bash

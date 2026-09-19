@@ -9,11 +9,23 @@ and is never copied, rewritten, or retrained.
 
 Typical Kaggle use from the cloned repository is::
 
-    python scripts/run_task3c.py --dry-run --write-plan
+    cd /kaggle/working/MoE_Imbalance
+    python scripts/run_task3c.py \
+        --dry-run \
+        --device cuda \
+        --data-root ./data \
+        --artifact-root ./artifacts/oof \
+        --pilot-root ./artifacts/oof/task3b_pilot_ce_s78_o0_i0
     python scripts/run_task3c.py --validate-only
     python scripts/run_task3c.py --run-missing --max-jobs 1 --execute-full \
         --device cuda
     python scripts/run_task3c.py --build-diagnostics --device cuda
+
+The preflight deliberately reports missing jobs as a successful dry-run
+inventory.  ``--validate-only`` returns a nonzero status while any required
+job is missing; that status means incomplete work, not corrupted artifacts.
+All Task 3C outputs stay under ``./artifacts/oof/task3c_oof`` so an operator
+can validate them and explicitly commit/push them from the repository root.
 
 The last two commands may be rerun after a session interruption. Results are
 stored under ``artifacts/oof/task3c_oof``. This library never runs ``git push``;

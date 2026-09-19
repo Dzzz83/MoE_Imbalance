@@ -28,6 +28,7 @@ from scripts.config import ConfigError, TrainingConfig
 from scripts.expert_diagnostics import ExpertDiagnostics
 from scripts.oof_pipeline import (
     OOFArtifactError,
+    OOFArtifactMissingError,
     OOFArtifactStore,
     OOFCompletedRun,
     OOFPipeline,
@@ -58,6 +59,7 @@ TASK3C_CONFIG_FILES = {
     "balanced_softmax": "balanced_softmax.yaml",
     "mixup": "mixup.yaml",
 }
+TASK3C_PILOT_EXPERIMENT_ID = "task3b_pilot_ce_s78_o0_i0"
 TASK3C_PILOT_DEFAULT = "artifacts/oof/task3b_pilot_ce_s78_o0_i0"
 
 
@@ -129,6 +131,7 @@ class Task3CJobStatus:
     state: str
     artifact_dir: Path
     detail: str = ""
+    recovery_ready: bool = False
 
 
 @dataclass(frozen=True)
@@ -370,53 +373,65 @@ class Task3CBatchRunner:
         pilot_root = self.plan.pilot_root
         if not pilot_root.exists():
             return None
+        if pilot_root.name != TASK3C_PILOT_EXPERIMENT_ID:
+            raise Task3CError(
+                "the CE pilot directory must retain its original experiment ID "
+                f"{TASK3C_PILOT_EXPERIMENT_ID!r}"
+            )
+        if not pilot_root.is_dir():
+            raise Task3CError(f"the CE pilot path is not a directory: {pilot_root}")
         try:
             pilot_store = OOFArtifactStore(
                 root=pilot_root.parent,
                 manager=self.plan.manager,
-                experiment_id=pilot_root.name,
+                experiment_id=TASK3C_PILOT_EXPERIMENT_ID,
             )
             pilot_spec = OOFRunSpec(
-                experiment_id=pilot_root.name,
+                experiment_id=TASK3C_PILOT_EXPERIMENT_ID,
                 expert="ce",
                 training_seed=self.plan.protocol.training_seed,
                 outer_fold_id=self.plan.protocol.outer_fold_id,
                 inner_fold_id=0,
             )
             return pilot_store, pilot_spec.resolve(self.plan.manager)
-        except (OOFProtocolError, OOFArtifactError) as exc:
+        except (OOFProtocolError, OOFArtifactError, OSError) as exc:
             raise Task3CError(f"cannot resolve the existing CE pilot: {exc}") from exc
 
     def _validate_frozen_resolved_config(
         self, job: Task3CJob, resolved_config: Mapping[str, Any]
     ) -> None:
-        """Check semantic frozen settings without requiring a machine path."""
-        if resolved_config.get("expert") != job.expert_key:
-            raise Task3CError(f"{job.job_id}: resolved config has the wrong expert")
-        if resolved_config.get("seed") != self.plan.protocol.training_seed:
-            raise Task3CError(f"{job.job_id}: resolved config has the wrong training seed")
-        model = resolved_config.get("model", {})
-        if model.get("arch") != "resnet32" or model.get("num_classes") != 100:
-            raise Task3CError(f"{job.job_id}: resolved config has the wrong model")
-        data = resolved_config.get("data", {})
-        if data.get("imbalance_ratio") != 100.0 or data.get("batch_size") != 128:
-            raise Task3CError(f"{job.job_id}: resolved config changes the data recipe")
-        schedule = resolved_config.get("schedule", {})
-        if (
-            schedule.get("epochs") != TASK3C_EPOCHS
-            or schedule.get("warmup_epochs") != 5
-            or tuple(schedule.get("decay_epochs", ())) != (160, 180)
+        """Check all frozen recipe fields while ignoring runtime-only paths."""
+        if not isinstance(resolved_config, Mapping):
+            raise Task3CError(f"{job.job_id}: resolved config must be a mapping")
+        expected = self.plan.config_for(job).replace(
+            seed=self.plan.protocol.training_seed,
+            epochs=TASK3C_EPOCHS,
+        ).to_dict()
+
+        def frozen_projection(config: Mapping[str, Any]) -> dict[str, Any]:
+            projected = dict(config)
+            projected.pop("device", None)
+            projected.pop("resolved_device", None)
+            projected.pop("checkpoint", None)
+            data = projected.get("data")
+            if not isinstance(data, Mapping):
+                raise Task3CError(f"{job.job_id}: resolved config has invalid data settings")
+            projected["data"] = {
+                key: value for key, value in data.items() if key != "root"
+            }
+            return projected
+
+        if _canonical_json(frozen_projection(resolved_config)) != _canonical_json(
+            frozen_projection(expected)
         ):
-            raise Task3CError(f"{job.job_id}: resolved config changes the schedule")
-        optimiser = resolved_config.get("optimiser", {})
-        if (
-            optimiser.get("name") != "sgd"
-            or optimiser.get("lr") != 0.1
-            or optimiser.get("momentum") != 0.9
-            or optimiser.get("weight_decay") != 2.0e-4
-            or optimiser.get("nesterov")
+            raise Task3CError(
+                f"{job.job_id}: resolved config does not match the frozen training recipe"
+            )
+        checkpoint = resolved_config.get("checkpoint")
+        if not isinstance(checkpoint, Mapping) or not isinstance(
+            checkpoint.get("dir"), str
         ):
-            raise Task3CError(f"{job.job_id}: resolved config changes the optimizer")
+            raise Task3CError(f"{job.job_id}: resolved config has invalid checkpoint settings")
 
     def inspect(self) -> tuple[Task3CJobStatus, ...]:
         statuses: list[Task3CJobStatus] = []
@@ -462,47 +477,58 @@ class Task3CBatchRunner:
             try:
                 completed = self.store.validate_completed_run(context)
                 self._validate_frozen_resolved_config(job, completed.resolved_config)
-            except (OOFArtifactError, Task3CError, OSError, RuntimeError) as exc:
-                if not self.store.prediction_path(context).exists():
+            except (OOFArtifactError, Task3CError, OSError, RuntimeError):
+                try:
+                    metadata, resolved_config = self.store.validate_run_provenance(context)
+                    self._validate_frozen_resolved_config(job, resolved_config)
+                    self.store.validate_final_checkpoint(
+                        context,
+                        metadata=metadata,
+                        resolved_config=resolved_config,
+                        require_record=False,
+                    )
+                except OOFArtifactMissingError as exc:
                     statuses.append(
                         Task3CJobStatus(
                             job.job_id,
                             "partial",
                             artifact_dir,
-                            "run is present but has no validated complete prediction: "
-                            + str(exc),
+                            "run is interrupted or has no valid final checkpoint: " + str(exc),
                         )
                     )
+                except (OOFArtifactError, Task3CError, OSError, RuntimeError) as exc:
+                    statuses.append(
+                        Task3CJobStatus(job.job_id, "invalid", artifact_dir, str(exc))
+                    )
                 else:
-                    # A session may have written the complete prediction file
-                    # and stopped before the final metadata update.  Accept
-                    # this only when the existing prediction, checkpoint
-                    # linkage, and frozen config are independently readable;
-                    # the next OOFPipeline call will finalize it idempotently.
-                    try:
-                        self.store.load_predictions(context)
-                        resolved_config = json.loads(
-                            self.store.config_path(context).read_text()
-                        )
-                        self._validate_frozen_resolved_config(job, resolved_config)
-                    except (OOFArtifactError, Task3CError, OSError, RuntimeError, json.JSONDecodeError) as recovery_exc:
-                        statuses.append(
-                            Task3CJobStatus(
-                                job.job_id,
-                                "invalid",
-                                artifact_dir,
-                                str(recovery_exc),
-                            )
-                        )
-                    else:
+                    if not self.store.prediction_path(context).exists():
                         statuses.append(
                             Task3CJobStatus(
                                 job.job_id,
                                 "partial",
                                 artifact_dir,
-                                "prediction is valid; completion metadata will be recovered",
+                                "valid final checkpoint; prediction artifact is missing and "
+                                "can be recovered without training",
+                                recovery_ready=True,
                             )
                         )
+                    else:
+                        try:
+                            self.store.load_predictions(context)
+                        except (OOFArtifactError, Task3CError, OSError, RuntimeError) as exc:
+                            statuses.append(
+                                Task3CJobStatus(job.job_id, "invalid", artifact_dir, str(exc))
+                            )
+                        else:
+                            statuses.append(
+                                Task3CJobStatus(
+                                    job.job_id,
+                                    "partial",
+                                    artifact_dir,
+                                    "prediction is valid; completion metadata will be recovered",
+                                    recovery_ready=True,
+                                )
+                            )
             else:
                 statuses.append(
                     Task3CJobStatus(
@@ -572,10 +598,13 @@ class Task3CBatchRunner:
         ]
         if max_jobs is not None:
             pending = pending[:max_jobs]
-        if pending and not execute_full:
+        if pending and not execute_full and any(
+            not status.recovery_ready for status in pending
+        ):
             raise Task3CError(
                 "full 200-epoch Task 3C execution requires --execute-full; "
-                "dry-run and validation do not launch training"
+                "dry-run and validation do not launch training; valid-checkpoint "
+                "prediction recovery does not require this authorization"
             )
 
         self.plan.write_batch_manifest()
@@ -830,6 +859,46 @@ class OOFAlignmentBuilder:
                 raise Task3CError(
                     f"{job.job_id}: prediction artifact contains a different expert"
                 )
+            checkpoint = run.metadata.get("checkpoint")
+            expected_checkpoint_sha = (
+                checkpoint.get("sha256")
+                if isinstance(checkpoint, Mapping)
+                else None
+            )
+            expected_config_sha = _sha256_text(
+                _canonical_json(dict(run.resolved_config))
+            )
+            recorded_config_sha = run.metadata.get("resolved_config_sha256")
+            if (
+                recorded_config_sha is not None
+                and recorded_config_sha != expected_config_sha
+            ):
+                raise Task3CError(
+                    f"{job.job_id}: run metadata has the wrong resolved configuration hash"
+                )
+            for record in run.artifact.records:
+                if record.training_seed != context.training_seed:
+                    raise Task3CError(
+                        f"{job.job_id}: prediction record has the wrong training seed"
+                    )
+                if (
+                    record.expert_training_membership_hash
+                    != context.training_membership_hash
+                ):
+                    raise Task3CError(
+                        f"{job.job_id}: prediction record has the wrong training membership"
+                    )
+                if (
+                    expected_checkpoint_sha is not None
+                    and record.checkpoint_sha256 != expected_checkpoint_sha
+                ):
+                    raise Task3CError(
+                        f"{job.job_id}: prediction record has the wrong checkpoint hash"
+                    )
+                if record.resolved_config_sha256 != expected_config_sha:
+                    raise Task3CError(
+                        f"{job.job_id}: prediction record has the wrong resolved configuration"
+                    )
 
         rows: list[tuple[int, int, int, list[int], list[np.ndarray]]] = []
         labels_by_index = dict(
@@ -1027,6 +1096,7 @@ __all__ = [
     "DIAGNOSTIC_REPORT_SCHEMA_VERSION",
     "TASK3C_CONFIG_FILES",
     "TASK3C_EXPERIMENT_ID",
+    "TASK3C_PILOT_EXPERIMENT_ID",
     "TASK3C_PILOT_DEFAULT",
     "Task3CBatchPlan",
     "Task3CBatchRunner",

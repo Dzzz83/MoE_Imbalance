@@ -47,6 +47,10 @@ class OOFArtifactError(OOFProtocolError):
     """Raised when an OOF artifact is unsafe, incomplete, or inconsistent."""
 
 
+class OOFArtifactMissingError(OOFArtifactError):
+    """Raised when a resumable run is missing a required artifact file."""
+
+
 def _canonical_json(value: Any) -> str:
     try:
         return json.dumps(value, sort_keys=True, separators=(",", ":"))
@@ -261,6 +265,119 @@ class OOFArtifactStore:
         self._write_once(self.manifest_path, self.manager.manifest().to_json())
         return self.manifest_path
 
+    def validate_run_provenance(
+        self,
+        context: OOFRunContext,
+        *,
+        expected_config: Mapping[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Read and validate immutable run provenance without writing files."""
+        self._validate_context(context)
+        run_dir = self.run_dir(context).resolve()
+        if not run_dir.is_dir():
+            raise OOFArtifactMissingError(f"OOF run directory is missing: {run_dir}")
+
+        metadata = self._read_metadata(context)
+        if metadata.get("experiment_id") != self.experiment_id:
+            raise OOFArtifactError("OOF run metadata has a mismatched experiment ID")
+        if metadata.get("status") not in {"prepared", "training_complete", "complete"}:
+            raise OOFArtifactError(
+                f"OOF run metadata has an unsupported status {metadata.get('status')!r}"
+            )
+
+        manifest_path = self.manifest_path
+        if not manifest_path.exists():
+            raise OOFArtifactMissingError(f"OOF fold manifest is missing: {manifest_path}")
+        try:
+            manifest = FoldManifest.from_json(manifest_path.read_text())
+            manifest.validate()
+        except (OSError, OOFProtocolError) as exc:
+            raise OOFArtifactError(f"OOF fold manifest is invalid: {manifest_path}") from exc
+        if manifest.to_dict() != self.manager.manifest().to_dict():
+            raise OOFArtifactError(
+                "OOF fold manifest disagrees with the current frozen fold manager"
+            )
+
+        resolved_config = self._read_resolved_config(context)
+        if expected_config is not None and _canonical_json(resolved_config) != _canonical_json(
+            dict(expected_config)
+        ):
+            raise OOFArtifactError(
+                "completed OOF run has a resolved configuration different from the "
+                "requested frozen configuration"
+            )
+
+        expected_static = self._static_metadata(context, resolved_config)
+        for key, value in expected_static.items():
+            if key == "status":
+                continue
+            if metadata.get(key) != value:
+                raise OOFArtifactError(
+                    f"OOF metadata disagrees for {key!r}"
+                )
+        return metadata, resolved_config
+
+    def validate_final_checkpoint(
+        self,
+        context: OOFRunContext,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+        resolved_config: Mapping[str, Any] | None = None,
+        require_record: bool = False,
+    ) -> tuple[Path, dict[str, Any], str]:
+        """Validate the expected final checkpoint without changing metadata.
+
+        When ``require_record`` is false, a final checkpoint at the canonical
+        run-relative path may be validated before an interrupted metadata update
+        records it.  This is the only checkpoint that prediction recovery may
+        adopt; no canonical full-data checkpoint is considered.
+        """
+        self._validate_context(context)
+        if metadata is None:
+            metadata = self._read_metadata(context)
+        if resolved_config is None:
+            resolved_config = self._read_resolved_config(context)
+
+        checkpoint_record = metadata.get("checkpoint")
+        expected_path = self.checkpoint_path(context).resolve()
+        if checkpoint_record is None:
+            if require_record:
+                raise OOFArtifactError("completed OOF run has no checkpoint record")
+            checkpoint_path = expected_path
+        elif not isinstance(checkpoint_record, Mapping):
+            raise OOFArtifactError("OOF checkpoint metadata is malformed")
+        else:
+            recorded_value = checkpoint_record.get("path")
+            expected_relative = self.checkpoint_path(context).relative_to(
+                self.run_dir(context)
+            )
+            if recorded_value != str(expected_relative):
+                raise OOFArtifactError(
+                    "OOF checkpoint metadata does not reference the expected final "
+                    "checkpoint path"
+                )
+            checkpoint_path = self._recorded_path(
+                self.run_dir(context).resolve(),
+                recorded_value,
+                name="checkpoint",
+            )
+
+        state, actual_sha = self._validate_checkpoint_file(
+            context,
+            checkpoint_path,
+            resolved_config,
+        )
+        if isinstance(checkpoint_record, Mapping):
+            if checkpoint_record.get("sha256") != actual_sha:
+                raise OOFArtifactError(
+                    "OOF checkpoint hash does not match its bytes"
+                )
+            if checkpoint_record.get("epoch") != int(state["epoch"]):
+                raise OOFArtifactError(
+                    "OOF checkpoint epoch disagrees with metadata"
+                )
+        return checkpoint_path, state, actual_sha
+
     def prepare_run(
         self,
         context: OOFRunContext,
@@ -283,6 +400,10 @@ class OOFArtifactStore:
                 raise OOFArtifactError(
                     f"cannot read existing OOF run metadata: {metadata_path}"
                 ) from exc
+            if not isinstance(existing, Mapping):
+                raise OOFArtifactError(
+                    f"existing OOF run metadata must contain a mapping: {metadata_path}"
+                )
             for key, value in metadata.items():
                 if key == "status":
                     continue
@@ -311,35 +432,25 @@ class OOFArtifactStore:
             raise OOFArtifactError(
                 "OOF checkpoint must be written inside its dedicated run directory"
             )
-        if not path.exists():
-            raise OOFArtifactError(f"OOF checkpoint does not exist: {path}")
-        actual_sha = _sha256_file(path)
+        if path != self.checkpoint_path(context).resolve():
+            raise OOFArtifactError(
+                "OOF checkpoint must use the expected final checkpoint path"
+            )
+        resolved_config = self._read_resolved_config(context)
+        _state, actual_sha = self._validate_checkpoint_file(
+            context,
+            path,
+            resolved_config,
+        )
         if checkpoint_sha256 is not None and checkpoint_sha256 != actual_sha:
             raise OOFArtifactError("checkpoint SHA-256 does not match its contents")
         metadata = self._read_metadata(context)
-        resolved_config = json.loads(self.config_path(context).read_text())
-        expected_epoch = None
-        schedule = resolved_config.get("schedule")
-        if isinstance(schedule, Mapping) and "epochs" in schedule:
-            expected_epoch = int(schedule["epochs"])
-        try:
-            state = torch.load(path, map_location="cpu", weights_only=False)
-            validate_checkpoint_metadata(
-                state,
-                path=path,
-                expected_expert=context.expert_name,
-                expected_seed=context.training_seed,
-                expected_epoch=expected_epoch,
-                require_final=True,
-            )
-        except (CheckpointValidationError, OSError, RuntimeError) as exc:
-            raise OOFArtifactError(f"checkpoint provenance validation failed: {exc}") from exc
 
         existing = metadata.get("checkpoint")
         checkpoint_record = {
             "path": str(path.relative_to(run_dir)),
             "sha256": actual_sha,
-            "epoch": int(state["epoch"]),
+            "epoch": int(_state["epoch"]),
         }
         if existing is not None and existing != checkpoint_record:
             raise OOFArtifactError("run already records a different checkpoint")
@@ -361,6 +472,15 @@ class OOFArtifactStore:
         checkpoint = metadata.get("checkpoint")
         if not isinstance(checkpoint, Mapping):
             raise OOFArtifactError("cannot write predictions before checkpoint validation")
+        resolved_config = self._read_resolved_config(context)
+        _checkpoint_path, _checkpoint_state, checkpoint_sha = self.validate_final_checkpoint(
+            context,
+            metadata=metadata,
+            resolved_config=resolved_config,
+            require_record=True,
+        )
+        if checkpoint.get("sha256") != checkpoint_sha:
+            raise OOFArtifactError("prediction artifact has a mismatched checkpoint hash")
         self._validate_run_artifact(context, artifact, checkpoint)
         serialized = artifact.to_json()
         path = self.prediction_path(context)
@@ -376,17 +496,25 @@ class OOFArtifactStore:
         return path
 
     def load_predictions(self, context: OOFRunContext) -> OOFPredictionArtifact:
+        self._validate_context(context)
         path = self.prediction_path(context)
         if not path.exists():
-            raise OOFArtifactError(f"OOF prediction artifact is missing: {path}")
+            raise OOFArtifactMissingError(f"OOF prediction artifact is missing: {path}")
         try:
             artifact = OOFPredictionArtifact.from_json(path.read_text())
         except OOFArtifactValidationError as exc:
             raise OOFArtifactError(f"invalid OOF prediction artifact: {exc}") from exc
         metadata = self._read_metadata(context)
-        checkpoint = metadata.get("checkpoint")
-        if not isinstance(checkpoint, Mapping):
-            raise OOFArtifactError("prediction artifact has no validated checkpoint")
+        resolved_config = self._read_resolved_config(context)
+        _checkpoint_path, _checkpoint_state, checkpoint_sha = self.validate_final_checkpoint(
+            context,
+            metadata=metadata,
+            resolved_config=resolved_config,
+            require_record=True,
+        )
+        checkpoint = metadata["checkpoint"]
+        if checkpoint.get("sha256") != checkpoint_sha:
+            raise OOFArtifactError("prediction artifact has a mismatched checkpoint hash")
         prediction_record = metadata.get("prediction")
         if prediction_record is not None:
             if not isinstance(prediction_record, Mapping):
@@ -425,91 +553,28 @@ class OOFArtifactStore:
         Kaggle session restart and lets it validate the Task 3B pilot without
         rewriting its metadata.
         """
-        self._validate_context(context)
+        metadata, resolved_config = self.validate_run_provenance(
+            context,
+            expected_config=expected_config,
+        )
         run_dir = self.run_dir(context).resolve()
-        if not run_dir.is_dir():
-            raise OOFArtifactError(f"OOF run directory is missing: {run_dir}")
-
-        metadata = self._read_metadata(context)
-        if metadata.get("experiment_id") != self.experiment_id:
-            raise OOFArtifactError("OOF run metadata has a mismatched experiment ID")
         if metadata.get("status") != "complete":
             raise OOFArtifactError(
                 "OOF run is not complete; recorded status is "
                 f"{metadata.get('status')!r}"
             )
 
-        manifest_path = self.manifest_path
-        if not manifest_path.exists():
-            raise OOFArtifactError(f"OOF fold manifest is missing: {manifest_path}")
-        try:
-            manifest = FoldManifest.from_json(manifest_path.read_text())
-            manifest.validate()
-        except (OSError, OOFProtocolError) as exc:
-            raise OOFArtifactError(f"OOF fold manifest is invalid: {manifest_path}") from exc
-        if manifest.to_dict() != self.manager.manifest().to_dict():
-            raise OOFArtifactError(
-                "OOF fold manifest disagrees with the current frozen fold manager"
-            )
-
-        config_path = self.config_path(context)
-        if not config_path.exists():
-            raise OOFArtifactError(f"OOF resolved config is missing: {config_path}")
-        try:
-            resolved_config = json.loads(config_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
-            raise OOFArtifactError(f"OOF resolved config is invalid: {config_path}") from exc
-        if not isinstance(resolved_config, Mapping):
-            raise OOFArtifactError("OOF resolved config must contain a mapping")
-        resolved_config = dict(resolved_config)
-        if expected_config is not None and _canonical_json(resolved_config) != _canonical_json(
-            dict(expected_config)
-        ):
-            raise OOFArtifactError(
-                "completed OOF run has a resolved configuration different from the "
-                "requested frozen configuration"
-            )
-
-        expected_static = self._static_metadata(context, resolved_config)
-        for key, value in expected_static.items():
-            if key == "status":
-                continue
-            if metadata.get(key) != value:
-                raise OOFArtifactError(
-                    f"completed OOF metadata disagrees for {key!r}"
-                )
-
         checkpoint_record = metadata.get("checkpoint")
         if not isinstance(checkpoint_record, Mapping):
             raise OOFArtifactError("completed OOF run has no checkpoint record")
-        checkpoint_path = self._recorded_path(
-            run_dir, checkpoint_record.get("path"), name="checkpoint"
+        checkpoint_path, _checkpoint_state, _actual_checkpoint_sha = (
+            self.validate_final_checkpoint(
+                context,
+                metadata=metadata,
+                resolved_config=resolved_config,
+                require_record=True,
+            )
         )
-        actual_checkpoint_sha = _sha256_file(checkpoint_path)
-        if checkpoint_record.get("sha256") != actual_checkpoint_sha:
-            raise OOFArtifactError("completed OOF checkpoint hash does not match its bytes")
-        expected_epoch = None
-        schedule = resolved_config.get("schedule")
-        if isinstance(schedule, Mapping) and "epochs" in schedule:
-            expected_epoch = int(schedule["epochs"])
-        try:
-            checkpoint_state = torch.load(
-                checkpoint_path, map_location="cpu", weights_only=False
-            )
-            validate_checkpoint_metadata(
-                checkpoint_state,
-                path=checkpoint_path,
-                expected_expert=context.expert_name,
-                expected_seed=context.training_seed,
-                expected_epoch=expected_epoch,
-                require_final=True,
-            )
-        except (CheckpointValidationError, OSError, RuntimeError) as exc:
-            raise OOFArtifactError(
-                f"completed OOF checkpoint provenance validation failed: {exc}"
-            ) from exc
-        if checkpoint_record.get("epoch") != int(checkpoint_state["epoch"]):
-            raise OOFArtifactError("completed OOF checkpoint epoch disagrees with metadata")
 
         prediction_record = metadata.get("prediction")
         if not isinstance(prediction_record, Mapping):
@@ -552,8 +617,92 @@ class OOFArtifactStore:
         if run_dir not in resolved.parents:
             raise OOFArtifactError(f"completed OOF {name} path escapes its run directory")
         if not resolved.is_file():
-            raise OOFArtifactError(f"completed OOF {name} file is missing: {resolved}")
+            raise OOFArtifactMissingError(
+                f"completed OOF {name} file is missing: {resolved}"
+            )
         return resolved
+
+    def _read_resolved_config(self, context: OOFRunContext) -> dict[str, Any]:
+        config_path = self.config_path(context)
+        if not config_path.exists():
+            raise OOFArtifactMissingError(f"OOF resolved config is missing: {config_path}")
+        try:
+            resolved_config = json.loads(config_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise OOFArtifactError(f"OOF resolved config is invalid: {config_path}") from exc
+        if not isinstance(resolved_config, Mapping):
+            raise OOFArtifactError("OOF resolved config must contain a mapping")
+        return dict(resolved_config)
+
+    def _validate_checkpoint_file(
+        self,
+        context: OOFRunContext,
+        path: Path,
+        resolved_config: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], str]:
+        expected_path = self.checkpoint_path(context).resolve()
+        path = path.resolve()
+        if path != expected_path:
+            raise OOFArtifactError(
+                "OOF checkpoint must use the expected final checkpoint path"
+            )
+        if not path.is_file():
+            raise OOFArtifactMissingError(f"OOF checkpoint is missing: {path}")
+        actual_sha = _sha256_file(path)
+        expected_epoch = None
+        schedule = resolved_config.get("schedule")
+        if isinstance(schedule, Mapping) and "epochs" in schedule:
+            try:
+                expected_epoch = int(schedule["epochs"])
+            except (TypeError, ValueError) as exc:
+                raise OOFArtifactError(
+                    "OOF resolved config contains an invalid schedule epoch"
+                ) from exc
+        try:
+            state = torch.load(path, map_location="cpu", weights_only=False)
+            validate_checkpoint_metadata(
+                state,
+                path=path,
+                expected_expert=context.expert_name,
+                expected_seed=context.training_seed,
+                expected_epoch=expected_epoch,
+                require_final=True,
+            )
+            self._validate_model_state_compatibility(
+                state,
+                path=path,
+                resolved_config=resolved_config,
+            )
+        except OOFArtifactError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - corrupt torch files are untrusted input
+            raise OOFArtifactError(
+                f"OOF checkpoint provenance validation failed: {exc}"
+            ) from exc
+        return state, actual_sha
+
+    @staticmethod
+    def _validate_model_state_compatibility(
+        state: Mapping[str, Any],
+        *,
+        path: Path,
+        resolved_config: Mapping[str, Any],
+    ) -> None:
+        """Check the frozen ResNet-32 state structure without touching data."""
+        model_config = resolved_config.get("model")
+        if not isinstance(model_config, Mapping):
+            return
+        if model_config.get("arch") != "resnet32" or model_config.get("num_classes") != 100:
+            return
+        from models.resnet32 import ResNet32
+
+        try:
+            model = ResNet32(num_classes=100)
+            model.load_state_dict(state["model_state_dict"], strict=True)
+        except Exception as exc:  # noqa: BLE001 - state structure is untrusted input
+            raise OOFArtifactError(
+                f"checkpoint model state is incompatible with ResNet-32/100 at {path}: {exc}"
+            ) from exc
 
     def _static_metadata(
         self, context: OOFRunContext, resolved_config: Mapping[str, Any]
@@ -658,6 +807,8 @@ class OOFArtifactStore:
             payload = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError) as exc:
             raise OOFArtifactError(f"OOF run metadata is invalid: {path}") from exc
+        if not isinstance(payload, Mapping):
+            raise OOFArtifactError(f"OOF run metadata must contain a mapping: {path}")
         if payload.get("schema_version") != OOF_RUN_SCHEMA_VERSION:
             raise OOFArtifactError("unsupported OOF run metadata schema")
         return payload

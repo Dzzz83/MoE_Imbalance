@@ -513,6 +513,10 @@ def test_pipeline_smoke_trains_only_the_declared_population():
         config = TrainingConfig.from_file("configs/ce.yaml").replace(
             device="cpu", epochs=1
         )
+        config = dataclasses.replace(
+            config,
+            model=dataclasses.replace(config.model, arch="synthetic", num_classes=3),
+        )
         result = pipeline.run(context_spec, config)
         recovered = pipeline.run(context_spec, config)
 
