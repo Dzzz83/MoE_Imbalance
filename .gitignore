@@ -32,7 +32,7 @@ __pycache__/
 # ── Nested-OOF development artifacts ──
 # Fold manifests, fold-expert checkpoints, predictions, and execution logs are
 # reproducible run outputs and must never be confused with canonical checkpoints.
-/artifacts/
+# /artifacts/
 
 # ── macOS ──
 .DS_Store
