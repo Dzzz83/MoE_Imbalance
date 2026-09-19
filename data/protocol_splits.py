@@ -84,6 +84,16 @@ def load_lt_train_indices(data_root: str = './data') -> np.ndarray:
     return np.load(str(path))
 
 
+def load_lt_train_labels(data_root: str = './data') -> np.ndarray:
+    """Load labels aligned to the canonical long-tailed training indices.
+
+    This helper deliberately loads only CIFAR-100's ``train=True`` population;
+    it never opens the balanced test split.
+    """
+    train_index = load_lt_train_indices(data_root)
+    return _load_targets(train_index, data_root)
+
+
 def _load_targets(train_index: np.ndarray, data_root: str) -> np.ndarray:
     """Per-sample class labels for the given CIFAR-100 train indices."""
     from torchvision import datasets
