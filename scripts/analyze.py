@@ -22,14 +22,13 @@ import time
 import numpy as np
 import torch
 
-from scripts.utils.data import (
-    load_all_experts, create_cifar_loader, get_class_groups, print_data_info,
-)
+from scripts.utils.data import load_all_experts, create_cifar_loader, print_data_info
 from scripts.utils.metrics import (
-    balanced_accuracy, per_class_accuracy, group_accuracies, confidence_metrics, ece,
+    balanced_accuracy, per_class_accuracy, confidence_metrics,
 )
 from scripts.utils.features import extract_all_experts, softmax
 from scripts.utils.test_access import TestAccessError
+from scripts.expert_diagnostics import ExpertDiagnostics
 
 
 def main():
@@ -98,28 +97,36 @@ def _analyze_diversity(
 
     N = len(targets)
     num_experts = len(expert_names)
-    num_correct = correct.sum(axis=1)
+    diagnostics = ExpertDiagnostics(
+        predictions=preds,
+        labels=targets,
+        class_counts=class_counts,
+        expert_names=expert_names,
+    )
+    complementarity = diagnostics.complementarity()
+    num_correct = np.asarray(complementarity['num_correct_experts'])
 
     # Correctness breakdown
     all_correct = (num_correct == num_experts)
-    any_correct = (num_correct > 0)
     all_wrong = (num_correct == 0)
 
-    print(f'\nCorrectness breakdown:')
+    print('\nCorrectness breakdown:')
     print(f'  All {num_experts} correct: {all_correct.sum():5d} ({all_correct.mean()*100:.1f}%)')
-    print(f'  Exactly 2 correct:     {(num_correct == 2).sum():5d} ({(num_correct == 2).mean()*100:.1f}%)')
-    print(f'  Exactly 1 correct:     {(num_correct == 1).sum():5d} ({(num_correct == 1).mean()*100:.1f}%)')
-    print(f'  All wrong:             {all_wrong.sum():5d} ({all_wrong.mean()*100:.1f}%)')
+    for count in range(num_experts - 1, 0, -1):
+        print(f'  Exactly {count} correct:     {(num_correct == count).sum():5d} '
+              f'({(num_correct == count).mean()*100:.1f}%)')
+    print(f'  All wrong:               {all_wrong.sum():5d} ({all_wrong.mean()*100:.1f}%)')
 
     # Per-expert accuracy
-    print(f'\nPer-expert balanced accuracy:')
+    print('\nPer-expert balanced accuracy:')
     for i, name in enumerate(expert_names):
-        ba = balanced_accuracy(targets, preds[:, i])
-        acc = (preds[:, i] == targets).mean()
+        metrics = complementarity['per_expert'][name]
+        ba = metrics['ba']
+        acc = metrics['accuracy']
         print(f'  {name:<10} BA={ba:.2%}  Acc={acc:.2%}')
 
     # Pairwise agreement (Cohen's κ)
-    print(f'\nPairwise agreement (Cohen\'s κ):')
+    print("\nPairwise agreement (Cohen's κ):")
     for i in range(num_experts):
         for j in range(i + 1, num_experts):
             agree = (preds[:, i] == preds[:, j]).mean()
@@ -132,7 +139,7 @@ def _analyze_diversity(
             print(f'  {expert_names[i]:<8} vs {expert_names[j]:<8}: agree={agree:.2%}, κ={kappa:.4f}')
 
     # Per-class accuracy correlation
-    print(f'\nPer-class accuracy correlation (Pearson r):')
+    print('\nPer-class accuracy correlation (Pearson r):')
     per_class = [per_class_accuracy(targets, preds[:, i]) for i in range(num_experts)]
     for i in range(num_experts):
         for j in range(i + 1, num_experts):
@@ -142,24 +149,24 @@ def _analyze_diversity(
             print(f'  {expert_names[i]:<8} vs {expert_names[j]:<8}: r={r:.4f}')
 
     # Groups
-    groups = get_class_groups(class_counts)
-    print(f'\nGroup accuracy by expert:')
+    print('\nGroup accuracy by expert:')
     print(f'  {"Expert":<10} {"Head":>8} {"Med":>8} {"Tail":>8}')
     for i, name in enumerate(expert_names):
-        ga = group_accuracies(targets, preds[:, i], groups)
-        print(f'  {name:<10} {ga.get("Head",0)*100:>7.2f}% {ga.get("Med",0)*100:>7.2f}% {ga.get("Tail",0)*100:>7.2f}%')
+        metrics = complementarity['per_expert'][name]
+        print(f'  {name:<10} {metrics.get("head",0)*100:>7.2f}% '
+              f'{metrics.get("medium",0)*100:>7.2f}% '
+              f'{metrics.get("tail",0)*100:>7.2f}%')
+
+    print('\nPrediction-agreement patterns:')
+    for pattern, count in complementarity['agreement_patterns']['pattern_counts'].items():
+        print(f'  {pattern:<10} {count:5d} ({count / N * 100:.1f}%)')
 
     # Oracle and all-wrong ceiling
-    oracle_preds = np.zeros(N, dtype=np.int64)
-    for i in range(N):
-        c = correct[i]
-        if c.any():
-            oracle_preds[i] = preds[i, np.where(c)[0][0]]
-        else:
-            oracle_preds[i] = preds[i, 0]
-    oracle_ba = balanced_accuracy(targets, oracle_preds)
+    headroom = diagnostics.hard_routing_headroom()
+    oracle_ba = headroom['hard_selection_oracle_balanced_accuracy']
     print(f'\nOracle BA: {oracle_ba:.2%}')
-    print(f'All-wrong ceiling: {all_wrong.mean()*100:.1f}%')
+    print(f'All-experts-wrong fraction: '
+          f'{headroom["all_experts_wrong_fraction"] * 100:.1f}%')
 
 
 def _analyze_root_cause(
@@ -177,93 +184,73 @@ def _analyze_root_cause(
 
     N = len(targets)
     num_experts = len(expert_names)
-    num_correct = correct.sum(axis=1)
-    any_correct = (num_correct > 0)
-    all_wrong = (num_correct == 0)
+    all_wrong = ~correct.any(axis=1)
 
-    # 1. Label ambiguity — how many samples have a unique best expert?
-    # Best expert = the one with highest confidence among those that are correct
+    diagnostics = ExpertDiagnostics(
+        predictions=preds,
+        logits=logits,
+        labels=targets,
+        class_counts=class_counts,
+        expert_names=expert_names,
+    )
+    correctness_report = diagnostics.correctness_diagnostics()
     probs = softmax(logits)
     conf = probs.max(axis=2)
 
-    best_expert = conf.argmax(axis=1)
-    best_is_correct = correct[np.arange(N), best_expert]
-
-    # Count how many samples have exactly one expert that is correct and confident
-    unique_best = np.zeros(N, dtype=bool)
-    for i in range(N):
-        if num_correct[i] == 0:
-            continue
-        # Among correct experts, is there one with strictly highest confidence?
-        correct_conf = conf[i, correct[i]]
-        if correct_conf.sum() > 0 and (correct_conf == correct_conf.max()).sum() == 1:
-            unique_best[i] = True
-
-    print(f'\nLabel ambiguity:')
-    print(f'  Samples with unique best expert: {unique_best.sum():,} ({unique_best.mean()*100:.1f}%)')
-    print(f'  Samples with tied/no best:       {N - unique_best.sum():,} ({(1-unique_best.mean())*100:.1f}%)')
+    print('\nCorrectness-label ambiguity (denominators are explicit):')
+    for key in ('exactly_one_correct', 'multiple_correct', 'no_correct'):
+        event = correctness_report[key]
+        print(f'  {key}: {event["count"]:,}/{event["denominator"]:,} '
+              f'({event["fraction"] * 100:.1f}%)')
+    global_conf = correctness_report['globally_most_confident']
+    print(f'  globally most-confident expert correct: '
+          f'{global_conf["correct_count"]:,}/{global_conf["denominator"]:,} '
+          f'({global_conf["correct_fraction"] * 100:.1f}%)')
+    ranking = correctness_report['confidence_ranking_among_correct']
+    print('  confidence rank of best correct expert, conditioned on any correct:')
+    for rank, fraction in ranking['best_correct_rank_fractions'].items():
+        print(f'    rank {rank}: {fraction * 100:.1f}% '
+              f'({ranking["best_correct_rank_counts"][rank]}/'
+              f'{ranking["denominator"]})')
+    unique_conf = correctness_report['unique_highest_confidence_among_correct']
+    print('  unique highest-confidence correct expert (same conditioning): '
+          f'{unique_conf["count"]}/{unique_conf["denominator"]} '
+          f'({unique_conf["fraction"] * 100:.1f}%)')
 
     # 2. Confidence routing analysis
-    print(f'\nConfidence routing:')
+    print('\nConfidence routing:')
     conf_choices = conf.argmax(axis=1)
     conf_correct = correct[np.arange(N), conf_choices]
     conf_ba = balanced_accuracy(targets, preds[np.arange(N), conf_choices])
     print(f'  Picks correct expert: {conf_correct.mean()*100:.1f}%')
     print(f'  BA: {conf_ba:.2%}')
 
-    # 3. Lone Dissenter Paradox
-    # When exactly 2 experts agree and 1 dissents, is the dissenter more often correct?
-    print(f'\nLone Dissenter Paradox:')
-    lone_dissenter_correct = 0
-    lone_dissenter_total = 0
-    for i in range(N):
-        if num_correct[i] != 2:
-            continue
-        # Find the two that agree (same prediction)
-        pairs_agree = []
-        for a in range(num_experts):
-            for b in range(a + 1, num_experts):
-                if preds[i, a] == preds[i, b]:
-                    pairs_agree.append((a, b))
-        if len(pairs_agree) == 1:
-            a, b = pairs_agree[0]
-            # The dissenter is the third expert
-            dissenter = [e for e in range(num_experts) if e not in (a, b)][0]
-            # Majority prediction
-            majority_pred = preds[i, a]
-            majority_correct = (majority_pred == targets[i])
-            dissenter_correct = correct[i, dissenter]
-            lone_dissenter_total += 1
-            if dissenter_correct and not majority_correct:
-                lone_dissenter_correct += 1
-
-    if lone_dissenter_total > 0:
-        print(f'  When exactly 2 agree, dissenter is correct: '
-              f'{lone_dissenter_correct}/{lone_dissenter_total} '
-              f'({lone_dissenter_correct/lone_dissenter_total*100:.1f}%)')
+    # 3. General agreement/dissenter diagnostic.  A 2-1-1 pattern is reported
+    # as non-unique; it is never forced into this denominator.
+    patterns = diagnostics.agreement_patterns()
+    unique = patterns['unique_dissenter']
+    print(f'\nUnique-dissenter correctness (only {unique["pattern"]} patterns):')
+    print(f'  agreeing group correct: {unique["agreeing_group_correct_count"]}/'
+          f'{unique["denominator"]} '
+          f'({unique["agreeing_group_correct_fraction"] * 100:.1f}%)')
+    print(f'  dissenting expert correct: {unique["dissenting_expert_correct_count"]}/'
+          f'{unique["denominator"]} '
+          f'({unique["dissenting_expert_correct_fraction"] * 100:.1f}%)')
 
     # 4. Feature learning gap (oracle-weighted routing vs uniform)
     # Oracle-weighted: for each sample, use the best expert (oracle)
     # This tells us the maximum possible routing gain
     uniform_ba = balanced_accuracy(targets, logits.mean(axis=1).argmax(axis=1))
 
-    # Oracle BA (already computed in diversity)
-    oracle_preds = np.zeros(N, dtype=np.int64)
-    for i in range(N):
-        c = correct[i]
-        if c.any():
-            oracle_preds[i] = preds[i, np.where(c)[0][0]]
-        else:
-            oracle_preds[i] = preds[i, 0]
-    oracle_ba = balanced_accuracy(targets, oracle_preds)
+    oracle_ba = diagnostics.hard_routing_headroom()['hard_selection_oracle_balanced_accuracy']
 
-    print(f'\nRouting headroom:')
+    print('\nRouting headroom:')
     print(f'  Uniform avg BA: {uniform_ba:.2%}')
     print(f'  Oracle BA:      {oracle_ba:.2%}')
     print(f'  Oracle gap:     {oracle_ba - uniform_ba:+.2%}')
 
     # 5. Per-class error overlap
-    print(f'\nPer-class error overlap (all 3 experts wrong):')
+    print(f'\nPer-class error overlap (all {num_experts} experts wrong):')
     per_class_all_wrong = np.zeros(100)
     per_class_count = np.zeros(100)
     for c in range(100):
@@ -289,7 +276,7 @@ def _analyze_calibration(
     print('  CALIBRATION ANALYSIS')
     print('=' * 60)
 
-    print(f'\nPer-expert calibration:')
+    print('\nPer-expert calibration:')
     print(f'  {"Expert":<10} {"ECE":>8} {"Avg Conf":>10} {"Avg Conf Corr":>14} {"Avg Conf Wrong":>14}')
     for i, name in enumerate(expert_names):
         conf = probs[:, i].max(axis=1)
@@ -299,7 +286,7 @@ def _analyze_calibration(
               f'{cm["avg_conf_correct"]:>13.4f} {cm["avg_conf_wrong"]:>13.4f}')
 
     # Confidence distributions
-    print(f'\nConfidence distribution (binned):')
+    print('\nConfidence distribution (binned):')
     bins = np.linspace(0, 1, 11)
     for i, name in enumerate(expert_names):
         conf = probs[:, i].max(axis=1)

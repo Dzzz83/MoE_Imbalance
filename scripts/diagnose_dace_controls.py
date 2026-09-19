@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """
-DACE diagnostic #2 — two control experiments to resolve a contradiction.
+RETIRED DACE diagnostic #2 — two control experiments to resolve a contradiction.
+
+Historical-only postmortem for the retired three-expert DACE pipeline. It does
+not establish anything about the current four-expert pool or all future
+learned routing methods. Execution requires an explicit ``--allow-retired``
+flag.
 
 Contradiction to resolve:
   (a) The recorded L_contrastive sat at ~4.80-4.84 for the whole run, which
@@ -32,6 +37,7 @@ _proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
 
+import argparse
 import json
 import numpy as np
 import torch
@@ -56,6 +62,16 @@ def probe_auroc(X, y, seed=0, ridge=1e-2):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--allow-retired', action='store_true',
+                        help='explicitly run this historical DACE control')
+    args = parser.parse_args()
+    if not args.allow_retired:
+        parser.error(
+            'retired DACE control; use supplied-array ExpertDiagnostics for '
+            'current evidence, or pass --allow-retired'
+        )
+
     dev = 'cpu'
     ck = './checkpoints'
     torch.manual_seed(42)

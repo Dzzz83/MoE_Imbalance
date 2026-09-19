@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """
-DACE diagnostic — WHY did routing collapse to "always Expert B"?
+RETIRED DACE diagnostic — WHY did routing collapse to "always Expert B"?
+
+This script is retained for historical provenance only. It is tied to the
+retired three-expert DACE checkpoints and the non-canonical legacy
+``lt_val_indices.npy`` split. Its findings concern one disagreement signal and
+one retired pipeline; they are not evidence that all learned routers are
+infeasible, and they are not current four-expert evidence. Use
+``scripts.expert_diagnostics.ExpertDiagnostics`` with supplied arrays for
+current-pool diagnostics.
 
 Read-only. Loads the trained DACE checkpoints and answers five questions with
 evidence instead of speculation:
@@ -14,8 +22,9 @@ evidence instead of speculation:
       (argmax across incomparable scales is arbitrary)
   Q5  What is the oracle headroom, and what does uniform vs routing capture?
 
-Uses the long-tailed VALIDATION split for measurement (permitted by the DACE
-plan for post-hoc analysis; never used for training).  No training, no writes.
+Uses the retired long-tailed validation split for measurement only. No
+training, no writes. Execution is blocked unless ``--allow-retired`` is
+provided explicitly.
 
 Usage:
     python scripts/diagnose_dace.py [--data-root ./data] [--checkpoint-dir ./checkpoints]
@@ -90,7 +99,15 @@ def main():
     ap.add_argument('--device', default='cpu')
     ap.add_argument('--max-batches', type=int, default=0,
                     help='0 = use whole split')
+    ap.add_argument('--allow-retired', action='store_true',
+                    help='explicitly run this historical three-expert diagnostic')
     args = ap.parse_args()
+
+    if not args.allow_retired:
+        ap.error(
+            'retired DACE diagnostic; use supplied-array ExpertDiagnostics for '
+            'current evidence, or pass --allow-retired for historical reproduction'
+        )
 
     dev = args.device
     ck = args.checkpoint_dir

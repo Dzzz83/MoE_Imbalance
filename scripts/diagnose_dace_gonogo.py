@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """
-DACE diagnostic #3 — THE GO/NO-GO TEST.
+RETIRED DACE diagnostic #3 — THE GO/NO-GO TEST.
+
+Historical-only postmortem for one retired three-expert DACE feature signal.
+Even a negative result here is limited to the tested features, split, and
+probe; it must not be reported as proof that all learned routing methods are
+infeasible. Execution requires an explicit ``--allow-retired`` flag.
 
 The routing signal currently in use (disagreement affinity) is ANTI-predictive of
 correctness (AUROC 0.327).  Before designing any fix we must know whether ANY
 signal available to a router can predict per-expert correctness.
 
-If per-expert correctness is unpredictable (AUROC ~0.50), no routing architecture
-can beat uniform and the fix must target the experts instead.  If it IS
-predictable, we know the achievable routing BA and can design against it.
+If per-expert correctness is unpredictable (AUROC ~0.50), this tested feature
+signal is not useful for the tested probe on the legacy split. That does not
+prove that every future routing signal or architecture will fail. If it is
+predictable, it motivates a separately designed held-out experiment.
 
 Protocol (strictly non-cheating):
   - Validation split only.  The 10K test set is never touched.
@@ -25,6 +31,7 @@ Then the decision-relevant quantity:
      applied to EVAL half), versus uniform / best-single-expert / oracle.
 """
 
+import argparse
 import os
 import sys
 
@@ -55,6 +62,16 @@ def balanced_accuracy(y_true, y_pred):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--allow-retired', action='store_true',
+                        help='explicitly run this historical DACE go/no-go test')
+    args = parser.parse_args()
+    if not args.allow_retired:
+        parser.error(
+            'retired DACE go/no-go test; use supplied-array ExpertDiagnostics '
+            'for current evidence, or pass --allow-retired'
+        )
+
     dev = 'cpu'
     ck = './checkpoints'
 
@@ -172,11 +189,13 @@ def main():
         for nm in ['A', 'B', 'C'])
     print(f"  Best correctness-probe AUROC : {best_probe:.4f}")
     if best_probe < 0.55:
-        print("  VERDICT: correctness is NOT predictable from these features.")
-        print("           Routing cannot beat uniform; fix the EXPERTS instead.")
+        print("  VERDICT: correctness is NOT predictable from these tested features")
+        print("           on this retired split/probe; this does not rule out all")
+        print("           future learned routing signals or architectures.")
     else:
-        print("  VERDICT: correctness IS predictable to a useful degree.")
-        print("           Re-aiming the routing target is viable.")
+        print("  VERDICT: correctness is predictable from these tested features")
+        print("           on this retired split/probe; a new held-out study is needed")
+        print("           before claiming inference-time routing feasibility.")
     print("=" * 74)
 
 

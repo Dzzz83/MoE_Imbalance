@@ -166,8 +166,11 @@ tail specialist existed at all). See `problem.md` §4.
 
 ## 5. Verdict
 
-- **20+ mechanisms over three mechanism families** (parameter-free rules;
-  fitted routers; the DACE cascade) have failed to beat uniform averaging.
+- **20+ tested mechanisms over three mechanism families** (parameter-free rules;
+  fitted routers; the DACE cascade) failed to beat uniform averaging under the
+  recorded protocols. This catalogue is not a mathematical proof that every
+  future learned router is infeasible; fitted methods still require an honest
+  OOF/held-out design.
 - The binding constraint is structural, not architectural: a **39.7% all-wrong
   floor** on the four-expert pool caps what any router can recover, and the
   accessible headroom (60.27 oracle − 46.98 uniform = **13.3 points**) has not

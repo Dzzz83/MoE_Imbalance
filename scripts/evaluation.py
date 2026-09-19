@@ -592,7 +592,13 @@ class HeadroomAnalyzer:
         return float((self.correct_matrix().sum(axis=1) == 0).mean())
 
     def oracle_accuracy(self) -> float:
-        """BA achievable with a perfect per-sample expert choice (the ceiling)."""
+        """Sample accuracy achievable by a perfect hard selector.
+
+        This is the fraction of samples for which at least one expert is
+        correct.  It equals balanced accuracy only when the evaluated samples
+        have equal class support; use :class:`ExpertDiagnostics` for an
+        explicit macro-recall oracle and Head/Medium/Tail breakdown.
+        """
         counts = self.correct_matrix().sum(axis=1)
         return float((counts > 0).mean())
 
