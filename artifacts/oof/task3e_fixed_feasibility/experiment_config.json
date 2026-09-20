@@ -1,0 +1,190 @@
+{
+  "analyzed_sample_count": 6507,
+  "candidate_grid": {
+    "allowed_weights": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "denominator": 4,
+    "generation": "all non-negative integer compositions of four units across four experts",
+    "number_of_candidates": 35,
+    "ordering": "lexicographic integer-unit tuple in the frozen expert order",
+    "unit_total": 4
+  },
+  "canonical_training_index_sha256": "10846747f461656ffe720299517e70724ed9a0959b258202b3efa80bb1d1298f",
+  "canonical_training_population_size": 10847,
+  "class_group_definitions": {
+    "head": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34
+    ],
+    "medium": [
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "source": "scripts.base_trainer.compute_class_groups",
+    "tail": [
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99
+    ]
+  },
+  "dataset": "CIFAR-100-LT",
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "fold_generation_seed": 42,
+  "full_aligned_sample_count": 8677,
+  "imbalance_ratio": 100.0,
+  "input_artifacts": {
+    "aligned_oof_arrays": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof.npz",
+      "sha256": "bcfa26aa425f4c232caebad6bb69c3ec7035b9f41342bc8c8cb1960b33641c7f"
+    },
+    "aligned_oof_metadata": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof_metadata.json",
+      "sha256": "c12462b2554dcd1e3ea76810dccd05780b2310568ccc71e9ef03c96aa06f645e"
+    },
+    "task3c_batch_manifest": {
+      "path": "artifacts/oof/task3c_oof/batch_manifest.json",
+      "sha256": "4e1525aa10985675b30fb75880201d98d7f057eb98d84bf2f6a594fb58166d85"
+    },
+    "task3c_diagnostics": {
+      "path": "artifacts/oof/task3c_oof/diagnostics.json",
+      "sha256": "f4f1f417467299ae69e84e14775c8ca6dcb168ebd686517ec36ca21f1e9ea94c"
+    },
+    "task3c_fold_manifest": {
+      "path": "artifacts/oof/task3c_oof/fold_manifest.json",
+      "sha256": "664f92673f7b5d0bea1ba4dbdaa8471a5f1a757586184a8dabda30d007a2e622"
+    }
+  },
+  "metric_definitions": {
+    "balanced_accuracy": "mean recall over all 100 classes",
+    "class_group_source": "scripts.base_trainer.compute_class_groups",
+    "head_accuracy": "macro recall over canonical classes with training count >= 100",
+    "medium_accuracy": "macro recall over canonical classes with 20 <= training count < 100",
+    "ordinary_accuracy": "fraction of samples with predicted class equal to the label",
+    "tail_accuracy": "macro recall over canonical classes with training count < 20"
+  },
+  "number_of_classes": 100,
+  "outer_evaluation_population_size": 2170,
+  "outer_fold": 0,
+  "permitted_analysis_inner_folds": [
+    1,
+    2,
+    3
+  ],
+  "reserved_router_selection_inner_folds": [
+    0
+  ],
+  "schema_version": "task3e_fixed_feasibility.v1",
+  "scientific_limitations": [
+    "All fixed-weight results are exploratory, label-dependent development results on inner folds 1\u20133.",
+    "Inner fold 0 is excluded from every new Task 3E-A metric calculation; earlier Task 3C diagnostics did use it descriptively.",
+    "The reserved outer-evaluation population and the CIFAR-100 test set are not accessed.",
+    "The fixed grid does not establish generalization, adaptive routing, or a final expert-weight choice."
+  ],
+  "source_git_commit": "5b28fecc40d06211c0a0fd90da278dfd6a800c06",
+  "task_identifier": "Task 3E-A",
+  "training_seed": 78,
+  "uniform_baseline_tolerance": 1e-12
+}
