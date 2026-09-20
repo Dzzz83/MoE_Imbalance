@@ -32,16 +32,26 @@ for the frozen evaluation protocol.
 
 ## Contents
 
-- [Overview](#overview)
-- [Data protocol](#data-protocol)
-- [Experts](#experts)
-- [Training parameters](#training-parameters)
-- [Results](#results)
-- [Why routing fails](#why-routing-fails)
-- [Repository structure](#repository-structure)
-- [Reproducing](#reproducing)
-- [Reproducibility notes](#reproducibility-notes)
-- [References](#references)
+- [MoE Imbalance — Expert Routing on Long-Tailed CIFAR-100](#moe-imbalance--expert-routing-on-long-tailed-cifar-100)
+  - [Headline result](#headline-result)
+  - [Contents](#contents)
+  - [Overview](#overview)
+  - [Data protocol](#data-protocol)
+  - [Experts](#experts)
+  - [Training parameters](#training-parameters)
+  - [Results](#results)
+    - [Per-expert performance](#per-expert-performance)
+    - [Combination rules](#combination-rules)
+    - [Routing headroom](#routing-headroom)
+    - [How many experts?](#how-many-experts)
+  - [Why routing fails](#why-routing-fails)
+  - [Repository structure](#repository-structure)
+  - [Reproducing](#reproducing)
+    - [Task 3C Kaggle preflight](#task-3c-kaggle-preflight)
+  - [Reproducibility notes](#reproducibility-notes)
+    - [Not included](#not-included)
+  - [References](#references)
+  - [Records](#records)
 
 ## Overview
 
@@ -323,7 +333,7 @@ the committed split before any OOF execution:
 ```bash
 git clone https://github.com/Dzzz83/MoE_Imbalance.git /kaggle/working/MoE_Imbalance
 cd /kaggle/working/MoE_Imbalance
-test -f data/cifar-100-python/data_batch_1
+test -f data/cifar-100-python/train
 test -f data/cifar-100-python/test
 test -f data/processed/lt_ir100_train_indices.npy
 ```
