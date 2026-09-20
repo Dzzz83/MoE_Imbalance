@@ -1,0 +1,298 @@
+{
+  "analysis_sample_index_sha256": "125dbf4497bd659e4f25746a29a655779233d2c49d4c157eadaa9ee5b1d452dd",
+  "analyzed_sample_count": 6507,
+  "calculation_dtype": "float64",
+  "canonical_training_index_sha256": "10846747f461656ffe720299517e70724ed9a0959b258202b3efa80bb1d1298f",
+  "canonical_training_population_size": 10847,
+  "class_group_definitions": {
+    "head": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34
+    ],
+    "medium": [
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "source": "scripts.base_trainer.compute_class_groups",
+    "tail": [
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99
+    ]
+  },
+  "correctability_criteria": {
+    "correctable": "verified reconstructed optimal margin > 1e-6",
+    "lower_bound": "strictly correctable count divided by analyzed sample count",
+    "not_strictly_correctable": "verified reconstructed optimal margin < -1e-6",
+    "numerically_ambiguous": "verified reconstructed optimal margin in [-1e-6, 1e-6]",
+    "potential_upper_bound": "strictly correctable plus ambiguous or failed count divided by analyzed sample count",
+    "solver_failure": "solver failure or failed numerical verification"
+  },
+  "dataset": "CIFAR-100-LT",
+  "execution_command": "/home/dzzz83/Documents/code/expert_method/.venv/bin/python scripts/run_task3e_soft.py --data-root ./data --oof-directory artifacts/oof/task3c_oof --fixed-results artifacts/oof/task3e_fixed_feasibility --output-directory artifacts/oof/task3e_soft_feasibility",
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "fixed_reference_ids": [
+    "fixed_020",
+    "fixed_006",
+    "fixed_007",
+    "fixed_010",
+    "fixed_011"
+  ],
+  "fold_generation_seed": 42,
+  "full_aligned_sample_count": 8677,
+  "historical_three_expert_reference": {
+    "balanced_accuracy_approx": 0.3719,
+    "not_a_grid_candidate": true,
+    "tail_accuracy_approx": 0.1385,
+    "weights": [
+      0.0,
+      0.3333333333333333,
+      0.3333333333333333,
+      0.3333333333333333
+    ]
+  },
+  "imbalance_ratio": 100.0,
+  "input_artifacts": {
+    "aligned_oof_arrays": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof.npz",
+      "sha256": "bcfa26aa425f4c232caebad6bb69c3ec7035b9f41342bc8c8cb1960b33641c7f"
+    },
+    "aligned_oof_metadata": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof_metadata.json",
+      "sha256": "c12462b2554dcd1e3ea76810dccd05780b2310568ccc71e9ef03c96aa06f645e"
+    },
+    "task3c_batch_manifest": {
+      "path": "artifacts/oof/task3c_oof/batch_manifest.json",
+      "sha256": "4e1525aa10985675b30fb75880201d98d7f057eb98d84bf2f6a594fb58166d85"
+    },
+    "task3c_diagnostics": {
+      "path": "artifacts/oof/task3c_oof/diagnostics.json",
+      "sha256": "f4f1f417467299ae69e84e14775c8ca6dcb168ebd686517ec36ca21f1e9ea94c"
+    },
+    "task3c_fold_manifest": {
+      "path": "artifacts/oof/task3c_oof/fold_manifest.json",
+      "sha256": "664f92673f7b5d0bea1ba4dbdaa8471a5f1a757586184a8dabda30d007a2e622"
+    },
+    "task3e_fixed_config": {
+      "path": "artifacts/oof/task3e_fixed_feasibility/experiment_config.json",
+      "sha256": "719868e216651641ab0870bd17acf87a47d8b1c48bcf051c11ed2534917783c6"
+    },
+    "task3e_fixed_results": {
+      "path": "artifacts/oof/task3e_fixed_feasibility/fixed_weight_results.json",
+      "sha256": "6b772652acd8a80cccfdd91c12fb916492afa1da2dd39caf31fa0f76fcfeae53"
+    },
+    "task3e_fixed_summary": {
+      "path": "artifacts/oof/task3e_fixed_feasibility/summary.md",
+      "sha256": "74b7c32c5ac44b2da3eee4a5cb8fe931ef0b560c0ffa05554c3d475c34e7345e"
+    }
+  },
+  "lp_formulation": {
+    "bounds": [
+      [
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        1.0
+      ],
+      [
+        0.0,
+        1.0
+      ],
+      [
+        null,
+        null
+      ]
+    ],
+    "constraints_per_image": 99,
+    "difference_matrix": "D[c,e] = z[e,true_label] - z[e,c] for c != true_label",
+    "equality": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0
+      ]
+    ],
+    "equality_rhs": [
+      1.0
+    ],
+    "inequality": "-D @ w + t <= 0",
+    "logits_are_unmodified": true,
+    "objective": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "variables": [
+      "w_CE",
+      "w_LAL",
+      "w_BalancedSoftmax",
+      "w_Mixup",
+      "t"
+    ],
+    "weights_are_optimized_independently_per_image": true
+  },
+  "metric_definitions": {
+    "balanced_accuracy": "mean per-class recall for predictions or mean per-class feasibility coverage for oracle events",
+    "head_accuracy": "macro recall/coverage over canonical Head classes",
+    "medium_accuracy": "macro recall/coverage over canonical Medium classes",
+    "ordinary_accuracy": "canonical prediction accuracy for references; ordinary feasibility fraction for oracle events",
+    "tail_accuracy": "macro recall/coverage over canonical Tail classes"
+  },
+  "number_of_classes": 100,
+  "numerical_tolerances": {
+    "fixed_reference_tolerance": 1e-12,
+    "margin_tolerance": 1e-06,
+    "margin_verification_tolerance": 1e-07,
+    "solver_feasibility_tolerance": 1e-07
+  },
+  "original_logit_dtype": "float32",
+  "outer_evaluation_population_size": 2170,
+  "outer_fold": 0,
+  "permitted_analysis_inner_folds": [
+    1,
+    2,
+    3
+  ],
+  "reserved_router_selection_inner_folds": [
+    0
+  ],
+  "router_fit_sample_index_sha256": "125dbf4497bd659e4f25746a29a655779233d2c49d4c157eadaa9ee5b1d452dd",
+  "schema_version": "task3e_soft_feasibility.v1",
+  "scientific_limitations": [
+    "The oracle uses each image's true label and is a label-dependent feasibility diagnostic, not a deployable router.",
+    "All new calculations use only outer-fold-0 inner folds 1\u20133; earlier Task 3C diagnostics inspected inner fold 0 descriptively.",
+    "The reserved outer-evaluation population and original CIFAR-100 test set are not accessed.",
+    "Strict correctability is an existence result for convex logit mixtures and does not predict Ridge, Sinkhorn, or any learned router performance.",
+    "The historical three-expert reference is approximate context and is not optimized or added to the E-A grid."
+  ],
+  "solver": {
+    "library": "scipy.optimize.linprog",
+    "method": "highs",
+    "options": {
+      "dual_feasibility_tolerance": 1e-09,
+      "ipm_optimality_tolerance": 1e-09,
+      "presolve": true,
+      "primal_feasibility_tolerance": 1e-09
+    },
+    "scipy_version": "1.18.1"
+  },
+  "source_git_commit": "0fdb46c7a849b23c14ee472b4536e36120d38b5c",
+  "source_restriction": {
+    "accepted_analysis_type": "RestrictedAnalysisDataset",
+    "complete_aligned_dataset_rejected": true,
+    "expert_training_started": false,
+    "inner_fold_0_rejected": true,
+    "outer_evaluation_rejected": true,
+    "test_loader_constructed": false
+  },
+  "task_identifier": "Task 3E-B",
+  "training_seed": 78
+}
