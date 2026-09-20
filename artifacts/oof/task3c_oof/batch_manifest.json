@@ -1,0 +1,168 @@
+{
+  "canonical_population_size": 10847,
+  "dataset": "CIFAR-100-LT",
+  "epochs": 200,
+  "experiment_id": "task3c_oof",
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "fold_generation_seed": 42,
+  "fold_manifest_sha256": "664f92673f7b5d0bea1ba4dbdaa8471a5f1a757586184a8dabda30d007a2e622",
+  "imbalance_ratio": 100.0,
+  "inner_fold_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "jobs": [
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/ce.yaml",
+      "expert_key": "ce",
+      "expert_name": "CE",
+      "inner_fold_id": 0,
+      "job_id": "ce/inner_0",
+      "pilot_reused_read_only": true
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/ce.yaml",
+      "expert_key": "ce",
+      "expert_name": "CE",
+      "inner_fold_id": 1,
+      "job_id": "ce/inner_1",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/ce.yaml",
+      "expert_key": "ce",
+      "expert_name": "CE",
+      "inner_fold_id": 2,
+      "job_id": "ce/inner_2",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/ce.yaml",
+      "expert_key": "ce",
+      "expert_name": "CE",
+      "inner_fold_id": 3,
+      "job_id": "ce/inner_3",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/lal.yaml",
+      "expert_key": "logit_adjusted",
+      "expert_name": "LAL",
+      "inner_fold_id": 0,
+      "job_id": "logit_adjusted/inner_0",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/lal.yaml",
+      "expert_key": "logit_adjusted",
+      "expert_name": "LAL",
+      "inner_fold_id": 1,
+      "job_id": "logit_adjusted/inner_1",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/lal.yaml",
+      "expert_key": "logit_adjusted",
+      "expert_name": "LAL",
+      "inner_fold_id": 2,
+      "job_id": "logit_adjusted/inner_2",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/lal.yaml",
+      "expert_key": "logit_adjusted",
+      "expert_name": "LAL",
+      "inner_fold_id": 3,
+      "job_id": "logit_adjusted/inner_3",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/balanced_softmax.yaml",
+      "expert_key": "balanced_softmax",
+      "expert_name": "BalancedSoftmax",
+      "inner_fold_id": 0,
+      "job_id": "balanced_softmax/inner_0",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/balanced_softmax.yaml",
+      "expert_key": "balanced_softmax",
+      "expert_name": "BalancedSoftmax",
+      "inner_fold_id": 1,
+      "job_id": "balanced_softmax/inner_1",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/balanced_softmax.yaml",
+      "expert_key": "balanced_softmax",
+      "expert_name": "BalancedSoftmax",
+      "inner_fold_id": 2,
+      "job_id": "balanced_softmax/inner_2",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/balanced_softmax.yaml",
+      "expert_key": "balanced_softmax",
+      "expert_name": "BalancedSoftmax",
+      "inner_fold_id": 3,
+      "job_id": "balanced_softmax/inner_3",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/mixup.yaml",
+      "expert_key": "mixup",
+      "expert_name": "Mixup",
+      "inner_fold_id": 0,
+      "job_id": "mixup/inner_0",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/mixup.yaml",
+      "expert_key": "mixup",
+      "expert_name": "Mixup",
+      "inner_fold_id": 1,
+      "job_id": "mixup/inner_1",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/mixup.yaml",
+      "expert_key": "mixup",
+      "expert_name": "Mixup",
+      "inner_fold_id": 2,
+      "job_id": "mixup/inner_2",
+      "pilot_reused_read_only": false
+    },
+    {
+      "config_path": "/kaggle/working/MoE_Imbalance/configs/mixup.yaml",
+      "expert_key": "mixup",
+      "expert_name": "Mixup",
+      "inner_fold_id": 3,
+      "job_id": "mixup/inner_3",
+      "pilot_reused_read_only": false
+    }
+  ],
+  "outer_evaluation_size": 2170,
+  "outer_fold_id": 0,
+  "pilot_path": "artifacts/oof/task3b_pilot_ce_s78_o0_i0",
+  "router_development": {
+    "fit_inner_fold_ids": [
+      1,
+      2,
+      3
+    ],
+    "outer_evaluation_excluded": true,
+    "router_fitting_implemented": false,
+    "selection_inner_fold_ids": [
+      0
+    ]
+  },
+  "schema_version": "task3c_oof_batch.v1",
+  "training_seed": 78
+}
