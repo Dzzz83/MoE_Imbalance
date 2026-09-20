@@ -1,0 +1,135 @@
+{
+  "arrays_file": "aligned_oof.npz",
+  "arrays_sha256": "bcfa26aa425f4c232caebad6bb69c3ec7035b9f41342bc8c8cb1960b33641c7f",
+  "canonical_training_index_sha256": "10846747f461656ffe720299517e70724ed9a0959b258202b3efa80bb1d1298f",
+  "expert_names": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "fold_generation_seed": 42,
+  "inner_fold_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "num_classes": 100,
+  "num_samples": 8677,
+  "outer_evaluation_excluded": true,
+  "outer_evaluation_size": 2170,
+  "outer_fold_id": 0,
+  "primary_diagnostic_partition": "router_fit_inner_folds_1_2_3",
+  "router_fit_inner_fold_ids": [
+    1,
+    2,
+    3
+  ],
+  "router_selection_inner_fold_ids": [
+    0
+  ],
+  "schema_version": "task3c_aligned_oof.v1",
+  "source_checkpoints": {
+    "balanced_softmax/inner_0": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_0/checkpoints/BalancedSoftmax_seed78_final.pt",
+      "sha256": "474bb9656dd9735c2a0c1e5b3fa06eb6f83a7ee59ad8f3c076775aa9615747d5"
+    },
+    "balanced_softmax/inner_1": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_1/checkpoints/BalancedSoftmax_seed78_final.pt",
+      "sha256": "63a486cc2b2942a32cbb04ea92a0f22b8134fd07a1f2a5783241bc533da77a34"
+    },
+    "balanced_softmax/inner_2": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_2/checkpoints/BalancedSoftmax_seed78_final.pt",
+      "sha256": "0684ead2e469f3aad601319b7c90dad9cc8c02052d716f1ea513ff3ec360c036"
+    },
+    "balanced_softmax/inner_3": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_3/checkpoints/BalancedSoftmax_seed78_final.pt",
+      "sha256": "25082c1d94ee268209f461e58fbb291687053c02a9111819f56a2746aefd5cb7"
+    },
+    "ce/inner_0": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3b_pilot_ce_s78_o0_i0/expert_CE/seed_78/outer_0/inner_0/checkpoints/CE_seed78_final.pt",
+      "sha256": "49cedf9cda880b0253ff394cbcc9004d26bf5a44acb95d8ef6717365383d6676"
+    },
+    "ce/inner_1": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_1/checkpoints/CE_seed78_final.pt",
+      "sha256": "a4e72186ab96b0cf5862277304665e6508731bc9359e16e139fb47bf5457ef47"
+    },
+    "ce/inner_2": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_2/checkpoints/CE_seed78_final.pt",
+      "sha256": "b0f9a8bcc91d013db2271a7283a665cd6fa8f2075132d75b5bc4a2ff343c2fa3"
+    },
+    "ce/inner_3": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_3/checkpoints/CE_seed78_final.pt",
+      "sha256": "80b0303f7518b9a531711ed432fb282d0c4c3010d4eca06a7aae809e1a3530dc"
+    },
+    "logit_adjusted/inner_0": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_0/checkpoints/LAL_seed78_final.pt",
+      "sha256": "08e2a85285f59a0be0baac518efc1b8ba04dd5a94a1b710ab78c06e6a277f6a9"
+    },
+    "logit_adjusted/inner_1": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_1/checkpoints/LAL_seed78_final.pt",
+      "sha256": "660978646c782a2b9f9a17a5debc66bcb99f6fd8cfe0f71dd838b6d5f02fa750"
+    },
+    "logit_adjusted/inner_2": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_2/checkpoints/LAL_seed78_final.pt",
+      "sha256": "0c9283eba7239444789e92047a2f793c6811b4c1f485f1109162d40d82c552eb"
+    },
+    "logit_adjusted/inner_3": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_3/checkpoints/LAL_seed78_final.pt",
+      "sha256": "f20cab70d1c0c4e0a1cd9fb4ec7141de68f87aefc798629aa61ee7ff336ef4d3"
+    },
+    "mixup/inner_0": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_0/checkpoints/Mixup_seed78_final.pt",
+      "sha256": "f13c8ed4eaf39061b2409f7390de3bf81afd706e04606973f8cf6e63f38a289e"
+    },
+    "mixup/inner_1": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_1/checkpoints/Mixup_seed78_final.pt",
+      "sha256": "addac74649f481575f8608bc7789e8d0bae0b3a25be4be9f5f540b9f01818682"
+    },
+    "mixup/inner_2": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_2/checkpoints/Mixup_seed78_final.pt",
+      "sha256": "2cae7ef4f3a348f25c1ac619ecba67b728bb205638fbfe078677d755948dea89"
+    },
+    "mixup/inner_3": {
+      "path": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_3/checkpoints/Mixup_seed78_final.pt",
+      "sha256": "cda5cffdea61e806dbdddc9e7cc06d91f51a4eb3692ce8764c8aee86247ab82e"
+    }
+  },
+  "source_job_ids": [
+    "balanced_softmax/inner_0",
+    "balanced_softmax/inner_1",
+    "balanced_softmax/inner_2",
+    "balanced_softmax/inner_3",
+    "ce/inner_0",
+    "ce/inner_1",
+    "ce/inner_2",
+    "ce/inner_3",
+    "logit_adjusted/inner_0",
+    "logit_adjusted/inner_1",
+    "logit_adjusted/inner_2",
+    "logit_adjusted/inner_3",
+    "mixup/inner_0",
+    "mixup/inner_1",
+    "mixup/inner_2",
+    "mixup/inner_3"
+  ],
+  "source_run_directories": {
+    "balanced_softmax/inner_0": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_0",
+    "balanced_softmax/inner_1": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_1",
+    "balanced_softmax/inner_2": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_2",
+    "balanced_softmax/inner_3": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_BalancedSoftmax/seed_78/outer_0/inner_3",
+    "ce/inner_0": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3b_pilot_ce_s78_o0_i0/expert_CE/seed_78/outer_0/inner_0",
+    "ce/inner_1": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_1",
+    "ce/inner_2": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_2",
+    "ce/inner_3": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_CE/seed_78/outer_0/inner_3",
+    "logit_adjusted/inner_0": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_0",
+    "logit_adjusted/inner_1": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_1",
+    "logit_adjusted/inner_2": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_2",
+    "logit_adjusted/inner_3": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_LAL/seed_78/outer_0/inner_3",
+    "mixup/inner_0": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_0",
+    "mixup/inner_1": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_1",
+    "mixup/inner_2": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_2",
+    "mixup/inner_3": "/kaggle/working/MoE_Imbalance/artifacts/oof/task3c_oof/expert_Mixup/seed_78/outer_0/inner_3"
+  }
+}
