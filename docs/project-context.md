@@ -21,8 +21,9 @@ The current research direction is narrower: determine whether beneficial expert
 contributions can be predicted from information available at inference time.
 Nested OOF data now supplies held-out development predictions for that
 question. Task 3F-A implements and evaluates the frozen Ridge feasibility
-study; it is exploratory and not independently validated. Sinkhorn remains a
-separate proposed direction.
+study, and Task 3F-B diagnoses its highlighted Mixup preference; both are
+exploratory and not independently validated. Sinkhorn remains a separate
+proposed direction.
 
 ## 2. Canonical data and metric protocol
 
@@ -67,6 +68,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3E-A: fixed-weight feasibility | Complete |
 | Task 3E-B: adaptive soft-mixture oracle | Complete |
 | Task 3F-A: predictable Ridge routing feasibility | Complete; exploratory only |
+| Task 3F-B: Ridge Mixup-preference diagnostics | Complete; retrospective only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -107,6 +109,16 @@ study does not establish useful adaptive routing beyond fixed composition.
 Full 13-feature models reduced contribution-prediction error relative to the
 confidence-only representation on average, without a corresponding
 classification advantage.
+
+Task 3F-B found that the highlighted confidence-only Ridge's Mixup preference
+is driven primarily by a consistently high learned intercept: Mixup led the
+mean held-out target and predicted score in all three folds, while signed mean
+image-dependent terms were close to zero despite nonzero per-image variation.
+On the permitted population, Mixup's mean assigned weight was 36.46% on Head
+and 40.49% on Tail, and it was the highest-weight expert on 98.38% and 99.45%
+of those groups. Reducing its saved weight improved the retrospective Tail
+metric at factors 0.25 and 0.0 but reduced BA; this is a sensitivity finding,
+not evidence of a selected or causal replacement router.
 
 ## 6. Next research decision
 
@@ -153,6 +165,8 @@ checkpoints.
   scripts/run_task3e_soft.py
 - Predictable Ridge analysis: scripts/task3f_ridge.py and
   scripts/run_task3f_ridge.py
+- Ridge preference diagnostics: scripts/task3f_mixup_diagnostics.py and
+  scripts/run_task3f_mixup_diagnostics.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
@@ -161,6 +175,8 @@ checkpoints.
   artifacts/oof/task3e_soft_feasibility/
 - Task 3F-A outputs:
   artifacts/oof/task3f_ridge/
+- Task 3F-B outputs:
+  artifacts/oof/task3f_mixup_diagnostics/
 
 ## 9. Documentation navigation
 

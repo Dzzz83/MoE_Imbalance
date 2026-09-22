@@ -23,6 +23,12 @@ Related project evidence:
   accurately than an intercept-only global control on this development
   population, but no adaptive configuration beats the prior fixed references
   on both BA and Tail.
+- Task 3F-B shows that the highlighted Ridge row's Mixup preference is mostly
+  a high global intercept with nonzero image-dependent modulation. Mixup is
+  still assigned the highest weight on nearly all Head and Tail rows; reducing
+  its saved weight improves the retrospective Tail metric at some fixed
+  factors but lowers BA. This is a diagnostic sensitivity result, not a new
+  selected router or a causal explanation.
 - Ridge is implemented as an exploratory feasibility study; Sinkhorn remains
   unimplemented.
 

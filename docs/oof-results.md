@@ -41,6 +41,7 @@ Primary artifacts:
 - [Task 3E-A output directory](../artifacts/oof/task3e_fixed_feasibility/)
 - [Task 3E-B output directory](../artifacts/oof/task3e_soft_feasibility/)
 - [Task 3F-A output directory](../artifacts/oof/task3f_ridge/)
+- [Task 3F-B diagnostic output directory](../artifacts/oof/task3f_mixup_diagnostics/)
 
 Relevant source files are
 [data/nested_oof.py](../data/nested_oof.py),
@@ -49,8 +50,9 @@ Relevant source files are
 [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py),
 [scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and
 [scripts/task3e_soft.py](../scripts/task3e_soft.py),
-[scripts/task3f_ridge.py](../scripts/task3f_ridge.py), and
-[scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py).
+[scripts/task3f_ridge.py](../scripts/task3f_ridge.py),
+[scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py), and
+[scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py).
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -282,7 +284,44 @@ experts; inner fold 0 and the reserved outer evaluation population were not
 used for new calculations, but inner fold 0 was inspected descriptively by
 Task 3C. No independent test-set or outer-fold evidence was collected.
 
-## 7. Scientific synthesis
+## 7. Task 3F-B — diagnosing the highlighted Mixup preference
+
+Task 3F-B re-read the saved Task 3F-A arrays and the validated Task 3C logits;
+it did not refit Ridge, retrain experts, use oracle weights, or access inner
+fold 0, the reserved outer population, or the CIFAR-100 test set. The
+highlighted confidence-only model's Mixup intercept was **1.1009–1.1289** in
+the three folds, while its signed mean image-dependent term was only
+**−0.0071–0.0134** (mean absolute term **0.4029–0.4417**). Mixup was the
+largest mean held-out supervised target and the largest mean predicted score in
+all three folds. This supports a strong learned global preference with
+image-dependent modulation, rather than a purely image-local Mixup discovery.
+
+The permitted population contains **5,294 Head**, **1,030 Medium**, and **183
+Tail** rows. Mixup's mean assigned weight is **36.46% / 39.28% / 40.49%** on
+Head / Medium / Tail, and it receives the highest weight on **98.38% / 99.51%
+/ 99.45%** of those groups. Its Tail mean predicted contribution (**1.4073**)
+exceeds its actual retrospective target (**0.6980**), while the individual
+Mixup expert has only **1.3228% Tail** accuracy in this population.
+
+Against uniform logit averaging, highlighted Ridge gains **1** Tail row, loses
+**0**, is correct on both for **13**, and is wrong on both for **169**. Its
+macro Head/Medium/Tail changes are **+1.2991 / +0.1477 / +0.3704 percentage
+points**. The corresponding global control reaches **36.3286% BA / 7.0094%
+Tail**, below Ridge's **36.5502% / 7.3797%** and with near-global weights.
+Reducing the saved Mixup weight without refitting raises Tail to **8.3494%** at
+factor 0.0, but lowers BA to **34.8383%**; factor 0.25 reaches **7.6828% Tail**
+and **35.4705% BA**. These are fixed retrospective sensitivity checks, not
+selected routing methods.
+
+The complete per-fold coefficients/scalers/targets, Head/Medium/Tail weight
+statistics, Tail gain/loss records, metric comparisons, sensitivity table, and
+source hashes are in the [Task 3F-B results](../artifacts/oof/task3f_mixup_diagnostics/diagnostic_results.json)
+and [summary](../artifacts/oof/task3f_mixup_diagnostics/summary.md). The
+evidence is descriptive: the high Mixup preference and weak Tail behavior are
+observed together, but the sensitivity check does not establish that the
+preference causally produces the Tail weakness.
+
+## 8. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
