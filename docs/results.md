@@ -139,8 +139,12 @@ which is the pre-registered success condition.
 | 1034 | 40.02 | 59.98 |
 | **mean** | **39.73** | **60.27** |
 
-*All-wrong floor = fraction of samples **no** expert gets right — unreachable by
-any router. Oracle = fraction where at least one expert is right.*
+*All-wrong floor = fraction of samples where **no** expert's existing top-1
+prediction is right — unreachable by a hard-selection router. This is not a
+limit on adaptive convex logit mixtures: [Task 3E-B](oof-results.md#5-task-3e-b--adaptive-soft-mixture-oracle)
+found 321 images correctable by a convex mixture even though every expert's
+individual top-1 prediction was wrong. Oracle = fraction where at least one
+expert is right.*
 
 Distribution of correct experts per sample (k experts correct):
 

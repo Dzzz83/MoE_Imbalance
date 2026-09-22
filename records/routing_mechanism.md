@@ -182,8 +182,12 @@ tail specialist existed at all). See [`problem.md`](../docs/problem.md)
   recorded protocols. This catalogue is not a mathematical proof that every
   future learned router is infeasible; fitted methods still require an honest
   OOF/held-out design.
-- The binding constraint is structural, not architectural: a **39.7% all-wrong
-  floor** on the four-expert pool caps what any router can recover, and the
+- The binding constraint is structural, not architectural for hard expert
+  selection: the historical **39.7% all-wrong floor** on the four-expert pool
+  limits what a hard-selection router can recover, but it is not a ceiling for
+  adaptive soft-mixture routing. [Task 3E-B](../docs/oof-results.md#5-task-3e-b--adaptive-soft-mixture-oracle)
+  found 321 images correctable by convex logit combinations even though every
+  expert's individual top-1 prediction was wrong. For hard selection, the
   accessible headroom (60.27 oracle − 46.98 uniform = **13.3 points**) has not
   been captured by any rule.
 - Two independent conditions must hold for routing to win, and neither does:
