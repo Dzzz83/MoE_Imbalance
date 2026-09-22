@@ -29,6 +29,12 @@ Related project evidence:
   its saved weight improves the retrospective Tail metric at some fixed
   factors but lowers BA. This is a diagnostic sensitivity result, not a new
   selected router or a causal explanation.
+- Task 3F-C finds limited retrospective confidence, disagreement and
+  predicted-class-group associations for Tail cases. LAL and BalancedSoftmax
+  sometimes have higher confidence when they are correct and Mixup is wrong,
+  but the saved Ridge weights still favor Mixup on those patterns. The result
+  is exploratory and constrained by 183 Tail rows; it does not select a new
+  feature set or routing rule.
 - Ridge is implemented as an exploratory feasibility study; Sinkhorn remains
   unimplemented.
 

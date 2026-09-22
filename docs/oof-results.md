@@ -1,4 +1,4 @@
-# OOF Results — Tasks 3C, 3D, 3E-A and 3E-B
+# OOF Results — Tasks 3C, 3D, 3E-A, 3E-B and 3F
 
 > Authoritative record of the completed nested-OOF development analyses. These
 > results are exploratory and are not a replacement for the original full-data
@@ -42,6 +42,7 @@ Primary artifacts:
 - [Task 3E-B output directory](../artifacts/oof/task3e_soft_feasibility/)
 - [Task 3F-A output directory](../artifacts/oof/task3f_ridge/)
 - [Task 3F-B diagnostic output directory](../artifacts/oof/task3f_mixup_diagnostics/)
+- [Task 3F-C Tail-signal diagnostic output directory](../artifacts/oof/task3f_tail_signal_diagnostics/)
 
 Relevant source files are
 [data/nested_oof.py](../data/nested_oof.py),
@@ -52,7 +53,9 @@ Relevant source files are
 [scripts/task3e_soft.py](../scripts/task3e_soft.py),
 [scripts/task3f_ridge.py](../scripts/task3f_ridge.py),
 [scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py), and
-[scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py).
+[scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py),
+[scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py),
+and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py).
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -321,7 +324,90 @@ evidence is descriptive: the high Mixup preference and weak Tail behavior are
 observed together, but the sensitivity check does not establish that the
 preference causally produces the Tail weakness.
 
-## 8. Scientific synthesis
+## 8. Task 3F-C — inference-time Tail-signal diagnostics
+
+Task 3F-C used only the existing 6,507 OOF rows from outer fold 0, inner folds
+1–3. It read the frozen Task 3F-A weights and validated Task 3F-B provenance;
+it did not refit Ridge, retrain experts, use true class groups as inference
+features, access inner fold 0, access the reserved outer population, or access
+the CIFAR-100 test set. The 183 Tail rows are used only for retrospective
+grouping and correctness analysis.
+
+### Confidence and correctness
+
+The raw maximum-softmax confidence distributions on true Tail rows were:
+
+| Expert | Mean / median confidence | Correct n / mean confidence | Incorrect n / mean confidence |
+|:--|--:|--:|--:|
+| CE | 0.6836 / 0.7149 | 8 / 0.7223 | 175 / 0.6818 |
+| LAL | 0.6187 / 0.6154 | 22 / 0.6915 | 161 / 0.6087 |
+| BalancedSoftmax | 0.6504 / 0.6467 | 20 / 0.6611 | 163 / 0.6491 |
+| Mixup | 0.3871 / 0.3597 | 3 / 0.3260 | 180 / 0.3882 |
+
+On the Tail rows where a rebalanced expert was correct and Mixup was wrong,
+the rebalanced-minus-Mixup confidence margin averaged **+0.2871** for LAL
+(n=20) and **+0.2570** for BalancedSoftmax (n=18). Thus confidence differences
+contain a retrospective clue in these cases, but Mixup's incorrect-Tail
+confidence was 0.3882/0.3601 (mean/median), and the confidence scales are not
+assumed calibrated across objectives.
+
+### Disagreement
+
+| True group | n | All four agree | Mixup ≠ LAL | Mixup ≠ BalancedSoftmax | LAL = BalancedSoftmax |
+|:--|--:|--:|--:|--:|--:|
+| Head | 5,294 | 37.55% | 47.22% | 46.24% | 50.74% |
+| Medium | 1,030 | 14.47% | 69.42% | 66.80% | 36.02% |
+| Tail | 183 | 9.29% | 73.77% | 74.32% | 25.14% |
+
+LAL and BalancedSoftmax agreed while Mixup disagreed on **666** rows overall:
+474 Head, 168 Medium and **24 Tail**. Their shared prediction was correct on
+211/666 (**31.68%**) overall and 7/24 (**29.17%**) on Tail; Mixup was correct on
+0/24 of that Tail subgroup. The complete distinct-prediction-count and
+Head/Medium/Tail pattern tables are in the machine-readable artifact.
+
+### Predicted class-group signals
+
+Mapping each expert's top-1 predicted class to the canonical class group is an
+inference-time signal; true groups are used only afterward to score it.
+
+| Expert | Predicted Tail n / rate | Actual Tail recall | Predicted-Tail precision | Actual Tail miss rate |
+|:--|--:|--:|--:|--:|
+| LAL | 915 / 14.06% | 33.33% | 6.67% | 66.67% |
+| BalancedSoftmax | 867 / 13.32% | 29.51% | 6.23% | 70.49% |
+| Mixup | 26 / 0.40% | 2.73% | 19.23% | 97.27% |
+
+LAL and BalancedSoftmax therefore predict Tail classes much more often than
+Mixup and recover more actual Tail rows, but their predicted-Tail precision is
+low. This is evidence of an association, not a validated Tail detector.
+
+### Frozen Ridge behavior
+
+The highlighted saved Ridge weights have overall mean Mixup weight **0.3702**.
+Conditioning on the prediction-only group signals gives Mixup mean weight
+0.3557 when LAL predicts Head versus 0.4064 when LAL predicts Tail, and 0.3558
+versus 0.4058 for the corresponding BalancedSoftmax conditions. When LAL and
+BalancedSoftmax agree on a predicted Tail class (n=132), their mean weights are
+0.1929 and 0.2054 while Mixup receives 0.4016. If Mixup disagrees with them
+(n=126), its mean weight is still 0.4009; when it disagrees with both
+rebalanced experts (n=2,552), its mean weight is 0.4110.
+
+On the retrospective true-Tail subsets where LAL or BalancedSoftmax is correct
+and Mixup is wrong, Ridge assigns Mixup mean weights 0.4052 (n=20) and 0.4019
+(n=18), respectively. The examined signals therefore contain some information
+about cases where rebalanced experts are more useful, but the frozen Ridge
+router does not reduce Mixup on those patterns. This diagnostic does not refit
+Ridge or select a new feature set or routing rule.
+
+The complete distributions, sample counts, pattern correctness, saved-weight
+conditioning, source hashes and signal-contract provenance are in the
+[Task 3F-C diagnostic results](../artifacts/oof/task3f_tail_signal_diagnostics/diagnostic_results.json)
+and [summary](../artifacts/oof/task3f_tail_signal_diagnostics/summary.md).
+
+Only 183 Tail rows are available, and several key subgroups contain 18–24
+rows. The conclusions are exploratory OOF development associations and do not
+establish an independent routing improvement.
+
+## 9. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -335,6 +421,11 @@ The completed OOF evidence supports these limited conclusions:
   be predicted from inference-time information; Task 3F-A found lower target
   MSE than a global control but no advantage over fixed references on the
   paired BA–Tail objective.
+- Task 3F-C found retrospective confidence and disagreement associations in
+  Tail cases, but the highlighted Ridge weights still favor Mixup when LAL and
+  BalancedSoftmax provide the more useful prediction. The evidence is too
+  small and calibration-dependent to establish that a new routing feature would
+  generalize.
 - No new method has demonstrated a validated improvement over the original
   full-data baseline or an independently held-out outer population.
 

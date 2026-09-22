@@ -21,9 +21,10 @@ The current research direction is narrower: determine whether beneficial expert
 contributions can be predicted from information available at inference time.
 Nested OOF data now supplies held-out development predictions for that
 question. Task 3F-A implements and evaluates the frozen Ridge feasibility
-study, and Task 3F-B diagnoses its highlighted Mixup preference; both are
-exploratory and not independently validated. Sinkhorn remains a separate
-proposed direction.
+study, Task 3F-B diagnoses its highlighted Mixup preference, and Task 3F-C
+checks confidence, disagreement and predicted-class-group signals against the
+saved weights. These are exploratory and not independently validated.
+Sinkhorn remains a separate proposed direction.
 
 ## 2. Canonical data and metric protocol
 
@@ -69,6 +70,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3E-B: adaptive soft-mixture oracle | Complete |
 | Task 3F-A: predictable Ridge routing feasibility | Complete; exploratory only |
 | Task 3F-B: Ridge Mixup-preference diagnostics | Complete; retrospective only |
+| Task 3F-C: Tail-specific routing-signal diagnostics | Complete; retrospective only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -120,6 +122,18 @@ of those groups. Reducing its saved weight improved the retrospective Tail
 metric at factors 0.25 and 0.0 but reduced BA; this is a sensitivity finding,
 not evidence of a selected or causal replacement router.
 
+Task 3F-C found that inference-time prediction patterns contain limited
+retrospective clues: on true Tail rows where LAL or BalancedSoftmax is correct
+and Mixup is wrong, their confidence exceeds Mixup's by 0.2871 (n=20) and
+0.2570 (n=18) on average. LAL and BalancedSoftmax also predict Tail classes
+more often than Mixup (14.06% and 13.32% versus 0.40%), although predicted-Tail
+precision is low. They agree against Mixup on 666 rows overall and 24 Tail
+rows, with 7/24 shared Tail predictions correct. The saved Ridge weights do not
+respond by reducing Mixup: its mean weight is 0.4016 on the predicted-Tail
+agreement pattern and 0.4110 when it disagrees with both rebalanced experts,
+versus 0.3702 overall. This is a small, retrospective association study on 183
+Tail rows, not evidence that a new feature or router will generalize.
+
 ## 6. Next research decision
 
 Before any independent evaluation or Sinkhorn work, preserve the frozen Task
@@ -167,6 +181,8 @@ checkpoints.
   scripts/run_task3f_ridge.py
 - Ridge preference diagnostics: scripts/task3f_mixup_diagnostics.py and
   scripts/run_task3f_mixup_diagnostics.py
+- Tail-signal diagnostics: scripts/task3f_tail_signal_diagnostics.py and
+  scripts/run_task3f_tail_signal_diagnostics.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
@@ -177,6 +193,8 @@ checkpoints.
   artifacts/oof/task3f_ridge/
 - Task 3F-B outputs:
   artifacts/oof/task3f_mixup_diagnostics/
+- Task 3F-C outputs:
+  artifacts/oof/task3f_tail_signal_diagnostics/
 
 ## 9. Documentation navigation
 
