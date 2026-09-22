@@ -14,6 +14,7 @@ balanced CIFAR-100 test set.
 | Task 3C: seed-78, outer-fold-0 collection | Complete |
 | Task 3E-A/B: restricted exploratory analysis | Complete |
 | Task 3F-A: restricted Ridge predictability analysis | Complete; exploratory only |
+| Task 3F-D: combined Tail-signal diagnostics | Complete; retrospective only |
 | Outer-fold expert training and evaluation | Not executed |
 | Full 300-run nested experiment | Not executed |
 
@@ -174,6 +175,9 @@ artifacts/oof/task3f_ridge/
   fold_assignments.json
   held_out_predictions.npz
   router_scores.npz
+  summary.md
+artifacts/oof/task3f_combined_signal_diagnostics/
+  diagnostic_results.json
   summary.md
 ~~~
 

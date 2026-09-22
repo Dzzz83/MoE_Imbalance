@@ -43,6 +43,7 @@ Primary artifacts:
 - [Task 3F-A output directory](../artifacts/oof/task3f_ridge/)
 - [Task 3F-B diagnostic output directory](../artifacts/oof/task3f_mixup_diagnostics/)
 - [Task 3F-C Tail-signal diagnostic output directory](../artifacts/oof/task3f_tail_signal_diagnostics/)
+- [Task 3F-D combined-signal diagnostic output directory](../artifacts/oof/task3f_combined_signal_diagnostics/)
 
 Relevant source files are
 [data/nested_oof.py](../data/nested_oof.py),
@@ -55,7 +56,9 @@ Relevant source files are
 [scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py), and
 [scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py),
 [scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py),
-and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py).
+and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py),
+[scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py),
+and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py).
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -407,7 +410,65 @@ Only 183 Tail rows are available, and several key subgroups contain 18–24
 rows. The conclusions are exploratory OOF development associations and do not
 establish an independent routing improvement.
 
-## 9. Scientific synthesis
+## 9. Task 3F-D — combined inference-time Tail signals
+
+Task 3F-D reused the validated 6,507-image outer-fold-0 / inner-folds-1–3
+population and the saved highlighted Ridge weights. Signals A–D were frozen
+before any label-dependent calculation:
+
+- A: LAL and BalancedSoftmax predict the same class;
+- B: Mixup disagrees with both rebalanced experts;
+- C: both rebalanced experts predict a canonical Tail class; and
+- D: both rebalanced experts have higher raw maximum-softmax confidence than
+  Mixup.
+
+All 15 predefined conjunctions were evaluated. Their masks were all distinct
+on this population. The population contained 5,294 Head, 1,030 Medium and 183
+Tail images (183/6,507 = 2.81% Tail prevalence).
+
+### Tail identification and rebalanced opportunities
+
+| Mask | Selected n | Head / Medium / Tail n | Tail precision | Tail recall | Rebalanced opportunity n / fraction |
+|:--|--:|--:|--:|--:|--:|
+| A | 3,103 | 2,686 / 371 / 46 | 46/3,103 = 1.48% | 46/183 = 25.14% | 211/3,103 = 6.80% |
+| B | 2,552 | 1,866 / 576 / 110 | 110/2,552 = 4.31% | 110/183 = 60.11% | 554/2,552 = 21.71% |
+| C | 291 | 200 / 62 / 29 | 29/291 = 9.97% | 29/183 = 15.85% | 13/291 = 4.47% |
+| D | 4,690 | 3,812 / 756 / 122 | 122/4,690 = 2.60% | 122/183 = 66.67% | 583/4,690 = 12.43% |
+| AB | 666 | 474 / 168 / 24 | 24/666 = 3.60% | 24/183 = 13.11% | 211/666 = 31.68% |
+| AC | 132 | 91 / 28 / 13 | 13/132 = 9.85% | 13/183 = 7.10% | 7/132 = 5.30% |
+| AD | 2,496 | 2,163 / 298 / 35 | 35/2,496 = 1.40% | 35/183 = 19.13% | 191/2,496 = 7.65% |
+| BC | 285 | 197 / 61 / 27 | 27/285 = 9.47% | 27/183 = 14.75% | 13/285 = 4.56% |
+| BD | 1,858 | 1,341 / 438 / 79 | 79/1,858 = 4.25% | 79/183 = 43.17% | 463/1,858 = 24.92% |
+| CD | 190 | 125 / 42 / 23 | 23/190 = 12.11% | 23/183 = 12.57% | 10/190 = 5.26% |
+| ABC | 126 | 88 / 27 / 11 | 11/126 = 8.73% | 11/183 = 6.01% | 7/126 = 5.56% |
+| ABD | 528 | 370 / 139 / 19 | 19/528 = 3.60% | 19/183 = 10.38% | 191/528 = 36.17% |
+| ACD | 87 | 58 / 19 / 10 | 10/87 = 11.49% | 10/183 = 5.46% | 5/87 = 5.75% |
+| BCD | 184 | 122 / 41 / 21 | 21/184 = 11.41% | 21/183 = 11.48% | 10/184 = 5.43% |
+| ABCD | 81 | 55 / 18 / 8 | 8/81 = 9.88% | 8/183 = 4.37% | 5/81 = 6.17% |
+
+The opportunity count is the retrospective union of rows where LAL or
+BalancedSoftmax is correct and Mixup is wrong. Several conjunctions increased
+precision or opportunity fraction relative to constituents, but always by
+selecting fewer rows. The complete per-group correctness outcomes, including
+Mixup-correct/both-rebalanced-wrong and all-three-wrong counts, are in the
+[Task 3F-D diagnostic results](../artifacts/oof/task3f_combined_signal_diagnostics/diagnostic_results.json).
+
+### Frozen Ridge conditioning
+
+Across all 6,507 rows, the saved Ridge mean weights were CE 0.2029, LAL 0.2099,
+BalancedSoftmax 0.2170 and Mixup 0.3702. Mixup received the highest weight on
+6,415/6,507 rows (98.59%). Only 2 of the 15 signal masks had a lower selected
+subgroup Mixup mean than 0.3702. The weights were read and checked against the
+saved predictions; they were not modified.
+
+The combinations therefore provide descriptive information about progressively
+smaller subgroups, but they do not establish a robust Tail detector, prove a
+generalizable useful-contribution signal, or justify a new feature set/router.
+Raw confidence comparisons are not assumed calibrated across experts, and the
+183 Tail images make small conjunctions unstable. No independent evaluation
+population or original test set was accessed.
+
+## 10. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -426,6 +487,10 @@ The completed OOF evidence supports these limited conclusions:
   BalancedSoftmax provide the more useful prediction. The evidence is too
   small and calibration-dependent to establish that a new routing feature would
   generalize.
+- Task 3F-D found that conjunctions can trade recall for precision and can
+  identify smaller groups with different retrospective correctness rates, but
+  the frozen Ridge weights still overwhelmingly favor Mixup and no combination
+  was selected as a routing rule.
 - No new method has demonstrated a validated improvement over the original
   full-data baseline or an independently held-out outer population.
 

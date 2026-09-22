@@ -23,7 +23,8 @@ Nested OOF data now supplies held-out development predictions for that
 question. Task 3F-A implements and evaluates the frozen Ridge feasibility
 study, Task 3F-B diagnoses its highlighted Mixup preference, and Task 3F-C
 checks confidence, disagreement and predicted-class-group signals against the
-saved weights. These are exploratory and not independently validated.
+saved weights. Task 3F-D evaluates the frozen combinations of those signals.
+These are exploratory and not independently validated.
 Sinkhorn remains a separate proposed direction.
 
 ## 2. Canonical data and metric protocol
@@ -71,6 +72,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3F-A: predictable Ridge routing feasibility | Complete; exploratory only |
 | Task 3F-B: Ridge Mixup-preference diagnostics | Complete; retrospective only |
 | Task 3F-C: Tail-specific routing-signal diagnostics | Complete; retrospective only |
+| Task 3F-D: Combined Tail-signal diagnostics | Complete; retrospective only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -134,6 +136,19 @@ agreement pattern and 0.4110 when it disagrees with both rebalanced experts,
 versus 0.3702 overall. This is a small, retrospective association study on 183
 Tail rows, not evidence that a new feature or router will generalize.
 
+Task 3F-D evaluated the four frozen inference-time signals and all 15
+predefined conjunctions on the same 6,507-image population. No conjunction
+had an equivalent membership mask to another configuration. Individual signals
+selected 291--4,690 rows and had Tail precision from 1.48% to 9.97%; the
+conjunctions selected 81--2,496 rows, with several higher-precision but
+lower-recall subsets. The ABCD mask selected 81 rows, including 8 Tail rows
+(9.88% precision, 4.37% recall), and 5 rows where a rebalanced expert was
+correct while Mixup was wrong. The frozen Ridge weights had overall mean Mixup
+weight 0.3702 and gave Mixup the highest weight on 6,415/6,507 rows (98.59%);
+only 2 of the 15 conditioned masks had a lower selected-subgroup Mixup mean.
+These are retrospective associations, not a selected feature representation
+or routing rule.
+
 ## 6. Next research decision
 
 Before any independent evaluation or Sinkhorn work, preserve the frozen Task
@@ -183,6 +198,8 @@ checkpoints.
   scripts/run_task3f_mixup_diagnostics.py
 - Tail-signal diagnostics: scripts/task3f_tail_signal_diagnostics.py and
   scripts/run_task3f_tail_signal_diagnostics.py
+- Combined Tail-signal diagnostics: scripts/task3f_combined_signal_diagnostics.py
+  and scripts/run_task3f_combined_signal_diagnostics.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
@@ -195,6 +212,8 @@ checkpoints.
   artifacts/oof/task3f_mixup_diagnostics/
 - Task 3F-C outputs:
   artifacts/oof/task3f_tail_signal_diagnostics/
+- Task 3F-D outputs:
+  artifacts/oof/task3f_combined_signal_diagnostics/
 
 ## 9. Documentation navigation
 

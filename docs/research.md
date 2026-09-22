@@ -35,6 +35,12 @@ Related project evidence:
   but the saved Ridge weights still favor Mixup on those patterns. The result
   is exploratory and constrained by 183 Tail rows; it does not select a new
   feature set or routing rule.
+- Task 3F-D evaluates the four frozen signals and all 15 predefined
+  conjunctions. Some conjunctions trade Tail recall for higher precision or
+  higher retrospective rebalanced-expert opportunity fractions, but they select
+  progressively smaller development subsets and the saved Ridge weights still
+  overwhelmingly favor Mixup. No combination is selected as a feature set or
+  routing rule.
 - Ridge is implemented as an exploratory feasibility study; Sinkhorn remains
   unimplemented.
 
