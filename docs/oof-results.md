@@ -40,6 +40,7 @@ Primary artifacts:
 - [Task 3C batch manifest](../artifacts/oof/task3c_oof/batch_manifest.json)
 - [Task 3E-A output directory](../artifacts/oof/task3e_fixed_feasibility/)
 - [Task 3E-B output directory](../artifacts/oof/task3e_soft_feasibility/)
+- [Task 3F-A output directory](../artifacts/oof/task3f_ridge/)
 
 Relevant source files are
 [data/nested_oof.py](../data/nested_oof.py),
@@ -47,7 +48,9 @@ Relevant source files are
 [scripts/run_task3c.py](../scripts/run_task3c.py),
 [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py),
 [scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and
-[scripts/task3e_soft.py](../scripts/task3e_soft.py).
+[scripts/task3e_soft.py](../scripts/task3e_soft.py),
+[scripts/task3f_ridge.py](../scripts/task3f_ridge.py), and
+[scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py).
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -229,7 +232,57 @@ The complete per-image and per-class records are in
 the concise [summary](../artifacts/oof/task3e_soft_feasibility/summary.md)
 records the frozen tolerances and exclusions.
 
-## 6. Scientific synthesis
+## 6. Task 3F-A — Ridge-based predictable routing feasibility
+
+Task 3F-A used the existing aligned OOF artifact without regenerating folds or
+training experts. Only inner folds 1–3 were used: each of the three runs fit on
+two folds and generated held-out predictions on the third. The supervised
+target was the four-dimensional marginal contribution to the uniform
+ensemble's true-class log probability. Ridge models used either the four
+confidence features or the full 13-feature representation, with the frozen
+alpha, class-weighting, temperature and shrinkage grids.
+
+The pooled uniform logit baseline reproduced Task 3C exactly:
+
+| Method | Accuracy | BA | Head | Medium | Tail |
+|:--|--:|--:|--:|--:|--:|
+| Uniform logit | 59.4283% | 35.9328% | 61.9661% | 34.6909% | 7.0094% |
+| Uniform probability | 58.5370% | 35.7778% | 60.9649% | 33.6690% | 8.8532% |
+| fixed_006 | 60.1660% | 37.2134% | 62.8900% | 34.9384% | 9.9115% |
+| fixed_007 | 55.8322% | 36.4403% | 58.1737% | 33.3167% | 14.7290% |
+| fixed_010 | 55.9398% | 36.4236% | 58.4063% | 33.2279% | 14.5055% |
+| fixed_011 | 52.3436% | 35.4372% | 54.4225% | 32.4557% | 16.7660% |
+| Uniform without CE | 57.6610% | 37.1860% | 60.1762% | 34.2020% | 13.8454% |
+
+All 600 adaptive configurations and 60 learned-global configurations were
+evaluated on the same 6,507 held-out rows. Sixty adaptive configurations
+improved both BA and Tail over uniform logit. The best adaptive BA/Tail pair
+was **36.5502% / 7.3797%**; no adaptive configuration improved both metrics
+over any of the previously identified fixed references. The best global-score
+control BA was **36.4478%**, with **6.1297% Tail**, and no global configuration
+improved both baseline metrics.
+
+The full 13-feature representation had lower mean held-out contribution MSE
+than confidence-only (**3.9683** versus **4.0126**); both beat the corresponding
+training-only global-score control (**4.2419** mean). This predictability signal
+did not translate into a classification advantage over fixed composition.
+The best adaptive row did not meet the defined collapse rule, although its
+dominant top-weight expert was Mixup on 98.6% of images and its mean Mixup
+weight was 37.0%. Tail evaluation contains only 183 images, so these small
+differences are not conclusive.
+
+The complete provenance, all configuration rows, fold-level metrics, target
+errors, weight diagnostics, sample-aligned held-out predictions and score
+arrays are in the [Task 3F-A artifact directory](../artifacts/oof/task3f_ridge/),
+with the concise [summary](../artifacts/oof/task3f_ridge/summary.md).
+
+This remains exploratory development-data evidence. The three-fold procedure
+does not remove overlapping training populations among the existing OOF
+experts; inner fold 0 and the reserved outer evaluation population were not
+used for new calculations, but inner fold 0 was inspected descriptively by
+Task 3C. No independent test-set or outer-fold evidence was collected.
+
+## 7. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -240,10 +293,12 @@ The completed OOF evidence supports these limited conclusions:
   selection.
 - Tail-class coverage remains limited and noisy.
 - The existence of beneficial weights does not establish that those weights can
-  be predicted from inference-time information.
+  be predicted from inference-time information; Task 3F-A found lower target
+  MSE than a global control but no advantage over fixed references on the
+  paired BA–Tail objective.
 - No new method has demonstrated a validated improvement over the original
-  full-data baseline.
+  full-data baseline or an independently held-out outer population.
 
-The next open question is predictable routing suitability. The current evidence
-does not validate Ridge, Sinkhorn, a new specialist, or a final adaptive
-weighting rule.
+The next open question is generalization of any frozen routing choice to an
+independent outer population. Sinkhorn, a new specialist, and a final adaptive
+weighting rule remain unvalidated.

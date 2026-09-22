@@ -20,8 +20,9 @@ historical uniform-logit baseline is **46.98 ± 0.69% BA** and
 The current research direction is narrower: determine whether beneficial expert
 contributions can be predicted from information available at inference time.
 Nested OOF data now supplies held-out development predictions for that
-question. Ridge and Sinkhorn remain proposed research directions; neither is
-implemented or validated.
+question. Task 3F-A implements and evaluates the frozen Ridge feasibility
+study; it is exploratory and not independently validated. Sinkhorn remains a
+separate proposed direction.
 
 ## 2. Canonical data and metric protocol
 
@@ -65,7 +66,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3D: exploratory specialization analysis | Complete |
 | Task 3E-A: fixed-weight feasibility | Complete |
 | Task 3E-B: adaptive soft-mixture oracle | Complete |
-| Predictable Ridge routing | Not implemented |
+| Task 3F-A: predictable Ridge routing feasibility | Complete; exploratory only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -92,14 +93,25 @@ analyses are label-dependent development results from one seed and one outer
 fold; neither is independently validated or comparable directly with the
 full-data test numbers.
 
-The main unresolved scientific question is therefore predictability, not the
-existence of any beneficial weight. Tail class coverage is still sparse, and
-the soft-mixture oracle is an existence diagnostic rather than a deployable
-classifier.
+The main unresolved scientific question is now whether any predictable signal
+generalizes and yields paired BA–Tail improvement beyond fixed composition, not
+the existence of any beneficial weight. Tail class coverage is still sparse,
+and the soft-mixture oracle is an existence diagnostic rather than a deployable
+classifier. Task 3F-A evaluated all 600 adaptive configurations on the
+6,507-image permitted population. Uniform logit averaging reproduced **35.9328%
+BA / 7.0094% Tail**. Sixty adaptive configurations improved both metrics over
+that uniform row, but none exceeded the previously identified fixed-weight
+references on both metrics. The best adaptive row reached **36.5502% BA / 7.3797%
+Tail**. Its learned global-score control did not improve both metrics, so the
+study does not establish useful adaptive routing beyond fixed composition.
+Full 13-feature models reduced contribution-prediction error relative to the
+confidence-only representation on average, without a corresponding
+classification advantage.
 
 ## 6. Next research decision
 
-Before implementing Ridge or Sinkhorn, freeze:
+Before any independent evaluation or Sinkhorn work, preserve the frozen Task
+3F-A definitions and document:
 
 1. the supervised target for useful expert contribution;
 2. inference-time features and any logit calibration;
@@ -109,9 +121,10 @@ Before implementing Ridge or Sinkhorn, freeze:
 5. safeguards against in-sample supervision, test-set selection, expert-pool
    changes, fold-trained/full-data distribution shift.
 
-Ridge is a candidate simple predictive model, not an approved formulation.
-Sinkhorn should be considered separately only after a suitability signal is
-shown to be learnable and after its global-allocation value is isolated.
+Task 3F-A is a simple predictive-model feasibility result, not approval of a
+final router. Sinkhorn should be considered separately only after a suitability
+signal is shown to be learnable and after its global-allocation value is
+isolated.
 
 ## 7. Experimental populations
 
@@ -138,12 +151,16 @@ checkpoints.
   scripts/run_task3e_fixed.py
 - Soft-mixture feasibility analysis: scripts/task3e_soft.py and
   scripts/run_task3e_soft.py
+- Predictable Ridge analysis: scripts/task3f_ridge.py and
+  scripts/run_task3f_ridge.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
   artifacts/oof/task3e_fixed_feasibility/
 - Task 3E-B outputs:
   artifacts/oof/task3e_soft_feasibility/
+- Task 3F-A outputs:
+  artifacts/oof/task3f_ridge/
 
 ## 9. Documentation navigation
 

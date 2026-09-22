@@ -87,13 +87,17 @@ predicted from inference-time information.
 Task 3E-A found fixed convex logit weights that improve both BA and Tail on the
 router-fitting partition. Task 3E-B found further soft-mixture feasibility.
 Neither result is an independently validated adaptive router, a full-data test
-result, or evidence that a particular Ridge or Sinkhorn formulation will work.
+result, or evidence that a particular Ridge formulation will generalize. Task
+3F-A subsequently found lower held-out contribution-target MSE than its
+training-only global control, but no paired BA–Tail advantage over the fixed
+references on the same development population.
 
 ## 3. Current unresolved problems
 
 The next research decision must address:
 
-- predicting beneficial expert weights without access to the true label;
+- generalizing any predictable expert-weight signal beyond the current OOF
+  development population without access to the true label;
 - improving weak Tail recognition and measuring Tail uncertainty honestly;
 - generalizing from fold-trained experts to the eventual full-data experts;
 - preventing in-sample router overfitting and separating fitting from
@@ -102,9 +106,9 @@ The next research decision must address:
 - obtaining independent evidence across additional outer folds, seeds or
   datasets.
 
-Before implementation, the supervised target, inference-time features,
-regularization, baselines, selection procedure and non-cheating safeguards
-must be frozen. Ridge is a candidate model for this question; Sinkhorn is a
+Before independent evaluation or any new router variant, the frozen Task 3F-A
+target, inference-time features, regularization, baselines, selection
+procedure and non-cheating safeguards must be preserved. Sinkhorn is a
 separate allocation mechanism and should not be treated as a source of
 predictive signal.
 
@@ -112,8 +116,9 @@ predictive signal.
 
 - No completed experiment validates a learned router on the reserved outer
   population or on a fresh test population.
-- No completed experiment validates Ridge, Sinkhorn, a new specialist, or the
-  full nested 300-run matrix.
+- No completed experiment validates Ridge on the reserved outer population or
+  a fresh test population; Sinkhorn, a new specialist, and the full nested
+  300-run matrix remain unexecuted.
 - Zero observed coverage for a rare Tail class is not proof that the class is
   intrinsically unlearnable.
 - OOF development improvements cannot be compared directly with the original

@@ -1,0 +1,298 @@
+{
+  "analyzed_sample_count": 6507,
+  "canonical_training_index_sha256": "10846747f461656ffe720299517e70724ed9a0959b258202b3efa80bb1d1298f",
+  "canonical_training_population_size": 10847,
+  "class_group_definitions": {
+    "head": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34
+    ],
+    "medium": [
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69
+    ],
+    "source": "scripts.base_trainer.compute_class_groups",
+    "tail": [
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99
+    ]
+  },
+  "class_weighting": {
+    "cap": 5.0,
+    "formula": "min(5,(n_max/n_y)**gamma)",
+    "gammas": [
+      0.0,
+      0.5,
+      1.0
+    ],
+    "labels_source": "router-training rows only",
+    "normalization": "mean one within each router-training fold"
+  },
+  "data_restrictions": {
+    "expert_training_or_checkpoints_modified": false,
+    "independent_validation_claim": false,
+    "inner_fold_zero_used": false,
+    "original_cifar_test_used": false,
+    "reserved_outer_evaluation_used": false,
+    "source_oof_logits_modified": false
+  },
+  "dataset": "CIFAR-100-LT",
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "features": {
+    "confidence_only": {
+      "dimension": 4,
+      "features": [
+        "confidence_CE",
+        "confidence_LAL",
+        "confidence_BalancedSoftmax",
+        "confidence_Mixup"
+      ],
+      "name": "confidence_only"
+    },
+    "full_13": {
+      "dimension": 13,
+      "features": [
+        "confidence_CE",
+        "confidence_LAL",
+        "confidence_BalancedSoftmax",
+        "confidence_Mixup",
+        "margin_CE",
+        "margin_LAL",
+        "margin_BalancedSoftmax",
+        "margin_Mixup",
+        "entropy_CE",
+        "entropy_LAL",
+        "entropy_BalancedSoftmax",
+        "entropy_Mixup",
+        "distinct_top1_predictions"
+      ],
+      "name": "full_13"
+    },
+    "source": "original OOF logits only; labels and fold IDs excluded",
+    "standardization": "StandardScaler fit separately on each router-training fold"
+  },
+  "fold_generation_seed": 42,
+  "full_aligned_sample_count": 8677,
+  "grid_size": {
+    "adaptive_ridge_configurations": 600,
+    "global_control_configurations": 60,
+    "ridge_fits_per_validation_fold": 30,
+    "ridge_fits_total": 90
+  },
+  "imbalance_ratio": 100.0,
+  "input_artifacts": {
+    "aligned_oof_arrays": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof.npz",
+      "sha256": "bcfa26aa425f4c232caebad6bb69c3ec7035b9f41342bc8c8cb1960b33641c7f"
+    },
+    "aligned_oof_metadata": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof_metadata.json",
+      "sha256": "c12462b2554dcd1e3ea76810dccd05780b2310568ccc71e9ef03c96aa06f645e"
+    },
+    "task3c_batch_manifest": {
+      "path": "artifacts/oof/task3c_oof/batch_manifest.json",
+      "sha256": "4e1525aa10985675b30fb75880201d98d7f057eb98d84bf2f6a594fb58166d85"
+    },
+    "task3c_diagnostics": {
+      "path": "artifacts/oof/task3c_oof/diagnostics.json",
+      "sha256": "f4f1f417467299ae69e84e14775c8ca6dcb168ebd686517ec36ca21f1e9ea94c"
+    },
+    "task3c_fold_manifest": {
+      "path": "artifacts/oof/task3c_oof/fold_manifest.json",
+      "sha256": "664f92673f7b5d0bea1ba4dbdaa8471a5f1a757586184a8dabda30d007a2e622"
+    }
+  },
+  "metric_definitions": {
+    "balanced_accuracy": "mean per-class recall over the pooled held-out predictions",
+    "head_accuracy": "macro recall over canonical Head classes",
+    "medium_accuracy": "macro recall over canonical Medium classes",
+    "ordinary_accuracy": "fraction of samples with predicted class equal to label",
+    "tail_accuracy": "macro recall over canonical Tail classes"
+  },
+  "number_of_classes": 100,
+  "outer_evaluation_population_size": 2170,
+  "outer_fold": 0,
+  "permitted_analysis_inner_folds": [
+    1,
+    2,
+    3
+  ],
+  "reserved_router_selection_inner_folds": [
+    0
+  ],
+  "ridge": {
+    "alphas": [
+      0.1,
+      1.0,
+      10.0,
+      100.0,
+      1000.0
+    ],
+    "fit_intercept": true,
+    "intercept_penalized": false,
+    "model": "sklearn.linear_model.Ridge",
+    "multi_output": true,
+    "solver": "lsqr",
+    "solver_random_state": null,
+    "solver_tolerance": 1e-12
+  },
+  "schema_version": "task3f_ridge.v1",
+  "scientific_limitations": [
+    "This is exploratory development-data cross-validation on one seed and one outer fold.",
+    "Existing OOF experts have overlapping training populations across router folds.",
+    "The permitted population contains only 183 Tail images.",
+    "Inner fold 0 was inspected descriptively by Task 3C before this study.",
+    "The result does not establish generalization to outer-fold or full-data experts."
+  ],
+  "score_to_weight": {
+    "combination": "weighted original logits",
+    "formula": "w=(1-lambda)/4+lambda*softmax(score/T)",
+    "shrinkages": [
+      0.0,
+      0.25,
+      0.5,
+      0.75,
+      1.0
+    ],
+    "temperatures": [
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ]
+  },
+  "source_git_commit": "7de775b77bc3a48db5827e3b8dc60d66bdae7701",
+  "target": {
+    "formula": "(z_e_y-zbar_y)-sum_c softmax(zbar)_c*(z_e_c-zbar_c)",
+    "name": "marginal_uniform_ensemble_true_class_log_probability",
+    "oracle_weights_used": false,
+    "target_dimension": 4,
+    "zero_sum_verified": true
+  },
+  "task_identifier": "Task 3F-A",
+  "training_seed": 78,
+  "uniform_baseline_verification": {
+    "absolute_differences": {
+      "balanced_accuracy": 0.0,
+      "head_accuracy": 0.0,
+      "medium_accuracy": 0.0,
+      "ordinary_accuracy": 0.0,
+      "tail_accuracy": 0.0
+    },
+    "matches": true,
+    "stored_task3c_metrics": {
+      "balanced_accuracy": 0.35932756391263865,
+      "head_accuracy": 0.6196608238716724,
+      "medium_accuracy": 0.34690896294118506,
+      "ordinary_accuracy": 0.5942830797602582,
+      "tail_accuracy": 0.07009379509379508
+    },
+    "task3e_metrics": {
+      "balanced_accuracy": 0.35932756391263865,
+      "head_accuracy": 0.6196608238716724,
+      "medium_accuracy": 0.34690896294118506,
+      "ordinary_accuracy": 0.5942830797602582,
+      "tail_accuracy": 0.07009379509379508
+    },
+    "tolerance": 1e-12
+  }
+}

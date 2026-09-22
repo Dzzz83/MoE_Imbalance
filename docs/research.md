@@ -19,19 +19,24 @@ Related project evidence:
 - The convex-logit soft-mixture oracle has been implemented and evaluated.
 - The oracle demonstrates additional theoretical headroom beyond hard
   selection, but it does not predict weights.
-- Predictability of useful expert weighting has not been established.
-- Ridge and Sinkhorn remain unimplemented.
+- Task 3F-A shows that Ridge predicts the supervised contribution target more
+  accurately than an intercept-only global control on this development
+  population, but no adaptive configuration beats the prior fixed references
+  on both BA and Tail.
+- Ridge is implemented as an exploratory feasibility study; Sinkhorn remains
+  unimplemented.
 
 The current scientific question is:
 
 > Can a model predict useful expert contributions from inference-time
 > information using legitimate OOF supervision?
 
-Ridge is a candidate simple predictive model. Its target, features,
-regularization, baseline comparisons and internal validation procedure have not
-been frozen. Sinkhorn is an allocation mechanism, not a source of routing
-signal, and should be investigated separately only after a useful suitability
-signal is established.
+Task 3F-A freezes and records the contribution target, the two feature sets,
+regularization and weighting grids, the uniform/fixed/global controls, and the
+three-fold fitting procedure. Its results are development evidence rather than
+an independently validated router. Sinkhorn is an allocation mechanism, not a
+source of routing signal, and should be investigated separately only after a
+useful suitability signal is established.
 
 ## 1. Multi-expert architectures for long-tailed recognition
 
@@ -155,21 +160,21 @@ averaging.
 | Mixup improves the pool | Calibration and ensemble literature | Calibration/head complementarity improved, Tail remained weak |
 | Logit and probability averaging are interchangeable | Balanced-data intuition | They differ on this imbalanced pool |
 | Product-of-experts is a new baseline | Generic ensemble intuition | It is the same classifier as uniform logit averaging |
-| Soft adaptive weighting may help | Convex-mixture feasibility | The OOF oracle shows existence headroom, not predictability |
+| Soft adaptive weighting may help | Convex-mixture feasibility | The OOF oracle shows existence headroom; Task 3F-A finds target predictability but no paired BA–Tail advantage over fixed references |
 
 ## 7. Current research boundary
 
-Before any fitted router is implemented, the project must freeze a supervised
-target, inference-time features, calibration choices, regularization grid,
-uniform/fixed/no-OT baselines, and the fit-versus-selection procedure. Fit and
+Before any independent evaluation or new router variant, preserve the frozen
+Task 3F-A supervised target, inference-time features, regularization grid,
+uniform/fixed/global controls, and fit-versus-selection procedure. Fit and
 selection must use the OOF roles in the
 [nested protocol](nested-oof-protocol.md), while the outer evaluation and
 original test set remain untouched.
 
-Ridge should first answer whether useful expert suitability is predictable.
-Sinkhorn should then be tested as a separate global-allocation control rather
-than assumed to create signal. The old ranked variants and staged sequence are
-historical hypotheses preserved in
+The next evidence should come from an independent frozen outer evaluation.
+Sinkhorn, if revisited, should be tested as a separate global-allocation
+control rather than assumed to create signal. The old ranked variants and
+staged sequence are historical hypotheses preserved in
 [archive/superseded-research-proposals.md](archive/superseded-research-proposals.md);
 they are not approved implementation instructions.
 
