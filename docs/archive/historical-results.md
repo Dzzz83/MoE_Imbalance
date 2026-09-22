@@ -1,13 +1,16 @@
 # Historical Results — Superseded Protocols
 
-> Archive only. These results are retained for traceability and are **not comparable** to the current canonical protocol. Current authoritative results are in [`../results.md`](../results.md).
+> Archive only. These results are retained for traceability and are **not
+> comparable** to the original full-data protocol or the OOF development
+> protocol. Original full-data results are in [`../results.md`](../results.md);
+> current OOF findings are in [`../oof-results.md`](../oof-results.md).
 
 Kept so earlier claims stay traceable. **Three** protocols exist in this
 project's history and their numbers are not interchangeable:
 
 | Protocol | Training data | Validation split | Notes |
 |:--|:--|:--|:--|
-| **Current** (§2–§5) | full LT set, 10,847 | none | 4 experts, 3 seeds, seed-controlled init |
+| **Original full-data** (§2–§5) | full LT set, 10,847 | none | 4 experts, 3 seeds, seed-controlled init |
 | **B — proper 80/20** | 8,677 (80% of 10,847) | 2,170 LT samples | non-standard: split off 20% of an already small set; left 4 tail classes with zero val samples |
 | **A — flawed** | 8,677 from a 45,000 pool | balanced 5,000 held out *before* LT subsampling | the original, non-standard pipeline |
 

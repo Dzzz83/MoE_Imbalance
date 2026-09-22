@@ -1,208 +1,111 @@
-# Expert diagnostics and routing feasibility
+# Expert Diagnostics
 
-This document records the Task 2 diagnostic framework.  It is an implementation
-and design note, not a new CIFAR-100-LT experiment.  No real test samples,
-cached test predictions, expert retraining, router fitting, Ridge, or Sinkhorn
-were used for this task.
+This document describes the reusable array-only diagnostic framework. It is
+implementation documentation, not an experimental results report. The
+implementation is [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py);
+completed OOF measurements are in [oof-results.md](oof-results.md).
 
-## Corrected defects
+The module accepts aligned logits or predictions and does not load a dataset,
+checkpoint or test split. It does not fit router parameters.
 
-- The old lone-dissenter loop was written for three experts.  On a four-expert
-  `2-1-1` prediction partition it found one agreeing pair and then silently
-  treated the first of two dissenters as *the* dissenter.  The reusable
-  diagnostic now identifies arbitrary prediction partitions and defines a
-  unique dissenter only for the `(E-1)-1` pattern.  For four experts it reports
-  `4-0`, `3-1`, `2-2`, `2-1-1`, and `1-1-1-1` separately.
-- The old `unique_best` quantity was a confidence event among correct experts,
-  but its name and report could be read as “only one expert is correct.”  The
-  new report separates the number of correct experts, exactly-one correctness,
-  multiple correctness, no correctness, global top-confidence correctness,
-  and the rank of the highest-confidence correct expert.  Every fraction
-  carries its denominator and conditioning event.
-- The three `diagnose_dace*.py` entry points are now explicitly marked and
-  guarded as retired three-expert/legacy-split postmortems.  Their negative
-  findings are limited to the tested DACE signal and probe; they no longer
-  present those findings as proof that all learned routing is infeasible.
-- New Head/Medium/Tail quantities use mean class recall within each group.  The
-  existing active evaluation metrics and historical numbers were not rewritten.
+## Inputs and validation
 
-## Reusable implementation
+The primary input is an aligned logits array with shape (N, E, C), or a
+prediction array with shape (N, E). Optional labels have shape (N,), class
+counts define the canonical groups, and expert names define the fixed expert
+order.
 
-[`scripts/expert_diagnostics.py`](../scripts/expert_diagnostics.py) exposes the
-array-only `ExpertDiagnostics` class.  It accepts aligned `(N, E, C)` logits or
-`(N, E)` predictions, optional `(N,)` labels, optional per-class training
-counts, and optional expert names.  It never loads a dataset or checkpoint and
-never fits parameters.
+Validation rejects nonfinite values, invalid class indices, missing labels when
+class counts are requested, duplicate or misordered expert names, shape
+mismatches, prediction/logit disagreements, negative weights and weight rows
+that do not sum to one.
 
-The public reports are:
+Head/Medium/Tail boundaries come from
+scripts/base_trainer.py::compute_class_groups: Head n >= 100, Medium
+20 <= n < 100, Tail n < 20. BA and each group metric are macro means of class
+recall. Sample accuracy is reported separately.
 
-- `agreement_patterns()` — partition counts/fractions and, only for `(E-1)-1`,
-  correctness of the agreeing group and unique dissenting expert.
-- `correctness_diagnostics()` — correctness-count distribution, confidence
-  ambiguity, and confidence ranks.  Global confidence ties use the first
-  supplied expert column; confidence ranks are conditioned on at least one
-  correct expert.
-- `complementarity()` — per-expert correctness/BA, pairwise joint correctness
-  and joint error, exclusive correctness, per-class overlap, macro H/M/T
-  overlap, and agreement patterns.  Prediction disagreement is reported but
-  is not treated as useful specialization.
-- `ensemble_contribution()` — paired BA and Tail changes after removing each
-  expert from uniform logit averaging.  The method requires class counts so
-  Tail is not silently replaced by sample accuracy.
-- `hard_routing_headroom()` — all-wrong fraction, at-least-one-correct
-  fraction, hard-selection oracle sample accuracy, oracle BA, and optional
-  macro H/M/T metrics.  This is a label-dependent hard-selection oracle, not
-  an inference-time method and not an upper bound on arbitrary soft mixtures.
-- `evaluate_soft_mixture(weights, combination=...)` — evaluates caller-
-  supplied row-stochastic nonnegative weights for either weighted logits or
-  weighted probabilities.  It does not optimize the weights.  Uniform weights
-  are checked against the existing Uniform and Probability router definitions.
+## Definitions
 
-Input checks reject nonfinite logits/counts/weights, invalid class indices,
-missing class labels when class counts are supplied, duplicate or misordered
-expert names, shape mismatches, prediction/logit disagreements, negative
-weights, and rows whose weights do not sum to one.
+For expert e, the top-1 prediction is
+\( \hat y_{ne} = \operatorname{argmax}_c z_{nec} \), and correctness is
+\( I[\hat y_{ne}=y_n] \). Confidence diagnostics use the expert's maximum
+softmax probability. Confidence ties use the first supplied expert.
 
-The canonical group boundaries are obtained from
-`scripts.base_trainer.compute_class_groups`: Head `n >= 100`, Medium
-`20 <= n < 100`, Tail `n < 20`.  BA and each nonempty group metric are macro
-means of class recalls.  Sample-weighted accuracy is reported separately.
+For row-stochastic nonnegative weights \(w_{ne}\), the two ensemble semantics
+are distinct:
 
-## Evidence assessment for the current pool
+- Weighted logits predict
+  \( \operatorname{argmax}_c \sum_e w_{ne}z_{nec} \).
+- Weighted probabilities predict
+  \( \operatorname{argmax}_c \sum_e w_{ne}\operatorname{softmax}(z_e)_{nc} \).
 
-The following is an interpretation of the verified historical summaries in
-[`docs/results.md`](results.md), [`docs/problem.md`](problem.md), and
-[`records/routing_mechanism.md`](../records/routing_mechanism.md).  The numbers
-were not regenerated or selected during this task.
+The uniform logit and uniform probability definitions are checked against the
+active router implementations.
 
-Established:
+## Public reports
 
-- The four experts have materially different aggregate profiles: LAL is the
-  strongest overall/tail expert in the recorded summary, Mixup is strongest on
-  Head and best calibrated, and CE is weaker overall and overconfident.  These
-  are performance differences, not proof of predictable per-sample routing.
-- Uniform logit averaging is the current recorded baseline and remains ahead
-  of the frozen parameter-free alternatives under the pre-registered BA + Tail
-  criterion.  Adding all four experts improves the unbiased mean ensemble-size
-  curve relative to smaller subsets; this establishes useful aggregate
-  combination, not which expert should be selected per sample.
-- Historical current-pool summaries report pairwise predicted-label kappa in a
-  narrow `0.42–0.49` range.  This establishes disagreement, but disagreement
-  alone is not complementary correctness.
-- Historical correctness-count summaries report a substantial all-wrong
-  region and that most savable samples have multiple correct experts.  Thus a
-  single “correct expert” target is often ambiguous.  Exact per-class
-  exclusive-correctness and joint-error tables still require supplied,
-  label-authorized predictions; the new module provides those calculations.
+- agreement_patterns() reports prediction partitions and fractions. A unique
+  dissenter is defined only for the (E−1)-1 pattern.
+- correctness_diagnostics() reports the number of correct experts, exactly-one
+  and multiple correctness, all-wrong/all-correct events, global
+  top-confidence correctness and the rank of the highest-confidence correct
+  expert.
+- complementarity() reports per-expert correctness/BA, pairwise joint
+  correctness and joint error, exclusive correctness, per-class overlap,
+  macro Head/Medium/Tail overlap and agreement patterns.
+- ensemble_contribution() reports paired BA and Tail changes after removing
+  each expert from uniform logit averaging. It requires class counts so Tail
+  is not silently replaced by sample accuracy.
+- hard_routing_headroom() reports the all-wrong fraction, at-least-one-correct
+  fraction, hard-selection oracle sample accuracy and macro metrics.
+- evaluate_soft_mixture(weights, combination=...) evaluates caller-supplied
+  row-stochastic weights for weighted logits or probabilities. It does not
+  optimize weights.
 
-Not established:
+## Three different oracle/ensemble concepts
 
-- The current protocol has no honest held-out correctness labels.  The full-
-  data expert predictions on the training set cannot be used to fit or validate
-  a router.  The retired DACE feature/probe result is evidence about one old
-  split and one signal, not a universal impossibility theorem.
-- No current experiment establishes predictable per-sample specialization,
-  feasible soft weights, or a Ridge/Sinkhorn gain.  Synthetic tests verify
-  definitions and input contracts only; they do not demonstrate learnability.
-- The all-wrong fraction is a ceiling for hard selection on the supplied
-  expert predictions, but it is not a ceiling for soft logit or probability
-  combinations: a soft combination can select a class that no individual
-  expert argmax selected.
+### Hard-selection oracle
 
-Training-only metadata can provide class counts, canonical groups, sample
-indices, expert identities, seeds, configurations, and checkpoint provenance.
-It cannot provide unbiased correctness, complementarity, or router-target
-labels.  Those require out-of-fold predictions or a separately authorized
-development set.
+The hard-selection oracle uses the true label only to ask whether at least one
+expert's top-1 prediction is correct. It measures the best possible hard
+selection among the supplied predictions. It is label-dependent and is not an
+inference-time router.
 
-## Proposed non-cheating OOF protocol
+### Fixed-weight logit ensemble
 
-This is design only.  It must be approved and pre-registered before any fold
-training or router fitting.
+A fixed-weight ensemble applies one weight vector to every image and then
+argmaxes the weighted logits. Task 3E-A evaluates such vectors on the OOF
+development population. It is an actual classifier evaluation when its weights
+are supplied in advance, but selecting the best vector on one development
+partition does not establish independent generalization.
 
-1. **Freeze the population and fold map.** Use only the canonical
-   `lt_ir100_train_indices.npy` population and its training labels.  Construct
-   a deterministic, class-stratified `K=5` fold assignment from sample indices
-   with a separately recorded fold seed.  The canonical tail classes have five
-   samples, so five folds give each such class one held-out sample per fold;
-   never use a global shuffle that can starve a rare class.  If a future
-   population has fewer than five samples in a class, reduce `K` or use a
-   pre-specified repeated/grouped design and disclose that the class cannot
-   support five independent folds.
+### Adaptive soft-mixture feasibility oracle
 
-2. **Train fold experts without membership leakage.** For every fold, expert
-   identity (CE, LAL, BalancedSoftmax, Mixup, and any future specialist), and
-   configured seed, train on exactly the other `K-1` folds.  Keep the canonical
-   recipe otherwise fixed: no test data, no test labels, no checkpoint choice
-   from test results, and no in-sample prediction for the held-out fold.
-   The final-epoch fold checkpoint is the source of the held-out prediction.
+The Task 3E-B implementation
+[scripts/task3e_soft.py](../scripts/task3e_soft.py) solves a separate LP for
+each image to ask whether any convex logit combination can give the true class
+a positive margin. It uses the true label, so it measures existence of a
+correcting combination rather than trained-router accuracy. Its results and
+numerical tolerances are documented in [oof-results.md](oof-results.md) and
+[soft_oracle_results.json](../artifacts/oof/task3e_soft_feasibility/soft_oracle_results.json).
 
-3. **Record provenance with every OOF row.** Persist, in a versioned artifact,
-   at least `sample_index`, class label, `fold_id`, expert identity, model seed,
-   fold-training-index hash, resolved configuration, checkpoint hash, and the
-   prediction/logits/features produced for that row.  Validate that the held-
-   out index is absent from the corresponding training membership before
-   accepting the row.  Keep expert column order fixed and record it in the
-   artifact schema.  Never mix predictions from different sample orderings.
+These three concepts must not be conflated: hard selection chooses an existing
+top-1 answer, fixed weights are a specified classifier, and adaptive
+soft-mixture feasibility is a label-dependent existence test.
 
-4. **Separate router fitting from hyperparameter selection.** Treat the five
-   expert folds as outer router folds.  For each outer fold, fit Ridge (or a
-   future candidate) on OOF rows from the other four folds and select any
-   regularization, feature, temperature, or Sinkhorn parameters without using
-   the outer-fold labels.  Evaluate the frozen choice on the outer fold and
-   aggregate the five outer results.  Rare-class estimates will be noisy and
-   must be reported with class support; do not tune separately for a tail class
-   with one observation per outer fold.  After the protocol and hyperparameters
-   are frozen, fit the final router on all OOF rows using only the selected
-   settings.
+## Corrected diagnostic defects
 
-5. **Distinguish fold-trained from full-data experts.** OOF predictions come
-   from experts trained on 80% of the data, while the eventual inference pool
-   will normally be trained on all 10,847 samples.  Do not treat their logits as
-   exchangeable without measuring the shift.  Use OOF data to fit any output
-   calibration/router mapping, then apply that frozen mapping to the full-data
-   experts.  Do not fit a correction on full-data in-sample predictions.
+- The former lone-dissenter logic assumed three experts. The reusable report
+  now distinguishes 4-0, 3-1, 2-2, 2-1-1 and 1-1-1-1 prediction partitions.
+- The former unique_best quantity mixed confidence and correctness. Reports now
+  separate correctness counts, exactly-one correctness, multiple correctness,
+  no correctness, global confidence correctness and confidence rank.
+- Retired diagnose_dace entry points are identified as three-expert,
+  legacy-split postmortems. Their findings are not presented as proof that all
+  learned routing is infeasible.
+- New Head/Medium/Tail quantities use mean class recall. Existing active
+  evaluation metrics and historical numbers were not rewritten.
 
-6. **Compare existing and future experts fairly.** Use the same fold IDs,
-   sample membership, seeds, training budget, provenance schema, and OOF
-   router splits for the current four experts and every proposed specialist.
-   Report per-expert macro BA/H/M/T, pairwise correctness overlap, all-wrong
-   and at-least-one headroom, uniform logit/probability baselines, and the
-   supplied soft-mixture result on the OOF outer folds.  A specialist that is
-   only better in-sample or only on a selected fold is not established as
-   complementary.
-
-7. **Freeze before the final test read.** Select the expert pool, router
-   features, regularization, temperature, transport variant, and reporting
-   rules using only OOF development results.  Then train the final full-data
-   experts, apply the frozen router once to the balanced test set through the
-   authorized evaluation entry point, and report the pre-specified BA and Tail
-   comparisons.  Do not inspect test labels to choose a router, subset,
-   checkpoint, threshold, or method, and do not create test-derived artifacts
-   for later development.
-
-This protocol can answer whether a suitability signal generalizes from
-held-out training samples to a final full-data expert pool.  It cannot by
-itself guarantee a gain: Sinkhorn can only reorganize a score matrix, and
-Ridge can only exploit information present in the OOF features/logits.
-
-## Recommended next steps and limitations
-
-First keep the new module as the analysis seam and run it only on synthetic or
-approved OOF arrays.  Next approve the fold map and OOF compute budget, collect
-OOF predictions for the existing pool, and estimate whether soft mixtures have
-decision-relevant headroom before designing new specialists.  Only after that
-evidence should a separate plan approve Ridge, and only a later plan should
-approve Sinkhorn implementation.
-
-The framework does not solve finite-sample uncertainty for five-example tail
-classes, distribution shift between fold-trained and full-data experts, or
-feature leakage in a future pipeline.  Those remain experimental questions.
-
-## Task 3A implementation
-
-The proposed protocol is now executable as a membership and provenance layer in
-[`data/nested_oof.py`](../data/nested_oof.py); its role definitions,
-canonical fold sizes, and remaining cross-fitted-model dependencies are
-documented in [`nested-oof-protocol.md`](nested-oof-protocol.md).  This task
-does not train experts, fit routers, or read the real test set.
+The diagnostic framework supplies definitions and checks; it does not establish
+that a future Ridge, Sinkhorn or other router can predict useful weights.

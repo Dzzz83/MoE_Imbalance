@@ -9,12 +9,18 @@
 
 ---
 
+This record governs the original full-data/test-track comparison. The later
+nested-OOF development protocol is documented separately in
+../docs/nested-oof-protocol.md; it does not retroactively change this frozen
+test-track candidate set.
+
 ## Why this file exists
 
-The project has no validation split and no honest held-out data, so **no router
-may be fitted**. If several unfitted rules were tried and the best reported, the
+The original full-data/test protocol had no validation split and no honest
+held-out data, so **no router could be fitted on that track**. If several
+unfitted rules were tried and the best reported, the
 test set would silently become a selection set. Freezing the candidate set in
-advance removes that degree of freedom, exactly as `AGENTs.md` §6 requires for
+advance removes that degree of freedom, exactly as `AGENTS.md` §6 requires for
 any reported claim.
 
 ## Expert pool (fixed)
@@ -103,7 +109,7 @@ For every rule, evaluated on the balanced 10K CIFAR-100 test set:
 
 - **Balanced Accuracy (BA)** — primary, mean per-class recall.
 - **Tail accuracy** — mean recall over tail classes (< 20 training samples),
-  using the immutable Head/Med/Tail definition in `AGENTs.md` §5.
+using the immutable Head/Med/Tail definition in `AGENTS.md` §5.
 - Head and Medium accuracy, for context only.
 - Per-expert usage distribution, so a rule that collapses onto one expert is
   visible.
@@ -119,7 +125,7 @@ on the *same* expert pool and the *same* test set:
 with the paired per-sample difference exceeding its own standard deviation, and
 the direction consistent across all three seeds {78, 88, 1034}. A rule that
 merely ties uniform is reported as **no gain** — never as a success
-(`AGENTs.md` §6).
+(`AGENTS.md` §6).
 
 ## Expected outcome, declared before looking
 

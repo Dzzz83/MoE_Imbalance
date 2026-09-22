@@ -1,85 +1,161 @@
-# Project Context — MoE Imbalance (CIFAR-100-LT)
+# Project Context — MoE Imbalance
 
-> Compact current-state index for this repository. Read `AGENTS.md` first. Open deeper docs only when the task requires them.
->
-> Current numbers: [`results.md`](results.md) · verified routing failures: [`problem.md`](problem.md) · literature: [`research.md`](research.md) · historical results: [`archive/historical-results.md`](archive/historical-results.md)
+> Primary current-state index for the repository. The original full-data
+> measurements are in [results.md](results.md); completed OOF findings are in
+> [oof-results.md](oof-results.md).
 
-## 1. Project question and status
+## 1. Objective and current decision
 
-**Question:** on CIFAR-100-LT (IR=100), can per-sample routing among differently trained experts beat simple uniform logit averaging?
+The project investigates adaptive combinations of experts for CIFAR-100-LT
+classification at imbalance ratio 100. The original research question is
+whether per-sample routing can improve both Balanced Accuracy (BA) and Tail
+accuracy over uniform logit averaging.
 
-**Success criterion:** improve both Balanced Accuracy (BA) and Tail accuracy over uniform averaging, consistently across the configured seeds.
+The original full-data experiments remain a legitimate, completed track:
+four experts were trained on all 10,847 long-tailed training images with seeds
+78, 88 and 1034, and evaluated on the balanced CIFAR-100 test set. Their
+historical uniform-logit baseline is **46.98 ± 0.69% BA** and
+**18.76 ± 0.86% Tail**.
 
-**Current expert pool:** CE, LAL, BalancedSoftmax, Mixup; each trained for seeds `{78, 88, 1034}`.
+The current research direction is narrower: determine whether beneficial expert
+contributions can be predicted from information available at inference time.
+Nested OOF data now supplies held-out development predictions for that
+question. Ridge and Sinkhorn remain proposed research directions; neither is
+implemented or validated.
 
-**Current status:** uniform logit averaging remains unbeaten by the four pre-registered parameter-free routing rules. The measured reasons are summarized in [`problem.md`](problem.md).
+## 2. Canonical data and metric protocol
 
-## 2. Canonical protocol
+- Dataset: CIFAR-100-LT with imbalance factor 0.01 (IR=100).
+- Canonical long-tailed training population: 10,847 images from the committed
+  data/processed/lt_ir100_train_indices.npy artifact.
+- The original full-data track has no validation split and reports final-epoch
+  checkpoints.
+- Head/Medium/Tail is defined only by
+  scripts/base_trainer.py::compute_class_groups: Head n >= 100 (35 classes),
+  Medium 20 <= n < 100 (35 classes), Tail n < 20 (30 classes).
+- The original balanced CIFAR-100 test set is evaluation-only and has already
+  been accessed repeatedly. It must not be used for router fitting, method
+  selection, or ordinary OOF development.
+- A method succeeds only if it improves both BA and Tail over the applicable
+  uniform-logit baseline, with the required provenance and consistency.
 
-- CIFAR-100 train is exponentially subsampled with `imb_factor=0.01` (IR=100), producing **10,847** training images.
-- All 10,847 LT samples are used for training. **There is no validation split.**
-- The balanced CIFAR-100 test set (10,000 images) is the **only evaluation set**.
-- Reported models are **final-epoch** checkpoints; no checkpoint selection is performed.
-- Canonical LT index artifact: `data/processed/lt_ir100_train_indices.npy` (deterministic, seed 42).
-- Head/Medium/Tail split is immutable: Head `n >= 100` (35 classes), Medium `20 <= n < 100` (35), Tail `n < 20` (30). The implementation source of truth is `scripts/base_trainer.py::compute_class_groups`.
-- Routers in the active registry are parameter-free; fitted routing is excluded under this protocol because there is no honest held-out correctness-label source.
+## 3. Existing expert pool
 
-## 3. Active code map
+| Expert | Configuration |
+|:--|:--|
+| CE | Cross-entropy |
+| LAL | Logit adjustment, tau = 1 |
+| BalancedSoftmax | Balanced softmax |
+| Mixup | Mixup with alpha = 1 |
 
-- `configs/*.yaml` — run definitions and expert-specific settings.
-- `data/lt_datamodule.py` — active training-data loader.
-- `data/protocol_splits.py` — canonical split loader and leakage guards.
-- `models/resnet32.py` — backbone/classifier.
-- `scripts/train.py` — training entry point.
-- `scripts/trainers.py` — expert trainers/registry.
-- `scripts/base_trainer.py` — shared training loop, seeding, schedule, numerical guards, class-group definition.
-- `scripts/evaluation.py` — BA, Head/Med/Tail, ECE, checkpoint loading, headroom and run-health utilities.
-- `scripts/evaluate_experts.py` — current expert + routing evaluation; reads/logs test access.
-- `scripts/analyze_subsets.py` — ensemble-size analysis; reads/logs test access.
-- `scripts/check_runs.py` — training-run health checks; does not read test data.
-- `scripts/router/` — active parameter-free rules: Uniform, Probability, Confidence, TTA.
-- `tests/` — protocol, routing, numerical, seeding, and regression checks.
+The canonical full-data experiments use seeds 78, 88 and 1034. The completed
+nested-OOF experiment uses expert-training seed 78, outer fold 0, and the fixed
+order CE, LAL, BalancedSoftmax, Mixup.
 
-Retired DACE/boosting/PaCo training scripts remain for historical traceability but are not part of the active trainer/evaluation path. Consult historical docs only when investigating them.
+## 4. Completed milestones
 
-## 4. Training/evaluation workflow
+| Stage | Status |
+|:--|:--|
+| Original four-expert experiments | Complete |
+| Evaluation hardening | Complete |
+| Expert diagnostic framework | Complete |
+| Nested OOF framework | Complete |
+| OOF training pipeline | Complete |
+| Task 3C: four-expert aligned OOF experiment | Complete |
+| Task 3D: exploratory specialization analysis | Complete |
+| Task 3E-A: fixed-weight feasibility | Complete |
+| Task 3E-B: adaptive soft-mixture oracle | Complete |
+| Predictable Ridge routing | Not implemented |
+| Sinkhorn routing | Not implemented |
+| New specialized experts | Not implemented |
+| Full nested-OOF evaluation across all folds and seeds | Not executed |
 
-1. **Protocol integrity:** `python tests/test_protocol_splits.py`
-2. **Train an expert:** `python scripts/train.py --config configs/ce.yaml --seed 78`
-3. **Lightweight dry run:** `python scripts/train.py --config configs/ce.yaml --max-batches 2 --epochs 1`
-4. **Check completed runs:** `python scripts/check_runs.py --seeds 78 88 1034`
-5. **Evaluate current experts/routing:** `python scripts/evaluate_experts.py --seeds 78 88 1034`
-6. **Analyze ensemble size:** `python scripts/analyze_subsets.py --seeds 78 88 1034`
-7. **Full tests:** `for f in tests/test_*.py; do python "$f"; done`
+Task 3D is an interpretation of Task 3C diagnostics, not a separately
+executed training or analysis pipeline.
 
-The two evaluation commands read the test set and append to `docs/test-access-log.md`.
+## 5. Current scientific findings
 
-## 5. Current result snapshot
+The full-data results establish that uniform logit averaging is stronger than
+the pre-registered parameter-free routing rules on the historical three-seed
+test track. They do not establish that all fitted routing is impossible.
 
-| Method | BA (3 seeds) | Tail |
-|:--|--:|--:|
-| Best single expert (LAL) | 42.43 ±1.53 | 23.49 ±1.71 |
-| **Uniform logit average** | **46.98 ±0.69** | 18.76 ±0.86 |
-| Probability average | 45.95 ±0.55 | 18.70 ±0.50 |
-| Confidence router | 44.27 ±0.46 | 18.69 ±0.36 |
-| TTA router | 44.15 ±0.68 | **19.38 ±0.97** |
+Task 3C shows complementary correct predictions in the held-out OOF
+development population. LAL and BalancedSoftmax provide useful Tail coverage,
+Mixup is strongest on Head in this population, and removing experts changes BA
+and Tail in different directions. This is evidence of complementarity, not
+evidence that a router can predict the useful contribution.
 
-For all authoritative numbers, uncertainty, per-seed results, headroom, and ensemble-size analysis, use [`results.md`](results.md).
+Task 3E-A shows that fixed convex logit weights can improve both BA and Tail
+over the OOF uniform baseline on the router-fit partition. Task 3E-B shows
+additional theoretical headroom for per-image convex logit mixtures. Both
+analyses are label-dependent development results from one seed and one outer
+fold; neither is independently validated or comparable directly with the
+full-data test numbers.
 
-## 6. Environment and reproducibility
+The main unresolved scientific question is therefore predictability, not the
+existence of any beneficial weight. Tail class coverage is still sparse, and
+the soft-mixture oracle is an existence diagnostic rather than a deployable
+classifier.
 
-- Reported training environment: Kaggle T4 GPU.
-- Local RTX 3060 Laptop/CPU environment is for verification, not the source of reported training metrics.
-- Shared recipe: ResNet-32, 200 epochs, SGD, momentum 0.9, weight decay `2e-4`, no Nesterov, LR 0.1 with 5-epoch warmup and decays after epochs 160/180, batch 128.
-- `set_seed` runs before model construction and disables TF32 for reproducibility with the reported T4 path.
+## 6. Next research decision
 
-Exact run settings are stored in `configs/*.yaml` and next to checkpoints as resolved config files.
+Before implementing Ridge or Sinkhorn, freeze:
 
-## 7. Documentation routing
+1. the supervised target for useful expert contribution;
+2. inference-time features and any logit calibration;
+3. uniform logit, probability-average, fixed-weight, and no-OT learned-gate
+   baselines;
+4. the fit/selection/outer-evaluation procedure; and
+5. safeguards against in-sample supervision, test-set selection, expert-pool
+   changes, fold-trained/full-data distribution shift.
 
-- Need current metrics or training setup → [`results.md`](results.md)
-- Need to know why routing failed / what is ruled out → [`problem.md`](problem.md)
-- Need prior literature or novelty context → [`research.md`](research.md)
-- Need superseded Protocol A/B numbers → [`archive/historical-results.md`](archive/historical-results.md)
-- Need provenance of prior bug fixes → [`archive/bugfix-report.md`](archive/bugfix-report.md)
-- Need test-set access audit → [`test-access-log.md`](test-access-log.md)
+Ridge is a candidate simple predictive model, not an approved formulation.
+Sinkhorn should be considered separately only after a suitability signal is
+shown to be learnable and after its global-allocation value is isolated.
+
+## 7. Experimental populations
+
+| Population | Role |
+|:--|:--|
+| Original 10,847 images | Train the canonical full-data experts |
+| Original balanced CIFAR-100 test set | Historical full-data evaluation |
+| Outer fold 0 training, 8,677 images | OOF development population |
+| Inner folds 1–3, 6,507 images | Primary router-fitting analysis partition |
+| Inner fold 0, 2,170 images | Router-selection partition in the frozen design; previously inspected descriptively |
+| Outer fold 0 evaluation, 2,170 images | Reserved for a future frozen evaluation procedure |
+
+OOF predictions are produced by experts that excluded the corresponding image
+from their training population. The OOF experts are not the full-data
+checkpoints.
+
+## 8. Code and artifact map
+
+- Fold membership and provenance: data/nested_oof.py
+- OOF training and prediction collection: scripts/oof_pipeline.py,
+  scripts/run_oof.py, scripts/run_task3c.py
+- Reusable diagnostics: scripts/expert_diagnostics.py
+- Fixed-weight analysis: scripts/task3e_fixed.py and
+  scripts/run_task3e_fixed.py
+- Soft-mixture feasibility analysis: scripts/task3e_soft.py and
+  scripts/run_task3e_soft.py
+- Aligned OOF data and Task 3C diagnostics:
+  artifacts/oof/task3c_oof/
+- Task 3E-A outputs:
+  artifacts/oof/task3e_fixed_feasibility/
+- Task 3E-B outputs:
+  artifacts/oof/task3e_soft_feasibility/
+
+## 9. Documentation navigation
+
+- [README.md](../README.md) — public overview and reproducibility entry points
+- [results.md](results.md) — original full-data three-seed results
+- [oof-results.md](oof-results.md) — completed OOF findings
+- [problem.md](problem.md) — established limitations and unresolved routing problems
+- [research.md](research.md) — literature and current research boundary
+- [nested-oof-protocol.md](nested-oof-protocol.md) — frozen fold and leakage protocol
+- [expert-diagnostics.md](expert-diagnostics.md) — reusable diagnostic API
+- [archive/historical-results.md](archive/historical-results.md) — superseded results
+- [archive/bugfix-report.md](archive/bugfix-report.md) — audit history
+- [test-access-log.md](test-access-log.md) — append-only test-set access audit
+- [../records/routing_mechanism.md](../records/routing_mechanism.md) — complete routing catalogue
+- [../records/routing-preregistration.md](../records/routing-preregistration.md) — frozen historical test candidate set

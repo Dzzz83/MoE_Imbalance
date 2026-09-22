@@ -3,17 +3,21 @@
 > Complete inventory of every routing / combination mechanism this project has
 > evaluated, with a one-line description and its measured result.
 >
-> Results are labelled by the protocol they were measured on. **"Current"** = the
-> canonical protocol (10,847-sample long-tailed training set, balanced 10,000
-> test set, 3 seeds). **"Old split"** = the discarded *flawed* protocol that held out a
+> Results are labelled by the protocol they were measured on. **"Full-data"** =
+> the original canonical protocol (10,847-sample long-tailed training set,
+> balanced 10,000 test set, 3 seeds). **"Old split"** = the discarded *flawed* protocol that held out a
 > balanced validation set before long-tail subsampling, where 3-expert uniform
 > averaging sat at **51.12**; those numbers are historical and not comparable.
 > (A second superseded protocol, the non-standard 80/20 split, had a uniform of
 > 45.68 — do not confuse the two.)
 >
-> Related: `results.md` · `problem.md` ·
+> This catalogue records the original full-data/test-track mechanisms. The
+> separate OOF development analyses are authoritative in
+> [`oof-results.md`](../docs/oof-results.md).
+>
+> Related: [`results.md`](../docs/results.md) · [`problem.md`](../docs/problem.md) ·
 > [`routing-preregistration.md`](routing-preregistration.md) (the frozen
-> candidate set) · `research.md` (literature)
+> candidate set) · [`research.md`](../docs/research.md) (literature)
 
 ---
 
@@ -34,7 +38,8 @@ of tuning on the test set. The interface enforces this — `BaseRouter` has **no
 **None beats Uniform on both BA and Tail**, which is the pre-registered success
 condition. Confidence and TTA are *significantly worse* on BA (paired difference
 exceeds its own std, negative in all 3 seeds). TTA's Tail is nominally higher
-(+0.62) but not consistent across seeds. See `results.md` §3.
+(+0.62) but not consistent across seeds. See [`results.md`](../docs/results.md)
+§3.
 
 *Rendering the images 10 augmented ways (TTA) is implemented for real: per-view
 softmax probabilities are averaged, then the logits are recovered as
@@ -44,7 +49,12 @@ row that measured nothing.*
 
 ## 2. Removed mechanisms — needed a validation split
 
-These five fitted parameters on held-out labels. With no validation split there
+These results belong to the original full-data protocol. The nested-OOF
+pipeline now provides held-out development predictions, but no fitted router
+has been implemented or validated.
+
+Each of these five mechanisms fitted parameters on held-out labels. With no
+validation split there
 is no honest data to fit them on (`routing_dev` is carved from the same 10,847
 samples the experts trained on, so its correctness labels are memorisation), and
 the test set may not be fitted on. The code was deleted; the results are kept
@@ -162,7 +172,8 @@ likely to be wrong, so learning the label better made routing worse. Secondary
 defects: incomparable score scales across experts, and a fallback threshold so
 high it never fired. Separately, partitioning weakened every expert (each
 near-zero on its non-target groups; expert B had **0.0000** tail recall — no
-tail specialist existed at all). See `problem.md` §4.
+tail specialist existed at all). See [`problem.md`](../docs/problem.md)
+§4.
 
 ## 5. Verdict
 
@@ -177,5 +188,10 @@ tail specialist existed at all). See `problem.md` §4.
   been captured by any rule.
 - Two independent conditions must hold for routing to win, and neither does:
   the signal must **exist** (it largely does not — see the lone-dissenter
-  paradox, `problem.md` §2) and it must be **comparable across
+  paradox, [`problem.md`](../docs/problem.md) §2) and it must be **comparable across
   experts** (it is not — the routing score was anti-predictive).
+
+The completed OOF work refines this historical verdict: complementary
+correctness and convex-mixture feasibility exist on the OOF development
+partition, but no fitted router has yet shown that the useful weights are
+predictable. See [`oof-results.md`](../docs/oof-results.md).

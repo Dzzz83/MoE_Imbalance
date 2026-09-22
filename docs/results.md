@@ -1,16 +1,23 @@
-# Results — CIFAR-100-LT
+# Results — Original Full-Data CIFAR-100-LT Experiments
 
-> Every number the project has produced. **Current** results (§2–§5) are on the
-> canonical protocol: 10,847-sample long-tailed training set, balanced 10,000
-> test set, 3 seeds {78, 88, 1034}, mean ± std across seeds unless stated.
-> This file contains **current canonical results only**. Superseded protocols are in [`archive/historical-results.md`](archive/historical-results.md) and are **not comparable**.
+> This document is the authoritative record of the original full-data track:
+> four experts trained on all 10,847 long-tailed samples with seeds {78, 88,
+> 1034}, followed by the historical balanced CIFAR-100 test evaluation. It is
+> not a catalog of every experiment in the repository. The completed nested-OOF
+> development results are in [`oof-results.md`](oof-results.md).
+>
+> Superseded protocols are in [`archive/historical-results.md`](archive/historical-results.md)
+> and are not comparable. The original test set has already influenced earlier
+> research decisions; its measurements are historical results, not untouched
+> confirmation of the OOF findings.
 >
 > Reproduce: `python scripts/evaluate_experts.py --seeds 78 88 1034` ·
 > `python scripts/analyze_subsets.py --seeds 78 88 1034` ·
 > `python scripts/check_runs.py --seeds 78 88 1034`
 >
 > Context: [`project-context.md`](project-context.md) ·
-> [`problem.md`](problem.md) · [`routing_mechanism.md`](../records/routing_mechanism.md)
+> [`problem.md`](problem.md) · [`oof-results.md`](oof-results.md) ·
+> [`routing_mechanism.md`](../records/routing_mechanism.md)
 
 ---
 
@@ -19,7 +26,9 @@
 **Data.** CIFAR-100 with **imbalance factor 0.01** (IR=100): an exponential
 per-class subsample, `n_i = n_max · IR^(−i/(C−1))` with `n_max = 500`, `C = 100`,
 giving **10,847** training images (head class 500, tail class 5). The balanced
-CIFAR-100 **test set (10,000)** is the only evaluation set.
+CIFAR-100 **test set (10,000)** is the historical evaluation population for
+this full-data track; the repository also contains a separate OOF development
+population documented in [`oof-results.md`](oof-results.md).
 
 **No validation split.** Training uses the full long-tailed set and the
 **final-epoch model is the reported model**; no checkpoint is selected. The
@@ -196,12 +205,15 @@ objective, not a failure to converge.*
 
 ---
 
-## 8. Not yet done
+## 7. Relationship to the OOF track
 
-- **A 5th expert.** The size curve (§5) has not flattened, so another genuinely
-  different expert should still help — but by roughly +0.5–1.0 point, and only
-  if it is decorrelated. A label-rule variant of the same ResNet-32 (e.g. a
-  rebalanced mixup) would likely move *toward* LAL/BS rather than away.
-- **Fitted routing.** Impossible under the current protocol: there is no honest
-  held-out data. Would require cross-fitting or a permanent `routing_dev`
-  holdout, i.e. retraining with less data.
+- The full-data checkpoints remain valid and available for the original
+  three-seed comparisons. Their predictions on their own training images are
+  not honest supervision for a fitted router.
+- The nested-OOF pipeline was introduced to generate held-out predictions on a
+  separate development population without using the original test set. Its
+  completed seed-78/outer-fold-0 findings are recorded in
+  [`oof-results.md`](oof-results.md).
+- The OOF fixed-weight and soft-mixture results are not directly comparable to
+  the three-seed full-data test results: they use different training
+  populations, a single seed, and a development partition.
