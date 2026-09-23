@@ -30,6 +30,14 @@ during recovery. Specialized Task 3F-B–F diagnostic loaders and validators als
 remain local until their differing error, tolerance, and provenance contracts
 can be migrated in controlled follow-up work.
 
+Independent Stage 1 verification identified one compatibility issue at the
+array-conversion boundary: Stage 0 allowed ragged inputs that `np.asarray`
+could not construct to raise NumPy's raw `ValueError`. The compatibility fix
+keeps shared validators reusable while allowing the migrated legacy diagnostic
+and Ridge callers to preserve that raw conversion error. Inputs that convert
+successfully continue through the existing task-specific shape, numeric,
+integer, and expert-weight validation checks.
+
 ## Compatibility guarantees
 
 The shared primitives do not access labels, folds, datasets, checkpoints, or
