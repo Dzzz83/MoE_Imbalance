@@ -129,13 +129,15 @@ Sections 10 and 11.
 ### Problem D — Prediction error and classification performance are different objectives
 
 The Task 3F-E target measures a local change in the true class's log
-probability, not the final top-1 decision. At the predefined Tail epsilon of
-0.5, positive target values occurred for roughly 84% of examined expert
-perturbations but corrected a previously wrong uniform prediction in only about
-2–9% of cases. A positive local margin contribution also does not guarantee a
-correction because the strongest incorrect competitor can change. Task 3F-F
-adds the corresponding model-level warning: lower contribution MSE did not
-produce better BA or Tail.
+probability, not the final top-1 decision. At ε = 0.5, among positive-target
+Tail cases, the tested perturbation increased true-class log probability in
+106/126 LAL cases (84.13%), 88/104 BalancedSoftmax cases (84.62%), and 86/102
+Mixup cases (84.31%). However, only 10/126 LAL cases (7.94%), 9/104
+BalancedSoftmax cases (8.65%), and 2/102 Mixup cases (1.96%) corrected a
+previously incorrect uniform classification. A positive local margin
+contribution also does not guarantee a correction because the strongest
+incorrect competitor can change. Task 3F-F adds the corresponding model-level
+warning: lower contribution MSE did not produce better BA or Tail.
 
 ### Problem E — Tail supervision is limited
 
