@@ -84,6 +84,10 @@ scripts/task3e_fixed.py          Task 3E-A fixed-weight analysis
 scripts/task3e_soft.py           Task 3E-B soft-feasibility analysis
 scripts/task3f_ridge.py          Task 3F-A predictable Ridge analysis
 scripts/run_task3f_ridge.py      Task 3F-A CLI entry point
+scripts/task3f_target_diagnostics.py
+                                  Task 3F-E target diagnostics
+scripts/run_task3f_target_diagnostics.py
+                                  Task 3F-E CLI entry point
 artifacts/oof/task3c_oof/        aligned OOF data and diagnostics
 artifacts/oof/task3e_fixed_feasibility/
                                   fixed-weight outputs
@@ -130,6 +134,18 @@ Task 3F-A is CPU-only and uses only inner folds 1–3 of the existing aligned
 OOF artifact. Its complete configuration table and caveated measurements are
 in [docs/oof-results.md](docs/oof-results.md) and
 [artifacts/oof/task3f_ridge/summary.md](artifacts/oof/task3f_ridge/summary.md).
+
+~~~bash
+./.venv/bin/python scripts/run_task3f_target_diagnostics.py \
+    --data-root ./data \
+    --oof-directory artifacts/oof/task3c_oof \
+    --ridge-directory artifacts/oof/task3f_ridge \
+    --output-directory artifacts/oof/task3f_target_diagnostics
+~~~
+
+Task 3F-E is read-only and retrospective: it recomputes contribution and
+classification-margin diagnostics on the same permitted OOF rows without
+refitting Ridge or selecting a new routing target.
 
 The original full-data training and historical evaluation commands remain
 available:

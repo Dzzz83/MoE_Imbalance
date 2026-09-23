@@ -44,6 +44,7 @@ Primary artifacts:
 - [Task 3F-B diagnostic output directory](../artifacts/oof/task3f_mixup_diagnostics/)
 - [Task 3F-C Tail-signal diagnostic output directory](../artifacts/oof/task3f_tail_signal_diagnostics/)
 - [Task 3F-D combined-signal diagnostic output directory](../artifacts/oof/task3f_combined_signal_diagnostics/)
+- [Task 3F-E target diagnostic output directory](../artifacts/oof/task3f_target_diagnostics/)
 
 Relevant source files are
 [data/nested_oof.py](../data/nested_oof.py),
@@ -58,7 +59,9 @@ Relevant source files are
 [scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py),
 and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py),
 [scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py),
-and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py).
+and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py),
+[scripts/task3f_target_diagnostics.py](../scripts/task3f_target_diagnostics.py),
+and [scripts/run_task3f_target_diagnostics.py](../scripts/run_task3f_target_diagnostics.py).
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -468,7 +471,67 @@ Raw confidence comparisons are not assumed calibrated across experts, and the
 183 Tail images make small conjunctions unstable. No independent evaluation
 population or original test set was accessed.
 
-## 10. Scientific synthesis
+## 10. Task 3F-E — supervised contribution target diagnostics
+
+Task 3F-E used only the existing 6,507 outer-fold-0 / inner-folds-1–3 OOF
+rows. It recomputed the frozen marginal true-class log-probability target and
+the current-uniform-ensemble classification-margin contribution, then compared
+them with the saved Task 3F-A held-out Ridge scores. It did not fit a new
+router, use an oracle target, or modify the source logits. The complete report
+is in the [Task 3F-E diagnostic results](../artifacts/oof/task3f_target_diagnostics/diagnostic_results.json)
+and [summary](../artifacts/oof/task3f_target_diagnostics/summary.md).
+
+### Target versus Ridge scores
+
+The actual target's mean favored Mixup on Head (1.0683) and Medium (1.3472),
+but not on Tail: LAL was 0.8306, Mixup 0.6980 and BalancedSoftmax 0.4873.
+Mixup was the actual highest-target expert on only 25.14% of Tail rows, while
+LAL and BalancedSoftmax led on 38.80% and 27.32%. The saved Ridge predicted
+Mixup highest on 99.45% of Tail rows. Among Tail rows where LAL's actual target
+exceeded Mixup's (103 rows), Ridge still predicted Mixup highest on 102; the
+corresponding BalancedSoftmax count was 94/94. Target/Ridge top-expert
+agreement was 25.68% on Tail, with score MSE 6.4697.
+
+Thus the pooled/Head/Medium target has a strong Mixup mean, but the Tail
+preference is not present in the same form in the actual target. On Tail, the
+diagnostic supports a target-prediction failure in addition to any target
+design limitation.
+
+### Log-probability versus classification
+
+The fixed perturbations used the predeclared epsilons 0.1, 0.25, 0.5 and 1.0.
+On Tail rows at epsilon 0.5, a positive target corresponded to a correction of
+the previously incorrect uniform prediction in 7.94% of LAL cases, 8.65% of
+BalancedSoftmax cases and 1.96% of Mixup cases. The corresponding positive
+target rates for an increase in true-class log probability were much higher:
+84.13%, 84.62% and 84.31%. Positive local target and final correctness are
+therefore related but not interchangeable. The report also records cases where
+a positive target coincided with an otherwise-correct prediction becoming
+incorrect.
+
+### Margin contribution and rebalanced opportunities
+
+Target and margin top-expert choices agreed on 83.61% of Tail rows. The Tail
+mean margin contribution was 1.0284 for LAL, 0.4748 for BalancedSoftmax and
+0.8261 for Mixup; LAL exceeded Mixup on 55.19% of Tail rows and
+BalancedSoftmax on 47.54%. This margin diagnostic exposes useful competing-class
+information, but it does not guarantee correction because the strongest
+competitor can change after perturbation.
+
+Among rows where a rebalanced expert corrected an incorrect uniform prediction
+under at least one fixed perturbation, the opportunity groups contained 235
+LAL rows and 233 BalancedSoftmax rows. The current target was positive on
+98.30% and 99.57% of those rows, and higher than Mixup on 86.81% and 86.27%.
+Ridge pairwise order accuracy was only 13.62% and 13.30%, while its saved
+mixture still gave Mixup the highest weight on 99.15% and 99.57%. The opposite
+damage groups contained 980 and 959 rows; these provide a corresponding loss
+trade-off rather than an inference-time selection rule.
+
+All values above are retrospective measurements on one development
+population. They do not establish that a margin target, a different target,
+or a new router would improve an independent evaluation.
+
+## 11. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -491,6 +554,12 @@ The completed OOF evidence supports these limited conclusions:
   identify smaller groups with different retrospective correctness rates, but
   the frozen Ridge weights still overwhelmingly favor Mixup and no combination
   was selected as a routing rule.
+- Task 3F-E found that the current target's Mixup mean is driven by Head and
+  Medium behavior, while Tail rows contain larger LAL/BalancedSoftmax target
+  opportunities that the saved Ridge scores usually fail to rank correctly.
+  Positive local log-probability contributions only weakly translated into
+  finite-perturbation corrections, and margin contributions added competing-
+  class information without becoming an approved training target.
 - No new method has demonstrated a validated improvement over the original
   full-data baseline or an independently held-out outer population.
 

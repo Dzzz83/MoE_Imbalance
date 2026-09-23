@@ -23,7 +23,9 @@ Nested OOF data now supplies held-out development predictions for that
 question. Task 3F-A implements and evaluates the frozen Ridge feasibility
 study, Task 3F-B diagnoses its highlighted Mixup preference, and Task 3F-C
 checks confidence, disagreement and predicted-class-group signals against the
-saved weights. Task 3F-D evaluates the frozen combinations of those signals.
+saved weights. Task 3F-D evaluates the frozen combinations of those signals,
+and Task 3F-E diagnoses the supervised contribution target against the saved
+Ridge predictions and classification outcomes.
 These are exploratory and not independently validated.
 Sinkhorn remains a separate proposed direction.
 
@@ -73,6 +75,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3F-B: Ridge Mixup-preference diagnostics | Complete; retrospective only |
 | Task 3F-C: Tail-specific routing-signal diagnostics | Complete; retrospective only |
 | Task 3F-D: Combined Tail-signal diagnostics | Complete; retrospective only |
+| Task 3F-E: Supervised contribution target diagnostics | Complete; retrospective only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -149,6 +152,16 @@ only 2 of the 15 conditioned masks had a lower selected-subgroup Mixup mean.
 These are retrospective associations, not a selected feature representation
 or routing rule.
 
+Task 3F-E found that the current target's mean favors Mixup on Head and
+Medium, but not on Tail: LAL's Tail target mean was 0.8306 versus Mixup's
+0.6980. The saved Ridge still predicted Mixup highest on 99.45% of Tail rows;
+among Tail rows where LAL's actual target exceeded Mixup's, it did so on 102
+of 103 rows. Positive local target values often increased true-class log
+probability under fixed perturbations, but much less often corrected the final
+classification. Margin contributions added competing-class information, while
+all target, margin, opportunity and damage groups remained retrospective.
+These findings do not approve a new target or router.
+
 ## 6. Next research decision
 
 Before any independent evaluation or Sinkhorn work, preserve the frozen Task
@@ -200,6 +213,8 @@ checkpoints.
   scripts/run_task3f_tail_signal_diagnostics.py
 - Combined Tail-signal diagnostics: scripts/task3f_combined_signal_diagnostics.py
   and scripts/run_task3f_combined_signal_diagnostics.py
+- Supervised-target diagnostics: scripts/task3f_target_diagnostics.py and
+  scripts/run_task3f_target_diagnostics.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
@@ -214,6 +229,8 @@ checkpoints.
   artifacts/oof/task3f_tail_signal_diagnostics/
 - Task 3F-D outputs:
   artifacts/oof/task3f_combined_signal_diagnostics/
+- Task 3F-E outputs:
+  artifacts/oof/task3f_target_diagnostics/
 
 ## 9. Documentation navigation
 
