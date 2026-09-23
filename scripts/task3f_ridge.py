@@ -11,11 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-import hashlib
-import json
 from pathlib import Path
-import subprocess
-import tempfile
 from typing import Any
 
 import numpy as np
@@ -23,6 +19,25 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis.artifacts import (
+    git_commit,
+    load_json_object,
+    repository_relative,
+    sha256_array,
+    sha256_file,
+    write_json_once,
+    write_npz_once,
+)
+from scripts.analysis.combination import (
+    combine_weighted_logits as _combine_weighted_logits,
+    combine_weighted_probabilities as _combine_weighted_probabilities,
+    stable_softmax,
+)
+from scripts.analysis.validation import (
+    validate_expert_weights,
+    validate_integer_vector,
+    validate_numeric_array,
+)
 from scripts.base_trainer import compute_class_groups
 from scripts.evaluation import balanced_accuracy
 from scripts.task3e_fixed import (
@@ -111,12 +126,13 @@ class Task3FError(OOFProtocolError):
 
 
 def _as_float_array(value: Any, *, name: str) -> np.ndarray:
-    array = np.asarray(value)
-    if not np.issubdtype(array.dtype, np.number) or np.iscomplexobj(array):
-        raise Task3FError(f"{name} must contain real numeric values")
-    if not np.isfinite(array).all():
-        raise Task3FError(f"{name} contains non-finite values")
-    return array.astype(np.float64, copy=False)
+    return validate_numeric_array(
+        value,
+        name=name,
+        finite=True,
+        cast_dtype=np.float64,
+        error_type=Task3FError,
+    )
 
 
 def _validate_logits(logits: Any, *, name: str = "logits") -> np.ndarray:
@@ -135,28 +151,20 @@ def _validate_logits(logits: Any, *, name: str = "logits") -> np.ndarray:
 
 
 def _validate_labels(labels: Any, *, num_samples: int, num_classes: int) -> np.ndarray:
-    array = np.asarray(labels)
-    if array.ndim != 1 or len(array) != num_samples:
-        raise Task3FError(
-            f"labels must have shape ({num_samples},), got {array.shape}"
-        )
-    if not np.issubdtype(array.dtype, np.number) or np.iscomplexobj(array):
-        raise Task3FError("labels must contain real integer-valued class indices")
-    if not np.isfinite(array).all() or not np.equal(array, np.floor(array)).all():
-        raise Task3FError("labels must contain finite integer-valued class indices")
-    array = array.astype(np.int64, copy=False)
-    if np.any(array < 0) or np.any(array >= num_classes):
-        raise Task3FError(f"labels must be in [0, {num_classes})")
-    return array
+    return validate_integer_vector(
+        labels,
+        name="labels",
+        shape=(num_samples,),
+        lower_bound=0,
+        upper_bound=num_classes,
+        error_type=Task3FError,
+    )
 
 
 def _stable_softmax(logits: np.ndarray) -> np.ndarray:
     """Return a finite softmax without changing the supplied logits."""
     array = _validate_logits(logits)
-    shifted = array - np.max(array, axis=-1, keepdims=True)
-    exponentials = np.exp(shifted)
-    denominator = exponentials.sum(axis=-1, keepdims=True)
-    probabilities = exponentials / denominator
+    probabilities = stable_softmax(array)
     if not np.isfinite(probabilities).all():
         raise Task3FError("stable softmax produced non-finite probabilities")
     return probabilities
@@ -351,37 +359,38 @@ def scores_to_weights(
 
 
 def _validate_weights(weights: np.ndarray, *, num_samples: int) -> np.ndarray:
-    array = _as_float_array(weights, name="routing weights")
-    if array.ndim == 1:
-        if array.shape != (len(EXPERT_ORDER),):
-            raise Task3FError("global routing weights must have shape (4,)")
-        array = np.repeat(array[None, :], num_samples, axis=0)
-    if array.shape != (num_samples, len(EXPERT_ORDER)):
-        raise Task3FError(
-            f"routing weights must have shape ({num_samples}, 4), got {array.shape}"
-        )
-    if np.any(array < 0.0) or not np.allclose(array.sum(axis=1), 1.0, atol=1e-12, rtol=0.0):
-        raise Task3FError("routing weights must be non-negative and sum to one")
-    return array
+    return validate_expert_weights(
+        weights,
+        num_experts=len(EXPERT_ORDER),
+        num_samples=num_samples,
+        allow_vector=True,
+        sum_atol=1e-12,
+        name="routing weights",
+        error_type=Task3FError,
+    )
 
 
 def combine_weighted_logits(logits: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Combine the original expert logits using supplied convex weights."""
-    array = _validate_logits(logits)
-    validated_weights = _validate_weights(weights, num_samples=array.shape[0])
-    combined = np.einsum("ne,nec->nc", validated_weights, array)
-    if not np.isfinite(combined).all():
-        raise Task3FError("combined logits are non-finite")
-    return combined
+    return _combine_weighted_logits(
+        logits,
+        weights,
+        num_experts=len(EXPERT_ORDER),
+        min_classes=2,
+        logit_cast_dtype=np.float64,
+        error_type=Task3FError,
+    )
 
 
 def _weighted_probability_predictions(logits: np.ndarray, weights: np.ndarray) -> np.ndarray:
-    array = _validate_logits(logits)
-    validated_weights = _validate_weights(weights, num_samples=array.shape[0])
-    probabilities = _stable_softmax(array)
-    combined = np.einsum("ne,nec->nc", validated_weights, probabilities)
-    if not np.isfinite(combined).all():
-        raise Task3FError("combined probabilities are non-finite")
+    combined = _combine_weighted_probabilities(
+        logits,
+        weights,
+        num_experts=len(EXPERT_ORDER),
+        min_classes=2,
+        logit_cast_dtype=np.float64,
+        error_type=Task3FError,
+    )
     return combined.argmax(axis=1).astype(np.int64)
 
 
@@ -747,12 +756,11 @@ def _weight_diagnostics(
 
 
 def _sha256_int_array(values: np.ndarray) -> str:
-    return hashlib.sha256(np.asarray(values, dtype=np.int64).tobytes()).hexdigest()
+    return sha256_array(np.asarray(values, dtype=np.int64))
 
 
 def _sha256_array(values: np.ndarray) -> str:
-    array = np.ascontiguousarray(values)
-    return hashlib.sha256(array.tobytes()).hexdigest()
+    return sha256_array(values)
 
 
 def _token(value: float) -> str:
@@ -1385,47 +1393,23 @@ class RidgeCVAnalyzer:
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise Task3FError(f"cannot hash file: {path}") from exc
-    return digest.hexdigest()
+    return sha256_file(path, error_type=Task3FError, description="file")
 
 
 def _repository_relative(path: Path, project_root: Path) -> str:
-    try:
-        return str(path.resolve().relative_to(project_root.resolve()))
-    except ValueError:
-        return str(path.resolve())
+    return repository_relative(path, project_root)
 
 
 def _git_commit(project_root: Path) -> str:
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise Task3FError("cannot record the source Git commit") from exc
-    commit = completed.stdout.strip()
-    if not commit:
-        raise Task3FError("source Git commit is empty")
-    return commit
+    return git_commit(project_root, error_type=Task3FError)
 
 
 def _load_reference_uniform_metrics(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3FError(f"cannot load Task 3C diagnostics: {path}") from exc
-    if not isinstance(payload, Mapping):
-        raise Task3FError("Task 3C diagnostics must be a JSON object")
+    payload = load_json_object(
+        path,
+        name="Task 3C diagnostics",
+        error_type=Task3FError,
+    )
     primary = payload.get("primary_router_fit_partition")
     if not isinstance(primary, Mapping):
         raise Task3FError("Task 3C diagnostics lack the primary router-fit partition")
@@ -1612,45 +1596,11 @@ def _jsonable_analysis(result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
-    serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        try:
-            existing = path.read_text()
-        except OSError as exc:
-            raise Task3FError(f"cannot inspect existing output: {path}") from exc
-        if existing != serialized:
-            raise Task3FError(f"refusing to overwrite an incompatible output: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(serialized)
+    write_json_once(path, payload, error_type=Task3FError)
 
 
 def _write_npz_once(path: Path, arrays: Mapping[str, np.ndarray]) -> None:
-    if path.exists():
-        try:
-            with np.load(path, allow_pickle=False) as existing:
-                if set(existing.files) != set(arrays):
-                    raise Task3FError(f"existing output arrays differ: {path}")
-                for key, value in arrays.items():
-                    existing_array = existing[key]
-                    if np.issubdtype(value.dtype, np.inexact):
-                        matches = np.array_equal(existing_array, value, equal_nan=True)
-                    else:
-                        matches = np.array_equal(existing_array, value)
-                    if not matches:
-                        raise Task3FError(f"existing output array differs for {key}: {path}")
-        except (OSError, ValueError) as exc:
-            raise Task3FError(f"cannot validate existing NumPy output: {path}") from exc
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".npz", dir=path.parent, delete=False) as handle:
-        temporary = Path(handle.name)
-    try:
-        np.savez_compressed(temporary, **arrays)
-        temporary.replace(path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+    write_npz_once(path, arrays, error_type=Task3FError)
 
 
 def _render_summary(

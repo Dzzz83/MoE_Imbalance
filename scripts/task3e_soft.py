@@ -15,10 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-import hashlib
-import json
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import numpy as np
@@ -26,6 +23,14 @@ import scipy
 from scipy.optimize import linprog
 
 from data.nested_oof import NestedOOFFoldManager
+from scripts.analysis.artifacts import (
+    git_commit,
+    load_json_object,
+    repository_relative,
+    serialize_json,
+    sha256_array,
+    write_texts_once,
+)
 from scripts.base_trainer import compute_class_groups
 from scripts.expert_diagnostics import ExpertDiagnostics
 from scripts.task3e_fixed import (
@@ -101,41 +106,19 @@ def _as_metric_bundle(metrics: Mapping[str, Any]) -> dict[str, float]:
 
 def _hash_indices(indices: Sequence[int]) -> str:
     values = np.asarray(sorted(int(value) for value in indices), dtype="<i8")
-    return hashlib.sha256(values.tobytes()).hexdigest()
+    return sha256_array(values)
 
 
 def _json_object(path: Path, *, name: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3EError(f"cannot load {name}: {path}") from exc
-    if not isinstance(payload, dict):
-        raise Task3EError(f"{name} must contain a JSON object: {path}")
-    return payload
+    return load_json_object(path, name=name, error_type=Task3EError)
 
 
 def _repository_relative(path: Path, project_root: Path) -> str:
-    try:
-        return str(path.resolve().relative_to(project_root.resolve()))
-    except ValueError:
-        return str(path.resolve())
+    return repository_relative(path, project_root)
 
 
 def _git_commit(project_root: Path) -> str:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise Task3EError("cannot record the source Git commit") from exc
-    commit = result.stdout.strip()
-    if not commit:
-        raise Task3EError("source Git commit is empty")
-    return commit
+    return git_commit(project_root, error_type=Task3EError)
 
 
 @dataclass(frozen=True)
@@ -1394,18 +1377,7 @@ def render_summary(
 
 
 def _write_outputs_once(files: Mapping[Path, str]) -> None:
-    for path, content in files.items():
-        if path.exists():
-            try:
-                existing = path.read_text()
-            except OSError as exc:
-                raise Task3EError(f"cannot inspect existing output: {path}") from exc
-            if existing != content:
-                raise Task3EError(f"refusing to overwrite an incompatible output: {path}")
-    for path, content in files.items():
-        if not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content)
+    write_texts_once(files, error_type=Task3EError)
 
 
 def run_task3e_soft(
@@ -1460,14 +1432,8 @@ def run_task3e_soft(
     results = build_results_payload(analysis)
     summary = render_summary(experiment_config, results)
     files = {
-        output_path / "experiment_config.json": json.dumps(
-            experiment_config, indent=2, sort_keys=True
-        )
-        + "\n",
-        output_path / "soft_oracle_results.json": json.dumps(
-            results, indent=2, sort_keys=True
-        )
-        + "\n",
+        output_path / "experiment_config.json": serialize_json(experiment_config),
+        output_path / "soft_oracle_results.json": serialize_json(results),
         output_path / "summary.md": summary,
     }
     _write_outputs_once(files)

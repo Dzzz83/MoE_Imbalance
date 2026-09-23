@@ -18,6 +18,12 @@ from collections.abc import Sequence
 import numpy as np
 
 from scripts.base_trainer import compute_class_groups
+from scripts.analysis.combination import (
+    combine_weighted_logits,
+    combine_weighted_probabilities,
+    stable_softmax,
+)
+from scripts.analysis.validation import validate_expert_weights, validate_integer_vector
 from scripts.evaluation import balanced_accuracy
 
 
@@ -27,25 +33,17 @@ class DiagnosticInputError(ValueError):
 
 def _as_integer_array(value: np.ndarray, *, name: str, ndim: int) -> np.ndarray:
     """Validate an array of integer-valued labels or predictions."""
-    array = np.asarray(value)
-    if array.ndim != ndim:
-        raise DiagnosticInputError(
-            f"{name} must have {ndim} dimensions, got shape {array.shape}"
-        )
-    if not np.issubdtype(array.dtype, np.number) or np.iscomplexobj(array):
-        raise DiagnosticInputError(f"{name} must contain real numeric class indices")
-    if not np.isfinite(array).all():
-        raise DiagnosticInputError(f"{name} contains non-finite class indices")
-    if not np.equal(array, np.floor(array)).all():
-        raise DiagnosticInputError(f"{name} must contain integer-valued class indices")
-    return array.astype(np.int64, copy=False)
+    return validate_integer_vector(
+        value,
+        name=name,
+        ndim=ndim,
+        error_type=DiagnosticInputError,
+    )
 
 
 def _stable_softmax(logits: np.ndarray) -> np.ndarray:
     """Numerically stable softmax over the final axis."""
-    shifted = logits - np.max(logits, axis=-1, keepdims=True)
-    exp = np.exp(shifted)
-    return exp / exp.sum(axis=-1, keepdims=True)
+    return stable_softmax(logits)
 
 
 def _fraction(count: int, denominator: int) -> float:
@@ -604,26 +602,14 @@ class ExpertDiagnostics:
         }
 
     def _validate_weights(self, weights: np.ndarray) -> np.ndarray:
-        weights = np.asarray(weights)
-        if weights.shape != (self.n_samples, self.num_experts):
-            raise DiagnosticInputError(
-                "routing weights must have shape "
-                f"({self.n_samples}, {self.num_experts}), got {weights.shape}"
-            )
-        if not np.issubdtype(weights.dtype, np.number) or np.iscomplexobj(weights):
-            raise DiagnosticInputError("routing weights must contain real numeric values")
-        if not np.isfinite(weights).all():
-            raise DiagnosticInputError("routing weights contain non-finite values")
-        if (weights < 0).any():
-            raise DiagnosticInputError("routing weights must be non-negative")
-        row_sums = weights.sum(axis=1)
-        if not np.allclose(row_sums, 1.0, rtol=0.0, atol=1e-7):
-            bad = np.flatnonzero(np.abs(row_sums - 1.0) > 1e-7).tolist()
-            raise DiagnosticInputError(
-                "routing weights must sum to one per sample within 1e-7; "
-                f"invalid rows: {bad}"
-            )
-        return weights.astype(np.float64, copy=False)
+        return validate_expert_weights(
+            weights,
+            num_experts=self.num_experts,
+            num_samples=self.n_samples,
+            sum_atol=1e-7,
+            name="routing weights",
+            error_type=DiagnosticInputError,
+        )
 
     def evaluate_soft_mixture(
         self,
@@ -654,12 +640,22 @@ class ExpertDiagnostics:
         mode = aliases[mode]
 
         if mode == "logit":
-            combined_logits = np.einsum("ne,nec->nc", weights, logits)
+            combined_logits = combine_weighted_logits(
+                logits,
+                weights,
+                num_experts=self.num_experts,
+                weight_sum_atol=1e-7,
+                error_type=DiagnosticInputError,
+            )
             probabilities = _stable_softmax(combined_logits)
         else:
             combined_logits = None
-            probabilities = np.einsum(
-                "ne,nec->nc", weights, _stable_softmax(logits)
+            probabilities = combine_weighted_probabilities(
+                logits,
+                weights,
+                num_experts=self.num_experts,
+                weight_sum_atol=1e-7,
+                error_type=DiagnosticInputError,
             )
         predictions = probabilities.argmax(axis=1).astype(np.int64)
         return {

@@ -10,15 +10,21 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-import hashlib
-import json
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import numpy as np
 
 from data.nested_oof import FoldManifest, NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis.artifacts import (
+    git_commit,
+    load_json_object,
+    repository_relative,
+    serialize_json,
+    sha256_file,
+    validate_sha256,
+    write_texts_once,
+)
 from scripts.base_trainer import compute_class_groups
 from scripts.expert_diagnostics import ExpertDiagnostics
 from scripts.task3c_oof import (
@@ -54,34 +60,15 @@ class Task3EError(OOFProtocolError):
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise Task3EError(f"cannot hash input artifact: {path}") from exc
-    return digest.hexdigest()
+    return sha256_file(path, error_type=Task3EError, description="input artifact")
 
 
 def _valid_sha256(value: Any, *, name: str) -> str:
-    if not isinstance(value, str) or len(value) != 64:
-        raise Task3EError(f"{name} must be a 64-character SHA-256 hash")
-    try:
-        int(value, 16)
-    except ValueError as exc:
-        raise Task3EError(f"{name} is not hexadecimal SHA-256") from exc
-    return value.lower()
+    return validate_sha256(value, name=name, error_type=Task3EError)
 
 
 def _load_json(path: Path, *, name: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3EError(f"cannot load {name}: {path}") from exc
-    if not isinstance(payload, dict):
-        raise Task3EError(f"{name} must contain a JSON object: {path}")
-    return payload
+    return load_json_object(path, name=name, error_type=Task3EError)
 
 
 def _require_equal(payload: Mapping[str, Any], key: str, expected: Any, *, name: str) -> None:
@@ -604,27 +591,11 @@ def _load_stored_uniform_metrics(path: Path) -> dict[str, Any]:
 
 
 def _repository_relative(path: Path, project_root: Path) -> str:
-    try:
-        return str(path.resolve().relative_to(project_root.resolve()))
-    except ValueError:
-        return str(path.resolve())
+    return repository_relative(path, project_root)
 
 
 def _git_commit(project_root: Path) -> str:
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise Task3EError("cannot record the source Git commit") from exc
-    commit = completed.stdout.strip()
-    if not commit:
-        raise Task3EError("source Git commit is empty")
-    return commit
+    return git_commit(project_root, error_type=Task3EError)
 
 
 def build_experiment_config(
@@ -855,19 +826,7 @@ def render_summary(
 
 
 def _write_texts_once(files: Mapping[Path, str]) -> None:
-    serialized = {path: text for path, text in files.items()}
-    for path, content in serialized.items():
-        if path.exists():
-            try:
-                existing = path.read_text()
-            except OSError as exc:
-                raise Task3EError(f"cannot inspect existing output: {path}") from exc
-            if existing != content:
-                raise Task3EError(f"refusing to overwrite an incompatible output: {path}")
-    for path, content in serialized.items():
-        if not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content)
+    write_texts_once(files, error_type=Task3EError)
 
 
 def run_task3e_fixed(
@@ -909,8 +868,8 @@ def run_task3e_fixed(
     results = build_results_payload(analysis, baseline_verification)
     summary = render_summary(experiment_config, results)
     output_files = {
-        output_path / "experiment_config.json": json.dumps(experiment_config, indent=2, sort_keys=True) + "\n",
-        output_path / "fixed_weight_results.json": json.dumps(results, indent=2, sort_keys=True) + "\n",
+        output_path / "experiment_config.json": serialize_json(experiment_config),
+        output_path / "fixed_weight_results.json": serialize_json(results),
         output_path / "summary.md": summary,
     }
     _write_texts_once(output_files)

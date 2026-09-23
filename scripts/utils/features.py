@@ -19,6 +19,7 @@ import numpy as np
 import torch
 from sklearn.decomposition import PCA
 
+from scripts.analysis.combination import stable_softmax
 from scripts.utils.data import load_all_experts
 
 EPS = 1e-12
@@ -35,9 +36,7 @@ def softmax(logits: np.ndarray) -> np.ndarray:
     Returns:
         Probabilities with same shape, summing to 1 over the last axis.
     """
-    shifted = logits - logits.max(axis=-1, keepdims=True)
-    exps = np.exp(shifted)
-    return exps / exps.sum(axis=-1, keepdims=True)
+    return stable_softmax(logits)
 
 
 # ── Logit Extraction ─────────────────────────────────────────────────────
