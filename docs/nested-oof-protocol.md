@@ -14,7 +14,7 @@ balanced CIFAR-100 test set.
 | Task 3C: seed-78, outer-fold-0 collection | Complete |
 | Task 3E-A/B: restricted exploratory analysis | Complete |
 | Task 3F-A: restricted Ridge predictability analysis | Complete; exploratory only |
-| Task 3F-D: combined Tail-signal diagnostics | Complete; retrospective only |
+| Task 3F-B–3F-F: Ridge retrospective diagnostics | Complete; retrospective only |
 | Outer-fold expert training and evaluation | Not executed |
 | Full 300-run nested experiment | Not executed |
 
@@ -103,8 +103,8 @@ not a replacement for those checkpoints.
 
 Task 3C diagnostics included descriptive analysis of inner-fold-0 labels.
 Consequently, inner fold 0 cannot be characterized as completely untouched for
-research choices influenced by those diagnostics. Tasks 3E-A and 3E-B excluded
-inner fold 0 from every new metric calculation. A future fitted-router
+research choices influenced by those diagnostics. Tasks 3E-A/B and 3F-A–3F-F
+excluded inner fold 0 from every new metric calculation. A future fitted-router
 experiment must document its fitting and selection procedure and acknowledge
 this earlier exploratory exposure.
 
@@ -176,7 +176,19 @@ artifacts/oof/task3f_ridge/
   held_out_predictions.npz
   router_scores.npz
   summary.md
+artifacts/oof/task3f_mixup_diagnostics/
+  diagnostic_results.json
+  summary.md
+artifacts/oof/task3f_tail_signal_diagnostics/
+  diagnostic_results.json
+  summary.md
 artifacts/oof/task3f_combined_signal_diagnostics/
+  diagnostic_results.json
+  summary.md
+artifacts/oof/task3f_target_diagnostics/
+  diagnostic_results.json
+  summary.md
+artifacts/oof/task3f_feature_comparison/
   diagnostic_results.json
   summary.md
 ~~~

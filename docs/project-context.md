@@ -24,8 +24,9 @@ question. Task 3F-A implements and evaluates the frozen Ridge feasibility
 study, Task 3F-B diagnoses its highlighted Mixup preference, and Task 3F-C
 checks confidence, disagreement and predicted-class-group signals against the
 saved weights. Task 3F-D evaluates the frozen combinations of those signals,
-and Task 3F-E diagnoses the supervised contribution target against the saved
-Ridge predictions and classification outcomes.
+Task 3F-E diagnoses the supervised contribution target against the saved Ridge
+predictions and classification outcomes, and Task 3F-F compares the confidence-
+only and full 13-feature Ridge results.
 These are exploratory and not independently validated.
 Sinkhorn remains a separate proposed direction.
 
@@ -76,6 +77,7 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3F-C: Tail-specific routing-signal diagnostics | Complete; retrospective only |
 | Task 3F-D: Combined Tail-signal diagnostics | Complete; retrospective only |
 | Task 3F-E: Supervised contribution target diagnostics | Complete; retrospective only |
+| Task 3F-F: Ridge feature comparison | Complete; retrospective only |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -162,23 +164,43 @@ classification. Margin contributions added competing-class information, while
 all target, margin, opportunity and damage groups remained retrospective.
 These findings do not approve a new target or router.
 
-## 6. Next research decision
+Task 3F-F compared the existing confidence-only and full 13-feature Ridge
+representations using 15 matched alpha/gamma settings and 300 matched
+classification configurations. Full features reduced pooled contribution MSE
+in all 15 matched settings and reduced Tail contribution MSE in all 15, but the
+predefined primary classification result fell from **36.55% to 36.10% BA** and
+from **7.38% to 6.55% Tail**. Tail mean Mixup weight changed from approximately
+40.49% to 40.65%; the full-feature model still did not establish useful
+adaptive routing. The comparison cannot distinguish feature insufficiency from
+insufficient Tail training data.
 
-Before any independent evaluation or Sinkhorn work, preserve the frozen Task
-3F-A definitions and document:
+## 6. Next research roadmap
 
-1. the supervised target for useful expert contribution;
-2. inference-time features and any logit calibration;
-3. uniform logit, probability-average, fixed-weight, and no-OT learned-gate
-   baselines;
-4. the fit/selection/outer-evaluation procedure; and
-5. safeguards against in-sample supervision, test-set selection, expert-pool
-   changes, fold-trained/full-data distribution shift.
+The completed work is documentation and exploratory development evidence. The
+next stages are:
 
-Task 3F-A is a simple predictive-model feasibility result, not approval of a
-final router. Sinkhorn should be considered separately only after a suitability
-signal is shown to be learnable and after its global-allocation value is
-isolated.
+1. **Documentation consolidation** — complete for this handoff; the
+   authoritative Markdown now covers the research through Task 3F-F.
+2. **Codebase audit and refactoring** — planned. The audit must preserve
+   executable behavior, artifacts and non-cheating safeguards; its architecture
+   has not been finalized or implemented.
+3. **New Ridge experiments** — planned. Alternative representations, targets
+   and weighting strategies may be compared, but no new Ridge approach is
+   currently implemented or approved.
+4. **Sinkhorn experiments** — planned. Multiple allocation mechanisms may be
+   compared; their constraints and execution protocol are not yet frozen.
+5. **Ridge + Sinkhorn experiments** — planned. Any allocation effect must be
+   isolated using the same expert pool, suitability scores and evaluation role.
+6. **Independent evaluation** — planned only after candidate methods and
+   criteria are frozen before accessing the reserved outer population.
+
+Before stages 3–6, preserve the frozen Task 3F-A supervised target,
+inference-time features and calibration definitions, uniform/probability/fixed-
+weight/no-OT controls, fit-versus-selection roles, and safeguards against
+in-sample supervision, test-set selection, expert-pool changes and
+fold-trained/full-data distribution shift. Task 3F-A is a predictive-model
+feasibility result, not approval of a final router. Sinkhorn is an allocation
+mechanism, not a source of predictive signal.
 
 ## 7. Experimental populations
 
@@ -215,6 +237,8 @@ checkpoints.
   and scripts/run_task3f_combined_signal_diagnostics.py
 - Supervised-target diagnostics: scripts/task3f_target_diagnostics.py and
   scripts/run_task3f_target_diagnostics.py
+- Ridge feature comparison: scripts/task3f_feature_comparison.py and
+  scripts/run_task3f_feature_comparison.py
 - Aligned OOF data and Task 3C diagnostics:
   artifacts/oof/task3c_oof/
 - Task 3E-A outputs:
@@ -231,6 +255,8 @@ checkpoints.
   artifacts/oof/task3f_combined_signal_diagnostics/
 - Task 3F-E outputs:
   artifacts/oof/task3f_target_diagnostics/
+- Task 3F-F outputs:
+  artifacts/oof/task3f_feature_comparison/
 
 ## 9. Documentation navigation
 

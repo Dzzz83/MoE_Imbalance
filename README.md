@@ -11,16 +11,21 @@ The project has two related experimental tracks:
 | Track | Completed scope | Interpretation |
 |:--|:--|:--|
 | Original full-data experiments | Four experts, three seeds, final-epoch checkpoints, historical balanced-test evaluation and parameter-free routing baselines | Uniform logit averaging remains the historical baseline at 46.98 ± 0.69% BA and 18.76 ± 0.86% Tail |
-| Nested OOF research | Frozen folds, seed-78/outer-fold-0 collection, expert diagnostics, fixed-weight feasibility, soft-mixture feasibility, and Task 3F-A Ridge predictability | Development evidence of complementarity and Ridge predictability; no validated new method |
+| Nested OOF research | Frozen folds, seed-78/outer-fold-0 collection, expert diagnostics, fixed-weight and soft-mixture feasibility, Task 3F-A Ridge routing, and Tasks 3F-B–3F-F diagnostics | Development evidence of complementarity and partial target predictability; no validated new method |
 
 All 16 Task 3C inner expert runs are complete. Task 3D is an exploratory
-analysis of those diagnostics. Tasks 3E-A and 3E-B use only the 6,507-image
-router-fitting partition from inner folds 1–3. They do not use the reserved
-outer evaluation population or the original CIFAR-100 test set.
+analysis of those diagnostics. Tasks 3E-A and 3E-B and the Task 3F-A–3F-F
+analyses use only the 6,507-image router-fitting partition from inner folds
+1–3. They do not use the reserved outer evaluation population or the original
+CIFAR-100 test set.
 
 Sinkhorn routing, new specialized experts, and a full multi-fold/multi-seed
-nested evaluation are not implemented or complete. Task 3F-A is an exploratory
-Ridge feasibility study only; it does not authorize independent evaluation.
+nested evaluation are not implemented or complete. Tasks 3F-A–3F-F are
+exploratory development analyses only; they do not authorize independent
+evaluation. Documentation consolidation is complete for this handoff. The
+next planned stages are a codebase audit/refactor, new Ridge experiments,
+Sinkhorn experiments, Ridge + Sinkhorn experiments, and then an independently
+frozen evaluation.
 
 ## Experimental protocol
 
@@ -68,6 +73,12 @@ feasibility and 26.3644% Tail feasibility on the same partition. This is an
 existence result, not inference-time accuracy: it uses the true label to solve
 an independent convex-logit feasibility problem for each image.
 
+Task 3F-F found that the full 13-feature Ridge representation reduced
+contribution MSE in all 15 matched settings (including all 15 Tail-MSE
+comparisons), but its predefined primary classification result was lower than
+confidence-only Ridge: 36.10% versus 36.55% BA and 6.55% versus 7.38% Tail.
+No feature set or router was selected from this comparison.
+
 See [docs/oof-results.md](docs/oof-results.md) for the complete provenance,
 diagnostics, limitations and synthesis. These development values are not
 directly comparable with the three-seed full-data test values.
@@ -84,16 +95,42 @@ scripts/task3e_fixed.py          Task 3E-A fixed-weight analysis
 scripts/task3e_soft.py           Task 3E-B soft-feasibility analysis
 scripts/task3f_ridge.py          Task 3F-A predictable Ridge analysis
 scripts/run_task3f_ridge.py      Task 3F-A CLI entry point
+scripts/task3f_mixup_diagnostics.py
+                                  Task 3F-B Mixup-preference diagnostics
+scripts/run_task3f_mixup_diagnostics.py
+                                  Task 3F-B CLI entry point
+scripts/task3f_tail_signal_diagnostics.py
+                                  Task 3F-C Tail-signal diagnostics
+scripts/run_task3f_tail_signal_diagnostics.py
+                                  Task 3F-C CLI entry point
+scripts/task3f_combined_signal_diagnostics.py
+                                  Task 3F-D combined-signal diagnostics
+scripts/run_task3f_combined_signal_diagnostics.py
+                                  Task 3F-D CLI entry point
 scripts/task3f_target_diagnostics.py
                                   Task 3F-E target diagnostics
 scripts/run_task3f_target_diagnostics.py
                                   Task 3F-E CLI entry point
+scripts/task3f_feature_comparison.py
+                                  Task 3F-F feature comparison
+scripts/run_task3f_feature_comparison.py
+                                  Task 3F-F CLI entry point
 artifacts/oof/task3c_oof/        aligned OOF data and diagnostics
 artifacts/oof/task3e_fixed_feasibility/
                                   fixed-weight outputs
 artifacts/oof/task3e_soft_feasibility/
                                   soft-oracle outputs
 artifacts/oof/task3f_ridge/      Ridge configurations, predictions and report
+artifacts/oof/task3f_mixup_diagnostics/
+                                  Task 3F-B outputs
+artifacts/oof/task3f_tail_signal_diagnostics/
+                                  Task 3F-C outputs
+artifacts/oof/task3f_combined_signal_diagnostics/
+                                  Task 3F-D outputs
+artifacts/oof/task3f_target_diagnostics/
+                                  Task 3F-E outputs
+artifacts/oof/task3f_feature_comparison/
+                                  Task 3F-F outputs
 checkpoints/                     original full-data checkpoints and reports
 records/                         routing catalogue and frozen historical preregistration
 ~~~
@@ -146,6 +183,20 @@ in [docs/oof-results.md](docs/oof-results.md) and
 Task 3F-E is read-only and retrospective: it recomputes contribution and
 classification-margin diagnostics on the same permitted OOF rows without
 refitting Ridge or selecting a new routing target.
+
+The remaining Task 3F diagnostics are also read-only and consume the saved OOF
+and Ridge artifacts. Run them in dependency order only when a fresh protected
+diagnostic report is needed:
+
+~~~bash
+./.venv/bin/python scripts/run_task3f_mixup_diagnostics.py
+./.venv/bin/python scripts/run_task3f_tail_signal_diagnostics.py
+./.venv/bin/python scripts/run_task3f_combined_signal_diagnostics.py
+./.venv/bin/python scripts/run_task3f_feature_comparison.py
+~~~
+
+Task 3F-F additionally reads the saved Task 3F-E output. These commands do not
+train experts, fit Ridge, or access the reserved outer population or test set.
 
 The original full-data training and historical evaluation commands remain
 available:

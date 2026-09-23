@@ -94,6 +94,22 @@ These three concepts must not be conflated: hard selection chooses an existing
 top-1 answer, fixed weights are a specified classifier, and adaptive
 soft-mixture feasibility is a label-dependent existence test.
 
+### Contribution targets, predicted scores and classification margins
+
+The Task 3F-A supervised contribution target is a label-dependent diagnostic
+quantity: it measures an expert's marginal change in the uniform ensemble's
+true-class log probability. A Ridge predicted contribution score is the
+model's estimate of that target from inference-time features; it is not itself
+an accuracy or a mixture weight. A subsequent weight transformation produces
+the expert mixture used for classification.
+
+Task 3F-E also computes a retrospective margin contribution against the
+uniform ensemble's strongest incorrect class. This adds competing-class
+information but remains label-dependent during analysis and was not approved
+as a training target. Neither contribution measure guarantees that a finite
+weight perturbation changes the final top-1 prediction. Task 3F-F further
+shows that lower contribution-prediction error need not improve classification.
+
 ## Corrected diagnostic defects
 
 - The former lone-dissenter logic assumed three experts. The reusable report

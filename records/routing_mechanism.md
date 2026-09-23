@@ -50,8 +50,10 @@ row that measured nothing.*
 ## 2. Removed mechanisms — needed a validation split
 
 These results belong to the original full-data protocol. The nested-OOF
-pipeline now provides held-out development predictions, but no fitted router
-has been implemented or validated.
+pipeline now provides held-out development predictions. No fitted router was
+available for this original full-data/test-track section; the later Task 3F-A
+Ridge fit is an exploratory OOF development analysis, not a validated test-track
+router. Its diagnostics are recorded in [oof-results.md](../docs/oof-results.md).
 
 Each of these five mechanisms fitted parameters on held-out labels. With no
 validation split there
@@ -190,10 +192,12 @@ tail specialist existed at all). See [`problem.md`](../docs/problem.md)
   expert's individual top-1 prediction was wrong. For hard selection, the
   accessible headroom (60.27 oracle − 46.98 uniform = **13.3 points**) has not
   been captured by any rule.
-- Two independent conditions must hold for routing to win, and neither does:
-  the signal must **exist** (it largely does not — see the lone-dissenter
-  paradox, [`problem.md`](../docs/problem.md) §2) and it must be **comparable across
-  experts** (it is not — the routing score was anti-predictive).
+- Two conditions must hold for routing to win: a useful per-image signal must
+  be predictable, and the resulting expert scores must be comparable. The
+  historical hard-selection results did not establish the first condition;
+  Tasks 3C–3F show complementary correctness but no validated predictive
+  signal. The retired routing score also failed the second condition because
+  it was anti-predictive and poorly scaled across experts.
 
 The completed OOF work refines this historical verdict: complementary
 correctness and convex-mixture feasibility exist on the OOF development

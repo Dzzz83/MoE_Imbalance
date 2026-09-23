@@ -1,4 +1,4 @@
-# OOF Results — Tasks 3C, 3D, 3E-A, 3E-B and 3F
+# OOF Results — Tasks 3C, 3D, 3E-A, 3E-B and 3F-A–3F-F
 
 > Authoritative record of the completed nested-OOF development analyses. These
 > results are exploratory and are not a replacement for the original full-data
@@ -45,23 +45,18 @@ Primary artifacts:
 - [Task 3F-C Tail-signal diagnostic output directory](../artifacts/oof/task3f_tail_signal_diagnostics/)
 - [Task 3F-D combined-signal diagnostic output directory](../artifacts/oof/task3f_combined_signal_diagnostics/)
 - [Task 3F-E target diagnostic output directory](../artifacts/oof/task3f_target_diagnostics/)
+- [Task 3F-F feature-comparison output directory](../artifacts/oof/task3f_feature_comparison/)
 
-Relevant source files are
-[data/nested_oof.py](../data/nested_oof.py),
-[scripts/oof_pipeline.py](../scripts/oof_pipeline.py),
-[scripts/run_task3c.py](../scripts/run_task3c.py),
-[scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py),
-[scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and
-[scripts/task3e_soft.py](../scripts/task3e_soft.py),
-[scripts/task3f_ridge.py](../scripts/task3f_ridge.py),
-[scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py), and
-[scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py),
-[scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py),
-and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py),
-[scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py),
-and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py),
-[scripts/task3f_target_diagnostics.py](../scripts/task3f_target_diagnostics.py),
-and [scripts/run_task3f_target_diagnostics.py](../scripts/run_task3f_target_diagnostics.py).
+Relevant source files are:
+
+- [data/nested_oof.py](../data/nested_oof.py), [scripts/oof_pipeline.py](../scripts/oof_pipeline.py), and [scripts/run_task3c.py](../scripts/run_task3c.py)
+- [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py), [scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and [scripts/task3e_soft.py](../scripts/task3e_soft.py)
+- [scripts/task3f_ridge.py](../scripts/task3f_ridge.py) and [scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py)
+- [scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py) and [scripts/run_task3f_mixup_diagnostics.py](../scripts/run_task3f_mixup_diagnostics.py)
+- [scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py) and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py)
+- [scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py) and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py)
+- [scripts/task3f_target_diagnostics.py](../scripts/task3f_target_diagnostics.py) and [scripts/run_task3f_target_diagnostics.py](../scripts/run_task3f_target_diagnostics.py)
+- [scripts/task3f_feature_comparison.py](../scripts/task3f_feature_comparison.py) and [scripts/run_task3f_feature_comparison.py](../scripts/run_task3f_feature_comparison.py)
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -531,7 +526,45 @@ All values above are retrospective measurements on one development
 population. They do not establish that a margin target, a different target,
 or a new router would improve an independent evaluation.
 
-## 11. Scientific synthesis
+## 11. Task 3F-F — confidence-only versus full-feature Ridge
+
+Task 3F-F was a read-only comparison of the saved Task 3F-A fits, scores and
+predictions. It used the same 6,507 outer-fold-0 / inner-folds-1–3 rows,
+including 5,294 Head, 1,030 Medium and 183 Tail images. It did not refit Ridge,
+retrain experts, use oracle weights, access inner fold 0, access the reserved
+outer population, or access the CIFAR-100 test set. Labels and canonical groups
+were used only for retrospective target and outcome diagnostics.
+
+The comparison matched the confidence-only and full 13-feature models at 15
+alpha/gamma settings across the existing temperature and shrinkage choices,
+giving 300 matched classification comparisons. Full features reduced pooled
+contribution MSE in **15/15** matched settings and Tail contribution MSE in
+**15/15** settings. The mean full-minus-confidence MSE change was **−0.044230**
+pooled and **−0.141768** on Tail.
+
+The predefined primary classification comparison was:
+
+| Method | BA | Tail | Mean Tail Mixup weight | Highest-weight Mixup fraction |
+|:--|--:|--:|--:|--:|
+| Confidence-only Ridge | 36.55% | 7.38% | 40.49% | 99.45% |
+| Full 13-feature Ridge | 36.10% | 6.55% | 40.65% | 96.17% |
+
+Thus, lower contribution-target error did not translate into better
+classification at the predefined primary setting. Across the full matched
+grid, full features improved BA in **114/300** pairs, improved Tail in
+**22/300**, and produced identical top-1 predictions in **60/300**. The saved
+training-versus-held-out diagnostics showed lower MSE for full features in
+45/45 matched model fits and held-out comparisons, but the sparse Tail
+population and shared OOF training dependence do not identify whether feature
+information or training data is the limiting factor.
+
+The complete comparison, including configuration alignment, ranking, weight
+changes, prediction changes and provenance hashes, is in the
+[Task 3F-F diagnostic results](../artifacts/oof/task3f_feature_comparison/diagnostic_results.json)
+and [summary](../artifacts/oof/task3f_feature_comparison/summary.md). No
+feature set, target, or router is selected from this retrospective comparison.
+
+## 12. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -560,9 +593,15 @@ The completed OOF evidence supports these limited conclusions:
   Positive local log-probability contributions only weakly translated into
   finite-perturbation corrections, and margin contributions added competing-
   class information without becoming an approved training target.
+- Task 3F-F found that the full 13-feature representation improves contribution
+  prediction error on every matched setting, including Tail, while its primary
+  classification result is worse than confidence-only Ridge. Better target
+  prediction is therefore not sufficient evidence of better routing, and no
+  feature representation has been approved for a new experiment.
 - No new method has demonstrated a validated improvement over the original
   full-data baseline or an independently held-out outer population.
 
 The next open question is generalization of any frozen routing choice to an
-independent outer population. Sinkhorn, a new specialist, and a final adaptive
-weighting rule remain unvalidated.
+independent outer population. Codebase refactoring, new Ridge variants,
+Sinkhorn, Ridge + Sinkhorn, a new specialist and a final adaptive weighting
+rule remain unimplemented or unvalidated.

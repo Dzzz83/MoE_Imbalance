@@ -41,6 +41,17 @@ Related project evidence:
   progressively smaller development subsets and the saved Ridge weights still
   overwhelmingly favor Mixup. No combination is selected as a feature set or
   routing rule.
+- Task 3F-E shows that the current contribution target does not systematically
+  favor Mixup on Tail: LAL's mean Tail target is 0.8306 versus Mixup's 0.6980,
+  but the saved Ridge ranks Mixup higher on 102 of 103 Tail rows where LAL's
+  actual target is higher. Positive local log-probability contributions often do
+  not change final top-1 correctness, and margin contribution remains a
+  retrospective diagnostic rather than an approved target.
+- Task 3F-F shows that the full 13-feature representation lowers contribution
+  MSE in all 15 matched settings, including all 15 Tail comparisons, but the
+  predefined primary classification result falls from 36.55% to 36.10% BA and
+  from 7.38% to 6.55% Tail. Better target prediction therefore has not been
+  shown to improve routing.
 - Ridge is implemented as an exploratory feasibility study; Sinkhorn remains
   unimplemented.
 
@@ -178,23 +189,35 @@ averaging.
 | Mixup improves the pool | Calibration and ensemble literature | Calibration/head complementarity improved, Tail remained weak |
 | Logit and probability averaging are interchangeable | Balanced-data intuition | They differ on this imbalanced pool |
 | Product-of-experts is a new baseline | Generic ensemble intuition | It is the same classifier as uniform logit averaging |
-| Soft adaptive weighting may help | Convex-mixture feasibility | The OOF oracle shows existence headroom; Task 3F-A finds target predictability but no paired BA–Tail advantage over fixed references |
+| Soft adaptive weighting may help | Convex-mixture feasibility | The OOF oracle shows existence headroom; Tasks 3F-A and 3F-F find target-prediction improvements without a paired BA–Tail advantage over fixed references |
 
-## 7. Current research boundary
+## 7. Current research roadmap and boundary
 
-Before any independent evaluation or new router variant, preserve the frozen
-Task 3F-A supervised target, inference-time features, regularization grid,
-uniform/fixed/global controls, and fit-versus-selection procedure. Fit and
-selection must use the OOF roles in the
-[nested protocol](nested-oof-protocol.md), while the outer evaluation and
-original test set remain untouched.
+The agreed development sequence is:
 
-The next evidence should come from an independent frozen outer evaluation.
-Sinkhorn, if revisited, should be tested as a separate global-allocation
-control rather than assumed to create signal. The old ranked variants and
-staged sequence are historical hypotheses preserved in
+1. **Documentation consolidation** — complete for the current handoff.
+2. **Codebase audit and refactoring** — planned; the architecture is not yet
+   finalized or implemented.
+3. **New Ridge experiments** — planned comparison of multiple representations,
+   supervised targets and weighting strategies; none is implemented.
+4. **Sinkhorn experiments** — planned comparison of multiple allocation
+   mechanisms; constraints and execution protocols are not frozen.
+5. **Ridge + Sinkhorn experiments** — planned comparison using the same expert
+   pool and suitability scores so any allocation effect is isolated.
+6. **Independent evaluation** — planned after candidates and criteria are
+   frozen before the reserved evaluation population is accessed.
+
+Before stages 3–6, preserve the frozen Task 3F-A supervised target,
+inference-time features, regularization grid, uniform/fixed/global controls,
+and fit-versus-selection procedure. Fit and selection must use the OOF roles in
+the [nested protocol](nested-oof-protocol.md), while the outer evaluation and
+original test set remain untouched. Sinkhorn is an allocation mechanism, not a
+source of routing signal.
+
+The old ranked variants and staged sequence are historical hypotheses preserved in
 [archive/superseded-research-proposals.md](archive/superseded-research-proposals.md);
-they are not approved implementation instructions.
+they are not approved implementation instructions. No future stage should be
+described as implemented or validated until it has passed the frozen protocol.
 
 ## References
 
