@@ -38,6 +38,7 @@ def _as_integer_array(value: np.ndarray, *, name: str, ndim: int) -> np.ndarray:
         name=name,
         ndim=ndim,
         error_type=DiagnosticInputError,
+        wrap_conversion_errors=False,
     )
 
 
@@ -609,6 +610,7 @@ class ExpertDiagnostics:
             sum_atol=1e-7,
             name="routing weights",
             error_type=DiagnosticInputError,
+            wrap_conversion_errors=False,
         )
 
     def evaluate_soft_mixture(

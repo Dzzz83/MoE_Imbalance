@@ -34,6 +34,7 @@ from scripts.task3f_ridge import (
     Task3FError,
     classification_metrics,
     combine_weighted_logits,
+    compute_contribution_targets,
     extract_features,
     scores_to_weights,
 )
@@ -45,6 +46,13 @@ from scripts.utils.metrics import (
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _assert_raw_numpy_conversion_error(call):
+    with pytest.raises(ValueError) as caught:
+        call()
+    assert type(caught.value) is ValueError
+    assert "setting an array element with a sequence" in str(caught.value)
 
 
 def _unequal_group_fixture() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -146,6 +154,108 @@ def test_weighted_logit_and_probability_combinations_keep_adaptive_rows_distinct
     assert adaptive_weights.shape == (2, 4)
     assert np.allclose(adaptive_weights.sum(axis=1), 1.0)
     assert not np.allclose(adaptive_weights[0], adaptive_weights[1])
+
+
+def test_legacy_callers_preserve_raw_numpy_errors_for_ragged_inputs():
+    ragged = [[0, 1], [2]]
+    diagnostic_logits = np.zeros((2, 2, 3), dtype=np.float64)
+    ridge_logits = np.zeros((2, 4, 3), dtype=np.float64)
+    diagnostic = ExpertDiagnostics(logits=diagnostic_logits)
+
+    calls = (
+        lambda: ExpertDiagnostics(predictions=ragged),
+        lambda: ExpertDiagnostics(
+            predictions=np.zeros((2, 1), dtype=np.int64), labels=ragged
+        ),
+        lambda: diagnostic.evaluate_soft_mixture(ragged),
+        lambda: extract_features(ragged, "confidence_only"),
+        lambda: compute_contribution_targets(ridge_logits, ragged),
+        lambda: scores_to_weights(ragged, temperature=1.0, shrinkage=1.0),
+        lambda: combine_weighted_logits(ragged, np.full(4, 0.25)),
+        lambda: combine_weighted_logits(ridge_logits, ragged),
+    )
+    for call in calls:
+        _assert_raw_numpy_conversion_error(call)
+
+
+def test_legacy_validation_keeps_task_specific_errors_after_conversion_fix():
+    diagnostic = ExpertDiagnostics(logits=np.zeros((2, 2, 3), dtype=np.float64))
+    logits = np.zeros((2, 4, 3), dtype=np.float64)
+
+    with pytest.raises(DiagnosticInputError, match="finite"):
+        ExpertDiagnostics(predictions=np.array([[0.0, np.nan]]))
+    with pytest.raises(DiagnosticInputError, match="integer"):
+        ExpertDiagnostics(predictions=np.array([[0.5, 1.0]]))
+    with pytest.raises(DiagnosticInputError, match="shape"):
+        diagnostic.evaluate_soft_mixture(np.ones((2, 3), dtype=np.float64))
+    with pytest.raises(DiagnosticInputError, match="non-negative"):
+        diagnostic.evaluate_soft_mixture(
+            np.array([[0.5, 0.5], [1.1, -0.1]], dtype=np.float64)
+        )
+    with pytest.raises(DiagnosticInputError, match="sum to one"):
+        diagnostic.evaluate_soft_mixture(
+            np.array([[0.5, 0.5], [0.4, 0.4]], dtype=np.float64)
+        )
+
+    invalid_logits = logits.copy()
+    invalid_logits[0, 0, 0] = np.nan
+    with pytest.raises(Task3FError, match="finite"):
+        extract_features(invalid_logits, "confidence_only")
+    with pytest.raises(Task3FError, match="integer"):
+        compute_contribution_targets(logits, np.array([0.5, 1.0]))
+    with pytest.raises(Task3FError, match=r"\[0, 3\)"):
+        compute_contribution_targets(logits, np.array([0, 3]))
+    with pytest.raises(Task3FError, match="shape"):
+        combine_weighted_logits(logits, np.ones((2, 3), dtype=np.float64))
+    with pytest.raises(Task3FError, match="non-negative"):
+        combine_weighted_logits(
+            logits, np.array([[0.5, 0.5, 0.1, -0.1], [0.25] * 4])
+        )
+    with pytest.raises(Task3FError, match="sum to one"):
+        combine_weighted_logits(
+            logits, np.array([[0.4, 0.4, 0.1, 0.0], [0.25] * 4])
+        )
+
+
+def test_valid_legacy_callers_keep_exact_numeric_outputs():
+    logits = np.array(
+        [
+            [[3.0, 0.0, -1.0], [0.0, 2.0, -2.0], [1.0, 1.0, 0.0], [-1.0, 0.0, 2.0]],
+            [[-2.0, 1.0, 0.0], [2.0, -1.0, 0.5], [0.0, 3.0, 1.0], [1.0, 0.0, -1.0]],
+        ],
+        dtype=np.float64,
+    )
+    labels = np.array([0, 1], dtype=np.int64)
+    weights = np.array([[0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1]])
+
+    shifted = logits - logits.max(axis=2, keepdims=True)
+    probabilities = np.exp(shifted)
+    probabilities /= probabilities.sum(axis=2, keepdims=True)
+    expected_features = probabilities.max(axis=2)
+    expected_combined_logits = np.einsum("ne,nec->nc", weights, logits)
+    expected_combined_probabilities = np.einsum(
+        "ne,nec->nc", weights, probabilities
+    )
+    ensemble_logits = logits.mean(axis=1)
+    ensemble_shifted = ensemble_logits - ensemble_logits.max(axis=1, keepdims=True)
+    ensemble_probabilities = np.exp(ensemble_shifted)
+    ensemble_probabilities /= ensemble_probabilities.sum(axis=1, keepdims=True)
+    deltas = logits - ensemble_logits[:, None, :]
+    expected_targets = (
+        np.take_along_axis(deltas, labels[:, None, None], axis=2).squeeze(axis=2)
+        - np.einsum("nc,nec->ne", ensemble_probabilities, deltas)
+    )
+
+    assert np.array_equal(extract_features(logits, "confidence_only"), expected_features)
+    assert np.array_equal(compute_contribution_targets(logits, labels), expected_targets)
+    assert np.array_equal(combine_weighted_logits(logits, weights), expected_combined_logits)
+
+    diagnostic = ExpertDiagnostics(logits=logits)
+    probability_report = diagnostic.evaluate_soft_mixture(weights, combination="probability")
+    assert np.array_equal(probability_report["probabilities"], expected_combined_probabilities)
+    assert np.array_equal(
+        probability_report["predictions"], expected_combined_probabilities.argmax(axis=1)
+    )
 
 
 def test_metric_callers_preserve_sample_weighted_and_macro_group_definitions():

@@ -25,17 +25,23 @@ def validate_numeric_array(
     finite: bool = True,
     cast_dtype: Any | None = None,
     error_type: type[Exception] = ValueError,
+    wrap_conversion_errors: bool = True,
 ) -> np.ndarray:
     """Return ``value`` as an array after real-numeric validation.
 
     ``shape`` may contain ``None`` entries for unconstrained dimensions.  No
-    values are changed unless ``cast_dtype`` is explicitly supplied.
+    values are changed unless ``cast_dtype`` is explicitly supplied.  When
+    ``wrap_conversion_errors`` is false, errors raised by the initial
+    ``np.asarray`` conversion propagate unchanged for legacy callers.
     """
-    try:
+    if wrap_conversion_errors:
+        try:
+            array = np.asarray(value)
+        except (TypeError, ValueError) as exc:
+            _raise(error_type, f"{name} must be a numeric array")
+            raise AssertionError("unreachable") from exc
+    else:
         array = np.asarray(value)
-    except (TypeError, ValueError) as exc:
-        _raise(error_type, f"{name} must be a numeric array")
-        raise AssertionError("unreachable") from exc
 
     if not np.issubdtype(array.dtype, np.number) or np.iscomplexobj(array):
         _raise(error_type, f"{name} must contain real numeric values")
@@ -81,13 +87,17 @@ def validate_integer_vector(
     upper_bound: int | None = None,
     cast_dtype: Any = np.int64,
     error_type: type[Exception] = ValueError,
+    wrap_conversion_errors: bool = True,
 ) -> np.ndarray:
     """Validate finite integer-valued numeric entries and return an integer array."""
-    try:
+    if wrap_conversion_errors:
+        try:
+            array = np.asarray(value)
+        except (TypeError, ValueError) as exc:
+            _raise(error_type, f"{name} must contain integer values")
+            raise AssertionError("unreachable") from exc
+    else:
         array = np.asarray(value)
-    except (TypeError, ValueError) as exc:
-        _raise(error_type, f"{name} must contain integer values")
-        raise AssertionError("unreachable") from exc
 
     if shape is not None:
         expected_shape = tuple(shape)
@@ -132,6 +142,7 @@ def validate_expert_weights(
     sum_atol: float = 1e-12,
     name: str = "expert weights",
     error_type: type[Exception] = ValueError,
+    wrap_conversion_errors: bool = True,
 ) -> np.ndarray:
     """Validate non-negative row-stochastic expert weights.
 
@@ -152,6 +163,7 @@ def validate_expert_weights(
         finite=True,
         cast_dtype=np.float64,
         error_type=error_type,
+        wrap_conversion_errors=wrap_conversion_errors,
     )
     if array.ndim == 1:
         if not allow_vector:

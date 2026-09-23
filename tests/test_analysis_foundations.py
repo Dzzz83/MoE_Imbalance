@@ -91,6 +91,27 @@ def test_numeric_and_integer_validators_enforce_explicit_shapes_and_finiteness()
         validate_integer_vector([0, 3], upper_bound=3)
 
 
+def test_shared_validators_can_preserve_raw_numpy_conversion_errors():
+    ragged = [[0, 1], [2]]
+
+    with pytest.raises(ValueError) as numeric_error:
+        validate_numeric_array(ragged, wrap_conversion_errors=False)
+    assert type(numeric_error.value) is ValueError
+    assert "setting an array element with a sequence" in str(numeric_error.value)
+
+    with pytest.raises(ValueError) as integer_error:
+        validate_integer_vector(ragged, wrap_conversion_errors=False)
+    assert type(integer_error.value) is ValueError
+    assert "setting an array element with a sequence" in str(integer_error.value)
+
+    # The generic shared interface continues to provide its task-independent
+    # wrapped error by default.
+    with pytest.raises(ValueError, match="numeric array"):
+        validate_numeric_array(ragged)
+    with pytest.raises(ValueError, match="integer values"):
+        validate_integer_vector(ragged)
+
+
 def test_expert_weight_validation_preserves_order_and_sum_tolerance():
     global_weights = validate_expert_weights(
         [0.1, 0.2, 0.3, 0.4],

@@ -132,6 +132,7 @@ def _as_float_array(value: Any, *, name: str) -> np.ndarray:
         finite=True,
         cast_dtype=np.float64,
         error_type=Task3FError,
+        wrap_conversion_errors=False,
     )
 
 
@@ -158,6 +159,7 @@ def _validate_labels(labels: Any, *, num_samples: int, num_classes: int) -> np.n
         lower_bound=0,
         upper_bound=num_classes,
         error_type=Task3FError,
+        wrap_conversion_errors=False,
     )
 
 
@@ -367,14 +369,17 @@ def _validate_weights(weights: np.ndarray, *, num_samples: int) -> np.ndarray:
         sum_atol=1e-12,
         name="routing weights",
         error_type=Task3FError,
+        wrap_conversion_errors=False,
     )
 
 
 def combine_weighted_logits(logits: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Combine the original expert logits using supplied convex weights."""
+    array = _validate_logits(logits)
+    weights_array = np.asarray(weights)
     return _combine_weighted_logits(
-        logits,
-        weights,
+        array,
+        weights_array,
         num_experts=len(EXPERT_ORDER),
         min_classes=2,
         logit_cast_dtype=np.float64,
@@ -383,9 +388,11 @@ def combine_weighted_logits(logits: np.ndarray, weights: np.ndarray) -> np.ndarr
 
 
 def _weighted_probability_predictions(logits: np.ndarray, weights: np.ndarray) -> np.ndarray:
+    array = _validate_logits(logits)
+    weights_array = np.asarray(weights)
     combined = _combine_weighted_probabilities(
-        logits,
-        weights,
+        array,
+        weights_array,
         num_experts=len(EXPERT_ORDER),
         min_classes=2,
         logit_cast_dtype=np.float64,
