@@ -15,7 +15,9 @@ balanced CIFAR-100 test set.
 | Task 3E-A/B: restricted exploratory analysis | Complete |
 | Task 3F-A: restricted Ridge predictability analysis | Complete; exploratory only |
 | Task 3F-B–3F-F: Ridge retrospective diagnostics | Complete; retrospective only |
-| Outer-fold expert training and evaluation | Not executed |
+| Ridge/Sinkhorn development selection | Complete |
+| Seed-78 outer-fold-0 expert training | Complete; four final-epoch experts |
+| Locked outer-fold-0 evaluation | Complete; expansion gate failed |
 | Full 300-run nested experiment | Not executed |
 
 Task 3C completed all 16 inner expert-training runs for the four experts at
@@ -40,14 +42,18 @@ zero-based.
 
 There are five outer folds. For each outer fold, the manager stores the outer
 expert-training and held-out indices, then creates four inner folds inside the
-outer training population. Inner fold 0 is reserved for router hyperparameter
-selection; inner folds 1–3 form the router-fit population. The four inner
-held-out prediction sets cover the outer training population exactly once.
+outer training population. In the completed seed-78, outer-fold-0 study, inner
+fold 0 was used to select one residual Ridge candidate, after its labels had
+been described in Task 3C. Inner folds 1–3 formed the initial router-fit
+population. The selected candidate was refit on all four inner OOF folds before
+the one locked outer evaluation. The four inner held-out prediction sets cover
+the outer training population exactly once.
 
 For outer fold 0:
 
 - outer expert training has 8,677 images;
-- outer evaluation has 2,170 images and is reserved;
+- outer evaluation has 2,170 images and was reserved until the locked
+  Ridge/Sinkhorn evaluation;
 - inner fold 0 has 2,170 prediction images;
 - inner folds 1–3 have 6,507 prediction images in total; and
 - each inner expert trains on the outer training set minus its prediction fold,
@@ -66,11 +72,11 @@ each of those classes.
 | Role | Population in one outer iteration | Purpose |
 |:--|:--|:--|
 | Outer expert training | Outer training indices | Train the separate expert used for that outer evaluation |
-| Outer evaluation | Outer held-out indices | Evaluate the frozen router choice; never use for development |
+| Outer evaluation | Outer held-out indices | Evaluate the frozen router choice once; never use for development or reselection |
 | Inner expert training | Outer training minus one inner prediction fold | Generate held-out predictions |
 | Inner prediction / OOF | One inner held-out fold | Provide router-development rows |
-| Router fit | OOF rows from inner folds 1–3 | Fit a future router |
-| Router selection | OOF rows from inner fold 0 | Select future hyperparameters |
+| Router fit | OOF rows from inner folds 1–3 | Fit candidate routers |
+| Router selection | OOF rows from inner fold 0 | Select one candidate for locked outer evaluation |
 
 `FoldIntegrityValidator` is the validation boundary: it recomputes outer/inner
 class counts and router-role memberships from the canonical labels and declared
@@ -90,8 +96,9 @@ Every future analysis must preserve all of these rules:
    corresponding image from training.
 2. Router-fitting data is restricted to the permitted development population.
 3. Router fitting and model-selection roles must be separated.
-4. The reserved outer-evaluation population remains excluded from router
-   development.
+4. The outer-evaluation population remains excluded from router development.
+   Outer fold 0 has now been consumed by one locked evaluation and cannot be
+   used to choose a replacement method or configuration.
 5. The original CIFAR-100 test set must not be used for repeated method
    selection.
 6. Final-epoch checkpoints are used without test-based checkpoint selection.
@@ -107,9 +114,10 @@ not a replacement for those checkpoints.
 Task 3C diagnostics included descriptive analysis of inner-fold-0 labels.
 Consequently, inner fold 0 cannot be characterized as completely untouched for
 research choices influenced by those diagnostics. Tasks 3E-A/B and 3F-A–3F-F
-excluded inner fold 0 from every new metric calculation. A future fitted-router
-experiment must document its fitting and selection procedure and acknowledge
-this earlier exploratory exposure.
+excluded inner fold 0 from their metric calculations. The later Ridge/Sinkhorn
+study used it once to select the locked candidate. Any new fitted-router study
+must document its fitting and selection procedure and acknowledge this earlier
+exploratory exposure.
 
 ## Separation and dependence
 
@@ -119,12 +127,13 @@ contract is followed.
 
 The design does not make these measurements statistically independent. An
 expert producing a router-fit row may have trained on router-selection images,
-because each inner expert excludes only its own prediction fold; the reverse
+because each inner expert excludes only its own prediction fold. The reverse
 dependency also exists. This is shared model-training dependence, not direct
 label leakage into the held-out row, and must be reported as a limitation.
 
-Inner experts train on about 60% of the canonical population, outer experts
-would train on about 80%, and eventual full-data experts train on 100%.
+Inner experts train on about 60% of the canonical population, the completed
+outer-fold-0 experts train on about 80%, and eventual full-data experts train
+on 100%.
 Generalization from fold-trained experts to the full-data pool remains a
 future question.
 
@@ -194,6 +203,16 @@ artifacts/oof/task3f_target_diagnostics/
 artifacts/oof/task3f_feature_comparison/
   diagnostic_results.json
   summary.md
+artifacts/oof/ridge_sinkhorn_v3/
+  allocation_v1/
+  residual_v1/
+  selection_v1/
+  selected_diagnostics_v1/
+  locked_outer_v1/
+  outer_evaluation_v1/
+artifacts/oof/ridge_sinkhorn_outer_s78_o0/
+  fold_manifest.json
+  expert_<Expert>/seed_78/outer_0/outer_eval/
 ~~~
 
 `run_metadata.json` state transitions are atomically replaced. Immutable
@@ -205,15 +224,18 @@ artifact root.
 
 ## Methodological limitations
 
-The current design provides honest row-wise OOF predictions for each held-out
-image, but it does not remove shared training dependence between fit and
-selection models. It also does not establish performance across outer folds,
-seeds or the final full-data experts.
+The design provides honest row-wise OOF predictions for each held-out image,
+but it does not remove shared training dependence between fit and selection
+models. The single completed outer result does not establish performance
+across outer folds, seeds or the final full-data experts.
 
 The full planned matrix is five outer folds × (four inner experts plus one
 outer expert) × four expert identities × three seeds = 300 training runs:
-240 inner and 60 outer. It has not been executed. No current OOF document may
-claim outer-fold accuracy, test-set improvement, or validated router quality.
+240 inner and 60 outer. It has not been executed. Current documents may report
+the one locked seed-78/outer-fold-0 result, but must not generalize it across
+folds or seeds, claim original-test improvement, or use outer fold 0 for new
+method selection. The candidate failed its prespecified fixed-reference Pareto
+gate, so the full matrix is not indicated for this method.
 
 For completed collection details and analysis numbers, see
 [oof-results.md](oof-results.md). For the reusable diagnostic definitions, see

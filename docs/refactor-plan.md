@@ -162,7 +162,9 @@ each slice small enough to review independently.
   uniform-logit baseline consistently across the configured seeds.
 - Each OOF prediction comes from an expert that excluded its sample from
   training. Router fit uses declared inner folds 1–3; selection uses inner fold
-  0; the outer evaluation population is reserved.
+  0. Outer fold 0 has been consumed by one locked Ridge/Sinkhorn evaluation and
+  cannot be used for method reselection; other outer folds retain their
+  evaluation role.
 - OOF class-count tuples, membership hashes, router role IDs and derived sample
   memberships are recomputed from canonical labels and exact fold IDs.
 - Complete inner-OOF artifacts contain exactly the expected sample/fold/expert

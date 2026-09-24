@@ -1,306 +1,144 @@
 # Project Context — MoE Imbalance
 
-> Primary current-state index for the repository. The original full-data
-> measurements are in [results.md](results.md); completed OOF findings are in
-> [oof-results.md](oof-results.md).
+> Current-state index. See [results.md](results.md) for the full-data benchmark,
+> [oof-results.md](oof-results.md) for OOF evidence, and
+> [nested-oof-protocol.md](nested-oof-protocol.md) for fold and data-role rules.
 
-## 1. Objective and current decision
+## Objective and current decision
 
-The project investigates adaptive combinations of experts for CIFAR-100-LT
-classification at imbalance ratio 100. The original research question is
-whether per-sample routing can improve both Balanced Accuracy (BA) and Tail
-accuracy over uniform logit averaging.
+The project studies whether inference-time combinations of differently trained experts can
+improve both Balanced Accuracy (BA) and Tail accuracy over uniform logit averaging on
+CIFAR-100-LT at imbalance ratio 100.
 
-The original full-data experiments remain a legitimate, completed track:
-four experts were trained on all 10,847 long-tailed training images with seeds
-78, 88 and 1034, and evaluated on the balanced CIFAR-100 test set. Their
-historical uniform-logit baseline is **46.98 ± 0.69% BA** and
-**18.76 ± 0.86% Tail**.
+There are two distinct experimental tracks. The completed full-data track trains experts on all
+10,847 long-tailed training images and reports historical results on the balanced CIFAR-100 test
+set. The OOF track uses held-out predictions from folds of the long-tailed training population;
+it has one locked seed-78, outer-fold-0 evaluation. Their metrics are not directly comparable.
 
-The current research direction is narrower: determine whether beneficial expert
-contributions can be predicted from information available at inference time.
-Nested OOF data now supplies held-out development predictions for that
-question. Task 3F-A implements and evaluates the frozen Ridge feasibility
-study, Task 3F-B diagnoses its highlighted Mixup preference, and Task 3F-C
-checks confidence, disagreement and predicted-class-group signals against the
-saved weights. Task 3F-D evaluates the frozen combinations of those signals,
-Task 3F-E diagnoses the supervised contribution target against the saved Ridge
-predictions and classification outcomes, and Task 3F-F compares the confidence-
-only and full 13-feature Ridge results.
-These are exploratory and not independently validated.
-Sinkhorn remains a separate proposed direction.
+The locked confidence-only residual Ridge candidate improved both metrics over outer uniform by
+point estimate. Its paired intervals include zero, and frozen `fixed_007` and `fixed_010` exceeded
+it on both metrics. The prespecified fixed-reference expansion gate failed. The five-fold,
+three-seed expansion is not indicated for this candidate, and outer fold 0 cannot be reused for
+method selection.
 
-Phase 1 correctness hardening is complete in the current worktree. It includes
-the shared analysis artifact readers/writer, stricter OOF integrity validation,
-the explicit router `predict_distribution` contract, and focused regression
-coverage. Later OOF/application extraction and legacy quarantine remain planned;
-no canonical metric rerun is implied by these code changes.
-
-## 2. Canonical data and metric protocol
+## Canonical protocol
 
 - Dataset: CIFAR-100-LT with imbalance factor 0.01 (IR=100).
-- Canonical long-tailed training population: 10,847 images from the committed
-  data/processed/lt_ir100_train_indices.npy artifact.
-- The original full-data track has no validation split and reports final-epoch
+- Canonical long-tailed training population: 10,847 images, defined by
+  `data/processed/lt_ir100_train_indices.npy`.
+- The original full-data training protocol has no validation split and reports final-epoch
   checkpoints.
-- Head/Medium/Tail is defined only by
-  scripts/base_trainer.py::compute_class_groups: Head n >= 100 (35 classes),
-  Medium 20 <= n < 100 (35 classes), Tail n < 20 (30 classes).
-- The original balanced CIFAR-100 test set is evaluation-only and has already
-  been accessed repeatedly. It must not be used for router fitting, method
-  selection, or ordinary OOF development.
-- A method succeeds only if it improves both BA and Tail over the applicable
-  uniform-logit baseline, with the required provenance and consistency.
+- Head, Medium, and Tail groups come only from
+  `scripts/base_trainer.py::compute_class_groups`.
+- The balanced CIFAR-100 test set is evaluation-only. It has been accessed for historical work
+  and must not be used for OOF router fitting, method selection, or ordinary development.
+- A method must improve both BA and Tail over the applicable uniform-logit baseline, with valid
+  provenance and the required consistency. The locked outer study also required a new point on
+  the frozen fixed-reference Pareto frontier.
 
-## 3. Existing expert pool
+| Group | Canonical training-count rule | Classes |
+|:--|:--|--:|
+| Head | `n >= 100` | 35 |
+| Medium | `20 <= n < 100` | 35 |
+| Tail | `n < 20` | 30 |
 
-| Expert | Configuration |
+## Expert pool
+
+All experts use ResNet-32 and the shared 200-epoch schedule. Full-data experiments use seeds 78,
+88, and 1034; completed OOF artifacts use seed 78, outer fold 0, and the fixed expert order below.
+
+| Expert | Objective |
 |:--|:--|
 | CE | Cross-entropy |
-| LAL | Logit adjustment, tau = 1 |
+| LAL | Logit adjustment, `tau = 1` |
 | BalancedSoftmax | Balanced softmax |
-| Mixup | Mixup with alpha = 1 |
+| Mixup | Mixup, `alpha = 1` |
 
-The canonical full-data experiments use seeds 78, 88 and 1034. The completed
-nested-OOF experiment uses expert-training seed 78, outer fold 0, and the fixed
-order CE, LAL, BalancedSoftmax, Mixup.
+## Milestones and current status
 
-## 4. Completed milestones
-
-| Stage | Status |
+| Area | Status |
 |:--|:--|
-| Original four-expert experiments | Complete |
-| Evaluation hardening | Complete |
-| Expert diagnostic framework | Complete |
-| Nested OOF framework | Complete |
-| OOF training pipeline | Complete |
-| Task 3C: four-expert aligned OOF experiment | Complete |
-| Task 3D: exploratory specialization analysis | Complete |
-| Task 3E-A: fixed-weight feasibility | Complete |
-| Task 3E-B: adaptive soft-mixture oracle | Complete |
-| Task 3F-A: predictable Ridge routing feasibility | Complete; exploratory only |
-| Task 3F-B: Ridge Mixup-preference diagnostics | Complete; retrospective only |
-| Task 3F-C: Tail-specific routing-signal diagnostics | Complete; retrospective only |
-| Task 3F-D: Combined Tail-signal diagnostics | Complete; retrospective only |
-| Task 3F-E: Supervised contribution target diagnostics | Complete; retrospective only |
-| Task 3F-F: Ridge feature comparison | Complete; retrospective only |
-| Phase 0: protocol/code characterization | Complete |
-| Phase 1: correctness hardening and regression coverage | Complete |
-| Sinkhorn routing | Not implemented |
+| Full-data four-expert experiments | Complete; historical test results recorded |
+| Nested OOF framework and training pipeline | Complete |
+| Task 3C aligned OOF collection | Complete: 16 inner expert runs for seed 78, outer fold 0 |
+| Tasks 3D–3F analyses | Complete; exploratory or retrospective development evidence |
+| Phase 1 correctness hardening | Complete: artifact I/O, fold validation, router contract, regression coverage |
+| Ridge/Sinkhorn staged study | Complete through one locked outer evaluation; expansion gate failed |
+| Full five-fold, three-seed OOF matrix | Not run: 300 expert runs |
 | New specialized experts | Not implemented |
-| Full nested-OOF evaluation across all folds and seeds | Not executed |
 
-Task 3D is an interpretation of Task 3C diagnostics, not a separately
-executed training or analysis pipeline.
+Follow-up OOF domain and CLI extraction and legacy quarantine remain planned. Phase 1 code changes
+do not imply that canonical metrics were rerun.
 
-## 5. Current scientific findings
+## Current findings
 
-The full-data results establish that uniform logit averaging is stronger than
-the pre-registered parameter-free routing rules on the historical three-seed
-test track. They do not establish that all fitted routing is impossible.
+- On the historical full-data test track, uniform logit averaging is stronger than the
+  preregistered parameter-free routing rules. This does not establish that all fitted routing
+  must fail.
+- On the 6,507-image OOF development partition, fixed convex mixtures improved both BA and Tail
+  over uniform. The label-dependent soft-mixture oracle shows feasibility headroom, not a
+  deployable classifier.
+- Confidence-only Ridge reached 36.55% BA / 7.38% Tail on that development partition. The
+  matched full 13-feature result was lower at 36.10% / 6.55%, despite lower contribution MSE.
+- Frozen-price Sinkhorn failed its development gate. In the selection analysis, a prior-only
+  global-bias control also exceeded the selected residual Ridge on both metrics.
+- The locked candidate was `residual_p1_g0_a0.1_s1`: confidence-only residual Ridge around
+  `fixed_007`, refit on all four inner OOF folds, with no OT.
 
-Task 3C shows complementary correct predictions in the held-out OOF
-development population. LAL and BalancedSoftmax provide useful Tail coverage,
-Mixup is strongest on Head in this population, and removing experts changes BA
-and Tail in different directions. This is evidence of complementarity, not
-evidence that a router can predict the useful contribution.
+| Outer-fold-0 method | BA | Tail |
+|:--|--:|--:|
+| Uniform original logits | 42.7006% | 15.8333% |
+| Locked residual Ridge | 44.7035% | 16.9444% |
+| `fixed_007` | 44.7248% | 18.6111% |
+| `fixed_010` | 44.7298% | 23.3333% |
 
-Task 3E-A shows that fixed convex logit weights can improve both BA and Tail
-over the OOF uniform baseline on the router-fit partition. Task 3E-B shows
-additional theoretical headroom for per-image convex logit mixtures. Both
-analyses are label-dependent development results from one seed and one outer
-fold; neither is independently validated or comparable directly with the
-full-data test numbers.
+The candidate's paired 95% bootstrap intervals versus uniform were [−0.4956, +4.5771] BA
+points and [−5.0000, +7.7778] Tail points. Both include zero. The single result does not
+establish generalization across folds, seeds, full-data experts, or a fresh test population.
+Full provenance, references, and metrics are in [oof-results.md](oof-results.md).
 
-The main unresolved scientific question is now whether any predictable signal
-generalizes and yields paired BA–Tail improvement beyond fixed composition, not
-the existence of any beneficial weight. Tail class coverage is still sparse,
-and the soft-mixture oracle is an existence diagnostic rather than a deployable
-classifier. Task 3F-A evaluated all 600 adaptive configurations on the
-6,507-image permitted population. Uniform logit averaging reproduced **35.9328%
-BA / 7.0094% Tail**. Sixty adaptive configurations improved both metrics over
-that uniform row, but none exceeded the previously identified fixed-weight
-references on both metrics. The best adaptive row reached **36.5502% BA / 7.3797%
-Tail**. Its learned global-score control did not improve both metrics, so the
-study does not establish useful adaptive routing beyond fixed composition.
-Full 13-feature models reduced contribution-prediction error relative to the
-confidence-only representation on average, without a corresponding
-classification advantage.
+## Experimental populations and data-use boundaries
 
-Task 3F-B found that the highlighted confidence-only Ridge's Mixup preference
-is driven primarily by a consistently high learned intercept: Mixup led the
-mean held-out target and predicted score in all three folds, while signed mean
-image-dependent terms were close to zero despite nonzero per-image variation.
-On the permitted population, Mixup's mean assigned weight was 36.46% on Head
-and 40.49% on Tail, and it was the highest-weight expert on 98.38% and 99.45%
-of those groups. Reducing its saved weight improved the retrospective Tail
-metric at factors 0.25 and 0.0 but reduced BA; this is a sensitivity finding,
-not evidence of a selected or causal replacement router.
-
-Task 3F-C found that inference-time prediction patterns contain limited
-retrospective clues: on true Tail rows where LAL or BalancedSoftmax is correct
-and Mixup is wrong, their confidence exceeds Mixup's by 0.2871 (n=20) and
-0.2570 (n=18) on average. LAL and BalancedSoftmax also predict Tail classes
-more often than Mixup (14.06% and 13.32% versus 0.40%), although predicted-Tail
-precision is low. They agree against Mixup on 666 rows overall and 24 Tail
-rows, with 7/24 shared Tail predictions correct. The saved Ridge weights do not
-respond by reducing Mixup: its mean weight is 0.4016 on the predicted-Tail
-agreement pattern and 0.4110 when it disagrees with both rebalanced experts,
-versus 0.3702 overall. This is a small, retrospective association study on 183
-Tail rows, not evidence that a new feature or router will generalize.
-
-Task 3F-D evaluated the four frozen inference-time signals and all 15
-predefined conjunctions on the same 6,507-image population. No conjunction
-had an equivalent membership mask to another configuration. Individual signals
-selected 291--4,690 rows and had Tail precision from 1.48% to 9.97%; the
-conjunctions selected 81--2,496 rows, with several higher-precision but
-lower-recall subsets. The ABCD mask selected 81 rows, including 8 Tail rows
-(9.88% precision, 4.37% recall), and 5 rows where a rebalanced expert was
-correct while Mixup was wrong. The frozen Ridge weights had overall mean Mixup
-weight 0.3702 and gave Mixup the highest weight on 6,415/6,507 rows (98.59%);
-only 2 of the 15 conditioned masks had a lower selected-subgroup Mixup mean.
-These are retrospective associations, not a selected feature representation
-or routing rule.
-
-Task 3F-E found that the current target's mean favors Mixup on Head and
-Medium, but not on Tail: LAL's Tail target mean was 0.8306 versus Mixup's
-0.6980. The saved Ridge still predicted Mixup highest on 99.45% of Tail rows;
-among Tail rows where LAL's actual target exceeded Mixup's, it did so on 102
-of 103 rows. Positive local target values often increased true-class log
-probability under fixed perturbations, but much less often corrected the final
-classification. Margin contributions added competing-class information, while
-all target, margin, opportunity and damage groups remained retrospective.
-These findings do not approve a new target or router.
-
-Task 3F-F compared the existing confidence-only and full 13-feature Ridge
-representations using 15 matched alpha/gamma settings and 300 matched
-classification configurations. Full features reduced pooled contribution MSE
-in all 15 matched settings and reduced Tail contribution MSE in all 15, but the
-predefined primary classification result fell from **36.55% to 36.10% BA** and
-from **7.38% to 6.55% Tail**. Tail mean Mixup weight changed from approximately
-40.49% to 40.65%; the full-feature model still did not establish useful
-adaptive routing. The comparison cannot distinguish feature insufficiency from
-insufficient Tail training data.
-
-## 6. Next research roadmap
-
-The completed work is documentation, exploratory development evidence, and
-Phase 1 correctness hardening. The next stages are:
-
-1. **Documentation consolidation** — complete for this handoff; the
-   authoritative Markdown now covers the research through Task 3F-F.
-2. **OOF domain extraction** — planned. Extract fold models, validators and
-   serializers behind the current `data.nested_oof` compatibility facade while
-   preserving schemas and imports.
-3. **OOF application and CLI extraction** — planned. Separate planning,
-   execution, storage and reporting from the current runner modules.
-4. **Analysis foundation completion** — planned. Finish migrating shared array,
-   combination and validation helpers without changing metric definitions.
-5. **Legacy quarantine** — planned. Isolate DACE/PaCo commands and document
-   their stale validation-era protocol before any compatibility decision.
-6. **New Ridge experiments** — planned. Alternative representations, targets
-   and weighting strategies may be compared, but no new Ridge approach is
-   currently implemented or approved.
-7. **Sinkhorn experiments** — planned. Multiple allocation mechanisms may be
-   compared; their constraints and execution protocol are not yet frozen.
-8. **Ridge + Sinkhorn experiments** — planned. Any allocation effect must be
-   isolated using the same expert pool, suitability scores and evaluation role.
-9. **Independent evaluation** — planned only after candidate methods and
-   criteria are frozen before accessing the reserved outer population.
-
-Before experimental stages 6–9 (new Ridge, Sinkhorn, Ridge + Sinkhorn and
-independent evaluation), preserve the frozen Task 3F-A supervised target,
-inference-time features and calibration
-definitions, uniform/probability/fixed-
-weight/no-OT controls, fit-versus-selection roles, and safeguards against
-in-sample supervision, test-set selection, expert-pool changes and
-fold-trained/full-data distribution shift. Task 3F-A is a predictive-model
-feasibility result, not approval of a final router. Sinkhorn is an allocation
-mechanism, not a source of predictive signal.
-
-## 7. Experimental populations
-
-| Population | Role |
+| Population | Role and status |
 |:--|:--|
-| Original 10,847 images | Train the canonical full-data experts |
-| Original balanced CIFAR-100 test set | Historical full-data evaluation |
-| Outer fold 0 training, 8,677 images | OOF development population |
-| Inner folds 1–3, 6,507 images | Primary router-fitting analysis partition |
-| Inner fold 0, 2,170 images | Router-selection partition in the frozen design; previously inspected descriptively |
-| Outer fold 0 evaluation, 2,170 images | Reserved for a future frozen evaluation procedure |
+| 10,847 canonical training images | Train full-data experts and define nested folds |
+| Balanced CIFAR-100 test set | Historical full-data evaluation only; excluded from OOF development |
+| Outer fold 0 training, 8,677 images | OOF expert-training population |
+| Inner folds 1–3, 6,507 images | Router fitting and permitted development analyses |
+| Inner fold 0, 2,170 images | Selection role; previously inspected descriptively in Task 3C |
+| Outer fold 0 evaluation, 2,170 images | Consumed once by the locked study; unavailable for reselection |
 
-OOF predictions are produced by experts that excluded the corresponding image
-from their training population. The OOF experts are not the full-data
-checkpoints.
+Each OOF prediction is produced by an expert that excluded its image during training. Inner
+experts share some training data across fit and selection folds, so OOF rows are not statistically
+independent. OOF experts also differ from the full-data checkpoints.
 
-## 8. Code and artifact map
+## Code and artifact navigation
 
-- Fold membership and provenance: data/nested_oof.py
-- OOF integrity boundary: `data/nested_oof.py::FoldIntegrityValidator`
-- Shared analysis artifacts: `scripts/analysis/artifacts.py` with
-  `ArtifactReader` and `ImmutableArtifactWriter`
-- OOF training and prediction collection: scripts/oof_pipeline.py,
-  scripts/run_oof.py, scripts/run_task3c.py
-- Reusable diagnostics: scripts/expert_diagnostics.py
-- Fixed-weight analysis: scripts/task3e_fixed.py and
-  scripts/run_task3e_fixed.py
-- Soft-mixture feasibility analysis: scripts/task3e_soft.py and
-  scripts/run_task3e_soft.py
-- Predictable Ridge analysis: scripts/task3f_ridge.py and
-  scripts/run_task3f_ridge.py
-- Ridge preference diagnostics: scripts/task3f_mixup_diagnostics.py and
-  scripts/run_task3f_mixup_diagnostics.py
-- Tail-signal diagnostics: scripts/task3f_tail_signal_diagnostics.py and
-  scripts/run_task3f_tail_signal_diagnostics.py
-- Combined Tail-signal diagnostics: scripts/task3f_combined_signal_diagnostics.py
-  and scripts/run_task3f_combined_signal_diagnostics.py
-- Supervised-target diagnostics: scripts/task3f_target_diagnostics.py and
-  scripts/run_task3f_target_diagnostics.py
-- Ridge feature comparison: scripts/task3f_feature_comparison.py and
-  scripts/run_task3f_feature_comparison.py
-- Aligned OOF data and Task 3C diagnostics:
-  artifacts/oof/task3c_oof/
-- Task 3E-A outputs:
-  artifacts/oof/task3e_fixed_feasibility/
-- Task 3E-B outputs:
-  artifacts/oof/task3e_soft_feasibility/
-- Task 3F-A outputs:
-  artifacts/oof/task3f_ridge/
-- Task 3F-B outputs:
-  artifacts/oof/task3f_mixup_diagnostics/
-- Task 3F-C outputs:
-  artifacts/oof/task3f_tail_signal_diagnostics/
-- Task 3F-D outputs:
-  artifacts/oof/task3f_combined_signal_diagnostics/
-- Task 3F-E outputs:
-  artifacts/oof/task3f_target_diagnostics/
-- Task 3F-F outputs:
-  artifacts/oof/task3f_feature_comparison/
+| Purpose | Source |
+|:--|:--|
+| Expert recipes | `configs/` |
+| Fold membership and validation | `data/nested_oof.py` |
+| OOF expert training and prediction collection | `scripts/oof_pipeline.py`, `scripts/run_oof.py` |
+| Shared analysis artifact I/O | `scripts/analysis/artifacts.py` |
+| Fixed-mixture and Ridge development analyses | `scripts/task3e_fixed.py`, `scripts/task3f_ridge.py` |
+| Ridge/Sinkhorn implementation and entry points | `scripts/ridge_sinkhorn_*.py`, `scripts/run_ridge_sinkhorn*.py` |
+| Router implementations | `scripts/router/` |
+| Aligned Task 3C predictions | `artifacts/oof/task3c_oof/` |
+| Ridge/Sinkhorn results | `artifacts/oof/ridge_sinkhorn_v3/` |
+| Outer-fold-0 expert runs | `artifacts/oof/ridge_sinkhorn_outer_s78_o0/` |
 
-### Router distribution contract
+The router API keeps contribution weights separate from class probabilities. `predict_proba`
+returns expert-contribution weights. Evaluation and calibration use `predict_distribution`, which
+must represent the same classifier used by `predict_class`.
 
-`BaseRouter.predict_proba` returns expert-contribution weights and is not, by
-itself, a class-probability API. `predict_class` is the decision contract.
-`predict_distribution` must return class probabilities from the exact
-classifier used by `predict_class`: the default hard-selected expert softmax,
-Uniform's softmax of mean logits, ProbabilityAverage's mean softmax, or TTA's
-delegated distribution. Calibration and evaluation code use this method so
-reported confidence and ECE correspond to the reported prediction.
+## Documentation and authoritative records
 
-## 9. Documentation navigation
-
-- [README.md](../README.md) — public overview and reproducibility entry points
-- [results.md](results.md) — original full-data three-seed results
-- [oof-results.md](oof-results.md) — completed OOF findings
-- [problem.md](problem.md) — established limitations and unresolved routing problems
-- [research.md](research.md) — literature and current research boundary
-- [nested-oof-protocol.md](nested-oof-protocol.md) — frozen fold and leakage protocol
-- [expert-diagnostics.md](expert-diagnostics.md) — reusable diagnostic API
-- [code-audit-report.md](code-audit-report.md) — verified audit findings and result impact
-- [refactor-plan.md](refactor-plan.md) — phased refactor, extraction and quarantine plan
-- [ridge-sinkhorn-implementation-handoff.md](ridge-sinkhorn-implementation-handoff.md) — agreed next-study plan and agent handoff; planning only
-- [archive/historical-results.md](archive/historical-results.md) — superseded results
-- [archive/bugfix-report.md](archive/bugfix-report.md) — audit history
-- [test-access-log.md](test-access-log.md) — append-only test-set access audit
-- [../records/routing_mechanism.md](../records/routing_mechanism.md) — complete routing catalogue
-- [../records/routing-preregistration.md](../records/routing-preregistration.md) — frozen historical test candidate set
+- [README.md](../README.md): project overview, pipeline, key evidence, and reproduction pointers.
+- [results.md](results.md): authoritative original full-data results.
+- [oof-results.md](oof-results.md): authoritative OOF development and outer-evaluation results.
+- [nested-oof-protocol.md](nested-oof-protocol.md): fold definitions, roles, and leakage rules.
+- [problem.md](problem.md): established limitations and unresolved problems.
+- [research.md](research.md): reviewed literature and current research direction.
+- [ridge-sinkhorn-runbook.md](ridge-sinkhorn-runbook.md): the completed staged study and its
+  artifacts, exact protocol, and reproduction instructions.
+- [test-access-log.md](test-access-log.md): append-only history of original test-set access.

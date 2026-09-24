@@ -1,8 +1,8 @@
-# OOF Results — Tasks 3C, 3D, 3E-A, 3E-B and 3F-A–3F-F
+# OOF Results — Tasks 3C–3F and locked Ridge/Sinkhorn outer evaluation
 
-> Authoritative record of the completed nested-OOF development analyses. These
-> results are exploratory and are not a replacement for the original full-data
-> track in [results.md](results.md).
+> Authoritative record of the completed nested-OOF development analyses and
+> the one locked outer-fold-0 Ridge/Sinkhorn evaluation. These results do not
+> replace the original full-data track in [results.md](results.md).
 
 ## 1. Frozen experimental setup
 
@@ -14,7 +14,7 @@
 | Expert-training seed | 78 |
 | Outer fold | 0 |
 | Outer-fold training population | 8,677 images |
-| Outer evaluation population | 2,170 images, excluded |
+| Outer evaluation population | 2,170 images; excluded from development and used once after the Ridge/Sinkhorn lock |
 | Aligned OOF development population | 8,677 images |
 | Primary router-fitting population | Inner folds 1–3, 6,507 images |
 | Router-selection partition | Inner fold 0, 2,170 images |
@@ -46,17 +46,30 @@ Primary artifacts:
 - [Task 3F-D combined-signal diagnostic output directory](../artifacts/oof/task3f_combined_signal_diagnostics/)
 - [Task 3F-E target diagnostic output directory](../artifacts/oof/task3f_target_diagnostics/)
 - [Task 3F-F feature-comparison output directory](../artifacts/oof/task3f_feature_comparison/)
+- [Ridge/Sinkhorn locked development output](../artifacts/oof/ridge_sinkhorn_v3/selection_v1/decision.json)
+- [Ridge/Sinkhorn outer evaluation](../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/results.json)
 
 Relevant source files are:
 
-- [data/nested_oof.py](../data/nested_oof.py), [scripts/oof_pipeline.py](../scripts/oof_pipeline.py), and [scripts/run_task3c.py](../scripts/run_task3c.py)
-- [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py), [scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and [scripts/task3e_soft.py](../scripts/task3e_soft.py)
-- [scripts/task3f_ridge.py](../scripts/task3f_ridge.py) and [scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py)
-- [scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py) and [scripts/run_task3f_mixup_diagnostics.py](../scripts/run_task3f_mixup_diagnostics.py)
-- [scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py) and [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py)
-- [scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py) and [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py)
-- [scripts/task3f_target_diagnostics.py](../scripts/task3f_target_diagnostics.py) and [scripts/run_task3f_target_diagnostics.py](../scripts/run_task3f_target_diagnostics.py)
-- [scripts/task3f_feature_comparison.py](../scripts/task3f_feature_comparison.py) and [scripts/run_task3f_feature_comparison.py](../scripts/run_task3f_feature_comparison.py)
+- [data/nested_oof.py](../data/nested_oof.py),
+  [scripts/oof_pipeline.py](../scripts/oof_pipeline.py), and
+  [scripts/run_task3c.py](../scripts/run_task3c.py)
+- [scripts/expert_diagnostics.py](../scripts/expert_diagnostics.py),
+  [scripts/task3e_fixed.py](../scripts/task3e_fixed.py), and
+  [scripts/task3e_soft.py](../scripts/task3e_soft.py)
+- [scripts/task3f_ridge.py](../scripts/task3f_ridge.py) and
+  [scripts/run_task3f_ridge.py](../scripts/run_task3f_ridge.py)
+- [scripts/task3f_mixup_diagnostics.py](../scripts/task3f_mixup_diagnostics.py) and
+  [scripts/run_task3f_mixup_diagnostics.py](../scripts/run_task3f_mixup_diagnostics.py)
+- [scripts/task3f_tail_signal_diagnostics.py](../scripts/task3f_tail_signal_diagnostics.py) and
+  [scripts/run_task3f_tail_signal_diagnostics.py](../scripts/run_task3f_tail_signal_diagnostics.py)
+- [scripts/task3f_combined_signal_diagnostics.py](../scripts/task3f_combined_signal_diagnostics.py)
+  and
+  [scripts/run_task3f_combined_signal_diagnostics.py](../scripts/run_task3f_combined_signal_diagnostics.py)
+- [scripts/task3f_target_diagnostics.py](../scripts/task3f_target_diagnostics.py) and
+  [scripts/run_task3f_target_diagnostics.py](../scripts/run_task3f_target_diagnostics.py)
+- [scripts/task3f_feature_comparison.py](../scripts/task3f_feature_comparison.py) and
+  [scripts/run_task3f_feature_comparison.py](../scripts/run_task3f_feature_comparison.py)
 
 All BA and Head/Medium/Tail values below are macro class recall. Ordinary
 accuracy is sample accuracy. Oracle feasibility is identified separately from
@@ -564,7 +577,72 @@ changes, prediction changes and provenance hashes, is in the
 and [summary](../artifacts/oof/task3f_feature_comparison/summary.md). No
 feature set, target, or router is selected from this retrospective comparison.
 
-## 12. Scientific synthesis
+## 12. Ridge/Sinkhorn — one locked outer-fold-0 evaluation
+
+The development study locked one confidence-only residual Ridge router with
+hinge-oracle penalty 1, Ridge alpha 0.1, gamma 0, residual scale 1, and **no
+OT**. Its fit used only inner folds 1–3 before selection on inner fold 0. The
+selected family and hyperparameters were frozen, then refitted on all four
+inner OOF folds before any outer artifact was loaded. The selection fold had
+earlier descriptive exposure in Task 3C, so development selection was not an
+untouched confirmation. Frozen-price OT failed its prespecified development
+gate; a prior-only global-bias control exceeded the selected router on both
+development metrics.
+
+All four seed-78 outer-fold-0 experts completed their 200-epoch final
+checkpoints. Their 2,170 predictions each passed the OOF artifact, fold,
+checkpoint, configuration, and hash checks. The one locked outer evaluation
+produced:
+
+| Outer-fold method | BA | Head | Medium | Tail | Sample accuracy |
+|:--|--:|--:|--:|--:|--:|
+| Uniform original logits | 42.7006% | 67.3885% | 41.0419% | 15.8333% | 63.9171% |
+| Locked residual Ridge | 44.7035% | 68.4018% | 44.7986% | 16.9444% | 65.1613% |
+| `fixed_006` | 44.6348% | 68.1301% | 44.6361% | 17.2222% | 65.1613% |
+| `fixed_007` | 44.7248% | 65.3856% | 46.4473% | 18.6111% | 62.7650% |
+| `fixed_010` | 44.7298% | 64.1379% | 43.6616% | 23.3333% | 61.8433% |
+
+The locked router exceeds outer uniform by **+2.0028 percentage points BA**
+and **+1.1111 points Tail**. Its 10,000-replicate, fixed-seed class/sample
+hierarchical paired intervals for those differences are **[−0.4956, +4.5771]**
+and **[−5.0000, +7.7778]** percentage points, respectively. These intervals
+include zero. On point estimates, `fixed_007` and `fixed_010` each exceed
+the router on both BA and Tail. Thus the prespecified new fixed-reference
+Pareto-point expansion gate **fails**; the full five-fold, three-seed nested
+experiment is not justified by this result. The original balanced CIFAR-100
+test set was not accessed for this study.
+
+The immutable [outer results](../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/results.json)
+and [paired predictions](../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/predictions.npz)
+contain all frozen references, paired differences, intervals, and source hashes.
+
+### Leakage and integrity audit
+
+The completed run passed the protocol checks needed to treat this as a valid
+locked OOF evaluation:
+
+- Each outer expert trained on 8,677 IDs and predicted 2,170 different IDs.
+  The intersection was empty and their union was the full 10,847-image
+  canonical long-tail training population.
+- The candidate ID, family and hyperparameters were recorded before any outer
+  artifact was loaded. No replacement was selected from the outer results.
+- The locked Ridge fit used aligned inner OOF rows. Each contributing expert
+  prediction for those rows came from a model that excluded that row during
+  training.
+- Decision, configuration, model, array and source provenance hashes matched
+  the locked records; the evaluator also validated each outer checkpoint and
+  prediction artifact.
+- Recomputing the metrics directly from the saved outer predictions reproduced
+  the stored values exactly.
+- The original balanced CIFAR-100 test set was not loaded; the outer evaluator
+  records `original_test_set_accessed: false`.
+
+These checks find no train/evaluation row overlap, outer-label tuning or
+original-test leakage in this run. They do not remove the statistical limits
+of one seed and one outer fold, the earlier descriptive exposure of inner fold
+0, or shared training dependence among the inner OOF experts.
+
+## 13. Scientific synthesis
 
 The completed OOF evidence supports these limited conclusions:
 
@@ -598,10 +676,14 @@ The completed OOF evidence supports these limited conclusions:
   classification result is worse than confidence-only Ridge. Better target
   prediction is therefore not sufficient evidence of better routing, and no
   feature representation has been approved for a new experiment.
+- The locked Ridge/Sinkhorn candidate improved BA and Tail over outer-fold
+  uniform, but was dominated on both by two frozen fixed-weight references.
+  It did not satisfy the prespecified expansion gate or establish an adaptive
+  advantage over fixed composition.
 - No new method has demonstrated a validated improvement over the original
-  full-data baseline or an independently held-out outer population.
+  full-data baseline.
 
-The next open question is generalization of any frozen routing choice to an
-independent outer population. Codebase refactoring, new Ridge variants,
-Sinkhorn, Ridge + Sinkhorn, a new specialist and a final adaptive weighting
-rule remain unimplemented or unvalidated.
+The completed outer evaluation gives one-seed, one-fold evidence against
+expanding this locked candidate. Other methods would need a separately
+prespecified development and independent evaluation protocol; the original
+balanced test set remains outside method search.

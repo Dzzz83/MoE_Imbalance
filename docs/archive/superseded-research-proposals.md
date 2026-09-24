@@ -118,24 +118,24 @@ compute-capacity constraint.
 
 ### Stage B — shared OOF artifact
 
-7. Train K-fold OOF versions of the four experts once.
-8. Save logits, probabilities, labels, fold IDs and feature statistics.
-9. Fit AdvantageRidge and ClassBalancedAdvantageRidge.
-10. Compare a learned gate, independent softmax, balanced Sinkhorn and UOT.
+1. Train K-fold OOF versions of the four experts once.
+2. Save logits, probabilities, labels, fold IDs and feature statistics.
+3. Fit AdvantageRidge and ClassBalancedAdvantageRidge.
+4. Compare a learned gate, independent softmax, balanced Sinkhorn and UOT.
 
 ### Stage C — conservative variants
 
-11. Add Selective Residual Ridge → UOT.
-12. Add Shrink-to-Uniform Ridge → UOT.
-13. Add Top-2 Advantage Ridge → UOT.
-14. Add temperature calibration and Head/Medium/Tail hierarchy only if a basic
+1. Add Selective Residual Ridge → UOT.
+2. Add Shrink-to-Uniform Ridge → UOT.
+3. Add Top-2 Advantage Ridge → UOT.
+4. Add temperature calibration and Head/Medium/Tail hierarchy only if a basic
     suitability signal exists.
 
 ### Stage D — exploratory structure
 
-15. Try performance-prior marginals and dual-price inductive routing.
-16. Try local or graph-smoothed routing if success clusters in feature space.
-17. Study quadratic OT or self-refinement only after simpler variants.
+1. Try performance-prior marginals and dual-price inductive routing.
+2. Try local or graph-smoothed routing if success clusters in feature space.
+3. Study quadratic OT or self-refinement only after simpler variants.
 
 ## Historical continuation rule
 

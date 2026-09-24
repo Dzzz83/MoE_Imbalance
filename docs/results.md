@@ -19,16 +19,16 @@
 > [`problem.md`](problem.md) · [`oof-results.md`](oof-results.md) ·
 > [`routing_mechanism.md`](../records/routing_mechanism.md)
 
-> **Audit status (2026-09-23).** The historical TTA BA/Tail row and its
-> derived comparison values are retained for provenance but are **invalid**:
-> the verified earlier `data/tta.py` implementation used incorrect padding for
-> normalized tensors and batch-shared crop semantics. Those values must not
-> support a conclusion pending a separately authorized reevaluation. Historical
-> routing ECE/average-confidence fields for **Uniform, Confidence and TTA** are
-> also invalid because the evaluator used a distribution that could differ from
-> the classifier used by `predict_class`. Probability routing calibration and
-> all per-expert calibration fields are unaffected. No replacement values are
-> reported here.
+**Audit status (2026-09-23).** The historical TTA BA/Tail row and its derived
+comparison values are retained for provenance but are **invalid**: the verified
+earlier `data/tta.py` implementation used incorrect padding for normalized
+tensors and batch-shared crop semantics. Those values must not support a
+conclusion pending a separately authorized reevaluation. Historical routing
+ECE/average-confidence fields for **Uniform, Confidence and TTA** are also
+invalid because the evaluator used a distribution that could differ from the
+classifier used by `predict_class`. Probability routing calibration and all
+per-expert calibration fields are unaffected. No replacement values are
+reported here.
 
 ---
 
@@ -104,7 +104,7 @@ Head = 35 classes with ≥100 training samples, Medium = 35 classes with
 samples and is Medium). Per-expert ECE values in this table are unaffected by
 the router-distribution mismatch.*
 
-**Reading the table**
+### Reading the table
 
 - **LAL is the strongest overall and the strongest on tail**; BalancedSoftmax
   is close behind on both.
@@ -209,7 +209,9 @@ logit averaging is better at every size.
 
 ## 6. Training runs
 
-12 runs, all healthy (`scripts/check_runs.py`): 200 epochs, correct LR decay at the 160/180 milestones, monotone loss, final checkpoint present.
+All 12 runs were healthy (`scripts/check_runs.py`): each trained for 200
+epochs, used the correct LR decay at the 160/180 milestones, had monotone loss,
+and saved a final checkpoint.
 
 | Expert | Loss @10 | Loss @160 | Loss @200 | Final train acc |
 |:--|:--:|:--:|:--:|:--:|
@@ -233,8 +235,10 @@ objective, not a failure to converge.*
   not honest supervision for a fitted router.
 - The nested-OOF pipeline was introduced to generate held-out predictions on a
   separate development population without using the original test set. Its
-  completed seed-78/outer-fold-0 findings are recorded in
-  [`oof-results.md`](oof-results.md).
+  completed seed-78 findings and the one locked outer-fold-0 Ridge evaluation
+  are recorded in [`oof-results.md`](oof-results.md). The outer candidate used
+  no Sinkhorn and failed the frozen fixed-reference Pareto expansion gate.
 - The OOF fixed-weight and soft-mixture results are not directly comparable to
   the three-seed full-data test results: they use different training
-  populations, a single seed, and a development partition.
+  populations, a single seed, and OOF populations rather than the original
+  balanced test set.

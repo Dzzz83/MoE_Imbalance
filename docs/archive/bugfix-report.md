@@ -186,7 +186,7 @@ call — no test deletes data.
 
 ## 5. Test-suite state
 
-```
+```text
 test_contrastive_routing_loss.py   exit 0   7 passed, 0 failed
 test_dace_a_synthetic.py           exit 0   4 passed, 0 failed
 test_dace_b_synthetic.py           exit 0   6 passed, 0 failed

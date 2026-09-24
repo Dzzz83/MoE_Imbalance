@@ -1,32 +1,32 @@
 # Routing Mechanisms — Everything Tried, and What Happened
 
-> Complete inventory of every routing / combination mechanism this project has
-> evaluated, with a one-line description and its measured result.
+> Complete inventory of routing and combination mechanisms evaluated by this
+> project, with measured results.
 >
-> Results are labelled by the protocol they were measured on. **"Full-data"** =
-> the original canonical protocol (10,847-sample long-tailed training set,
-> balanced 10,000 test set, 3 seeds). **"Old split"** = the discarded *flawed* protocol that held out a
-> balanced validation set before long-tail subsampling, where 3-expert uniform
-> averaging sat at **51.12**; those numbers are historical and not comparable.
-> (A second superseded protocol, the non-standard 80/20 split, had a uniform of
-> 45.68 — do not confuse the two.)
+> Results are labelled by protocol. **Full-data** is the canonical protocol
+> (10,847 long-tailed training samples, balanced 10,000-image test set, three
+> seeds). **Old split** is the discarded, flawed protocol that held out a
+> balanced validation set before long-tail subsampling; its three-expert uniform
+> result was **51.12**. These results are historical and not comparable. A
+> second superseded 80/20 protocol had a uniform result of **45.68**.
 >
 > This catalogue records the original full-data/test-track mechanisms. The
 > separate OOF development analyses are authoritative in
 > [`oof-results.md`](../docs/oof-results.md).
 >
-> Related: [`results.md`](../docs/results.md) · [`problem.md`](../docs/problem.md) ·
-> [`routing-preregistration.md`](routing-preregistration.md) (the frozen
-> candidate set) · [`research.md`](../docs/research.md) (literature)
+> Related: [`results.md`](../docs/results.md) ·
+> [`problem.md`](../docs/problem.md) ·
+> [`routing-preregistration.md`](routing-preregistration.md) (frozen candidates) ·
+> [`research.md`](../docs/research.md) (literature)
 
-> **Audit status (2026-09-23).** The historical TTA BA/Tail row below is
-> retained for provenance but is **invalid** because the earlier
-> `data/tta.py` implementation used incorrect padding for normalized tensors
-> and batch-shared crop semantics. It must not support a conclusion pending a
-> separately authorized reevaluation. Historical routing ECE/average-confidence
-> fields for Uniform, Confidence and TTA are also invalid from the old
-> distribution mismatch; Probability routing calibration and per-expert
-> calibration are unaffected.
+**Audit status (2026-09-23).** The historical TTA BA/Tail row below is retained
+for provenance but is **invalid** because the earlier `data/tta.py`
+implementation used incorrect padding for normalized tensors and batch-shared
+crop semantics. It must not support a conclusion pending a separately
+authorized reevaluation. Historical routing ECE/average-confidence fields for
+Uniform, Confidence, and TTA are also invalid from the old distribution
+mismatch; Probability routing calibration and per-expert calibration are
+unaffected.
 
 ---
 
@@ -93,7 +93,7 @@ the justification outlives the code.
 Measured when uniform averaging sat at **51.12**. Included for completeness;
 none of these numbers are comparable with §1.
 
-**Round 1 — basic routing**
+### Round 1 — basic routing
 
 | Method | BA | vs uniform |
 |:--|:--:|:--:|
@@ -114,7 +114,7 @@ table (52.43 − 51.12 = 1.31); the same record also claimed a "+0.29% routing
 contribution" that its own rows do not support. The BAs are as measured; only the
 derived deltas were recomputed.*
 
-**Round 2 — enriched features**
+### Round 2 — enriched features
 
 | Method | BA | vs uniform |
 |:--|:--:|:--:|
@@ -128,7 +128,7 @@ derived deltas were recomputed.*
 | MLP trust meters | 52.10 | +0.98 |
 | Adaptive threshold routing | 52.42 | +1.30 |
 
-**Round 3 — learning to rank**
+### Round 3 — learning to rank
 
 | Method | BA | vs uniform |
 |:--|:--:|:--:|
@@ -138,7 +138,7 @@ derived deltas were recomputed.*
 | **92-d combined (89-d + pairwise)** | **52.49** | **+1.37** |
 | Meta-router (9-d features) | 52.40 | +1.28 |
 
-**Round 4 — TTA, gradients, selective**
+### Round 4 — TTA, gradients, selective
 
 | Method | BA | vs uniform |
 |:--|:--:|:--:|
@@ -149,7 +149,7 @@ derived deltas were recomputed.*
 | **Selective 92-d (thresh 0.35)** | **52.70** | **+1.58** |
 | 392-d hybrid TTA | 53.22 | +0.68 vs TTA uniform |
 
-**Round 5 — gradient alignment and clustering**
+### Round 5 — gradient alignment and clustering
 
 | Method | BA | verdict |
 |:--|:--:|:--|
@@ -211,5 +211,8 @@ tail specialist existed at all). See [`problem.md`](../docs/problem.md)
 
 The completed OOF work refines this historical verdict: complementary
 correctness and convex-mixture feasibility exist on the OOF development
-partition, but no fitted router has yet shown that the useful weights are
-predictable. See [`oof-results.md`](../docs/oof-results.md).
+partition. One locked residual Ridge router improved over outer uniform by
+point estimate, but its intervals included zero and two frozen fixed mixtures
+exceeded it on both BA and Tail. The study therefore did not establish an
+adaptive advantage over fixed composition. See
+[`oof-results.md`](../docs/oof-results.md).

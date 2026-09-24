@@ -66,10 +66,11 @@ router-fitting partition.
 
 The narrower statement remains true: predictions from the original full-data
 experts on their own training images are not honest router supervision. The
-reserved outer-fold evaluation population and the original test set remain
-excluded from the completed analyses. Inner fold 0 was inspected descriptively
-during Task 3C, so it cannot be described as completely untouched for every
-research choice.
+original test set remains excluded from the OOF method study. Inner fold 0 was
+inspected descriptively during Task 3C and was later used for the frozen
+Ridge/Sinkhorn selection. Outer fold 0 was then consumed once for the locked
+candidate evaluation, so it is unavailable for selecting or validating a
+replacement method.
 
 ### All-experts-wrong is not a universal soft-mixture upper bound
 
@@ -99,7 +100,10 @@ Neither result is an independently validated adaptive router, a full-data test
 result, or evidence that a particular Ridge formulation will generalize. Task
 3F-A subsequently found lower held-out contribution-target MSE than its
 training-only global control, but no paired BA–Tail advantage over the fixed
-references on the same development population.
+references on the same development population. The later locked residual Ridge
+candidate improved over outer uniform by point estimate, but frozen
+`fixed_007` and `fixed_010` each exceeded it on both BA and Tail. Its paired
+intervals against uniform also included zero.
 
 ## 3. Current research problems
 
@@ -164,29 +168,39 @@ Several predefined fixed convex logit ensembles improve both development BA and
 Tail over uniform: fixed_006, fixed_007 and fixed_010. Fixed_011 gives the
 highest observed Tail value on the grid while trading away BA. Future adaptive
 methods must be compared with these strong fixed-weight controls, not only with
-uniform averaging. These are development-population comparisons, not selected
-independent results; the complete grid is in [oof-results.md](oof-results.md)
-§4.
+uniform averaging. The locked outer evaluation confirmed this concern:
+`fixed_007` and `fixed_010` both dominated the residual Ridge candidate on BA
+and Tail. The complete development grid and outer comparison are in
+[oof-results.md](oof-results.md) §§4 and 12.
 
-### Problem G — Evaluation and distribution-shift limitations
+### Problem G — Sinkhorn allocation did not rescue the tested Ridge scores
+
+The staged study implemented relaxed OT, balanced Sinkhorn, frozen dual-price
+inference and prior-only controls. Frozen-price Sinkhorn failed its development
+gate, so no Sinkhorn configuration advanced to the outer fold. The locked
+outer candidate was residual Ridge without OT. This rules out only the tested
+scores, priors and allocation settings; it does not show that every Sinkhorn
+formulation is ineffective.
+
+### Problem H — Evaluation and distribution-shift limitations
 
 The completed evidence remains limited by development-data reuse, overlapping
 OOF expert-training populations, one completed expert seed and outer fold,
 prior descriptive exposure of inner fold 0, and the shift from fold-trained
 experts to eventual full-data experts. The original balanced test set has also
-been accessed repeatedly during historical research. The reserved outer
-population has not been used for method selection or validation. These are
-protocol limitations and unresolved generalization questions, not evidence
-that every future router will fail.
+been accessed repeatedly during historical research. Outer fold 0 has now been
+used once for the locked candidate and may not be reused for method selection.
+These are protocol limitations and unresolved generalization questions, not
+evidence that every future router will fail.
 
 ## 4. Roadmap constraints
 
 Documentation consolidation and Phase 1 correctness hardening are complete for
 this handoff. Later OOF/application extraction and legacy quarantine remain
-planned, followed by new Ridge experiments, Sinkhorn experiments, Ridge +
-Sinkhorn experiments, and independent evaluation. New Ridge and Sinkhorn
-approaches have not been implemented, their exact protocols have not been
-frozen, and no future stage should be described as complete.
+planned. The staged Ridge/Sinkhorn study is complete for seed 78 and outer fold
+0: Sinkhorn failed its development gate, and the locked no-OT residual Ridge
+failed the outer fixed-reference Pareto gate. The full five-fold, three-seed
+expansion is therefore not indicated by this protocol.
 
 Before any new method or independent evaluation, preserve the frozen Task 3F-A
 target, inference-time feature definitions, calibration choices, uniform/
@@ -196,11 +210,11 @@ predictive signal.
 
 ## 5. What the current evidence does not establish
 
-- No completed experiment validates a learned router on the reserved outer
-  population or on a fresh test population.
-- No completed experiment validates Ridge on the reserved outer population or
-  a fresh test population; Sinkhorn, a new specialist and the full nested
-  300-run matrix remain unexecuted.
+- The single locked outer evaluation does not validate the residual Ridge
+  router across folds, seeds, full-data experts or a fresh test population.
+- Sinkhorn did not reach outer evaluation, and no result establishes that a
+  different score source, prior or allocation formulation would succeed.
+- A new specialist and the full nested 300-run matrix remain unexecuted.
 - No diagnostic target, margin measure, feature representation or retrospective
   subgroup is an approved inference-time routing rule.
 - OOF development improvements cannot be compared directly with the original

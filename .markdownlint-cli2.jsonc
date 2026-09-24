@@ -1,0 +1,30 @@
+{
+  // Keep lint behavior stable across local and CI runs.
+  // Run with: npx --yes markdownlint-cli2@0.18.1
+  "config": {
+    "default": true,
+    "MD013": {
+      "line_length": 100,
+      "headings": true,
+      "code_blocks": false,
+      "tables": false
+    },
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD029": {
+      "style": "ordered"
+    }
+  },
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    ".agents/**",
+    ".venv/**",
+    "AGENTS.md",
+    "artifacts/**",
+    "docs/test-access-log.md",
+    "records/routing-preregistration.md"
+  ]
+}

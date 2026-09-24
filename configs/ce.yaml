@@ -10,7 +10,7 @@
 # Reported model: the final-epoch checkpoint.
 
 expert: ce
-seed: 0                # one LT split; 3 training seeds are 0, 42, 123
+seed: 0                # one LT split; 3 training seeds are 78, 88, 1034
 device: auto           # 'auto' -> cuda when available, else cpu
 
 model:
