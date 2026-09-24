@@ -15,7 +15,7 @@
 > [`oof-results.md`](../docs/oof-results.md).
 >
 > Related: [`results.md`](../docs/results.md) ·
-> [`problem.md`](../docs/problem.md) ·
+> [`protocol.md`](../docs/protocol.md) ·
 > [`routing-preregistration.md`](routing-preregistration.md) (frozen candidates) ·
 > [`research.md`](../docs/research.md) (literature)
 
@@ -184,8 +184,8 @@ likely to be wrong, so learning the label better made routing worse. Secondary
 defects: incomparable score scales across experts, and a fallback threshold so
 high it never fired. Separately, partitioning weakened every expert (each
 near-zero on its non-target groups; expert B had **0.0000** tail recall — no
-tail specialist existed at all). See [`problem.md`](../docs/problem.md)
-§4.
+tail specialist existed at all). See [`research.md`](../docs/research.md)
+under “Historical approaches have protocol-specific failures”.
 
 ## 5. Verdict
 
@@ -197,7 +197,7 @@ tail specialist existed at all). See [`problem.md`](../docs/problem.md)
 - The binding constraint is structural, not architectural for hard expert
   selection: the historical **39.7% all-wrong floor** on the four-expert pool
   limits what a hard-selection router can recover, but it is not a ceiling for
-  adaptive soft-mixture routing. [Task 3E-B](../docs/oof-results.md#5-task-3e-b--adaptive-soft-mixture-oracle)
+  adaptive soft-mixture routing. [Task 3E-B](../docs/oof-results.md#task-3e-fixed-mixtures-and-soft-feasibility)
   found 321 images correctable by convex logit combinations even though every
   expert's individual top-1 prediction was wrong. For hard selection, the
   accessible headroom (60.27 oracle − 46.98 uniform = **13.3 points**) has not

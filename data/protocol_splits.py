@@ -15,7 +15,7 @@ Data roles
                          is a sample every expert has already seen: its
                          correctness label there is memorisation (final train
                          accuracy is 96-98%), which is why no router may be
-                         fitted on it either. See docs/problem.md section 5.
+                         fitted on it either. See docs/protocol.md.
                          This split is kept only so the disjointness protocol
                          (and its tests) has something to check.
   test          10,000   CIFAR-100 test set. FINAL reported numbers only.

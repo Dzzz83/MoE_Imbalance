@@ -25,10 +25,10 @@ class ConfidenceRouter(BaseRouter):
     ) -> np.ndarray:
         """Pick the expert with the highest max-softmax confidence.
 
-        Note (recorded, not fixed here): in savable samples the correct expert
-        is systematically the *least* confident one — the lone-dissenter
-        paradox, `docs/problem.md` §2 — so this rule is expected to
-        underperform uniform averaging.
+        Note (recorded, not fixed here): among historical savable samples the
+        correct expert was often not the most confident one (see
+        `docs/research.md`). This rule is expected to underperform uniform
+        averaging on that population.
         """
         return self.confidences(logits).argmax(axis=1)
 

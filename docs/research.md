@@ -1,284 +1,226 @@
-# Research — Literature and Current Direction
+# Research Constraints, Questions, and Literature
 
-This document records the literature that shaped the project and how it relates
-to the measured evidence. Superseded Ridge/Sinkhorn implementation proposals
-are preserved separately in
+This document combines measured limitations with the literature that shaped
+the project. Detailed numbers are owned by [results.md](results.md) for the
+full-data track and [oof-results.md](oof-results.md) for OOF development and
+the locked outer evaluation. Canonical data and evaluation rules are in
+[protocol.md](protocol.md). Retired Ridge/Sinkhorn proposals remain in
 [archive/superseded-research-proposals.md](archive/superseded-research-proposals.md).
 
-Related project evidence:
-[results.md](results.md), [oof-results.md](oof-results.md),
-[problem.md](problem.md), and
-[records/routing_mechanism.md](../records/routing_mechanism.md).
+## Measured constraints
 
-## Current research-status summary
+### Complementarity does not establish predictable routing
 
-- Legitimate held-out OOF predictions have been collected for the four existing
-  experts on one outer fold and one training seed.
-- Fixed-weight feasibility has been investigated on the permitted OOF
-  router-fitting partition.
-- The convex-logit soft-mixture oracle has been implemented and evaluated.
-- The oracle demonstrates additional theoretical headroom beyond hard
-  selection, but it does not predict weights.
-- Task 3F-A shows that Ridge predicts the supervised contribution target more
-  accurately than an intercept-only global control on this development
-  population, but no adaptive configuration beats the prior fixed references
-  on both BA and Tail.
-- Task 3F-B shows that the highlighted Ridge row's Mixup preference is mostly
-  a high global intercept with nonzero image-dependent modulation. Mixup is
-  still assigned the highest weight on nearly all Head and Tail rows; reducing
-  its saved weight improves the retrospective Tail metric at some fixed
-  factors but lowers BA. This is a diagnostic sensitivity result, not a new
-  selected router or a causal explanation.
-- Task 3F-C finds limited retrospective confidence, disagreement and
-  predicted-class-group associations for Tail cases. LAL and BalancedSoftmax
-  sometimes have higher confidence when they are correct and Mixup is wrong,
-  but the saved Ridge weights still favor Mixup on those patterns. The result
-  is exploratory and constrained by 183 Tail rows; it does not select a new
-  feature set or routing rule.
-- Task 3F-D evaluates the four frozen signals and all 15 predefined
-  conjunctions. Some conjunctions trade Tail recall for higher precision or
-  higher retrospective rebalanced-expert opportunity fractions, but they select
-  progressively smaller development subsets and the saved Ridge weights still
-  overwhelmingly favor Mixup. No combination is selected as a feature set or
-  routing rule.
-- Task 3F-E shows that the current contribution target does not systematically
-  favor Mixup on Tail: LAL's mean Tail target is 0.8306 versus Mixup's 0.6980,
-  but the saved Ridge ranks Mixup higher on 102 of 103 Tail rows where LAL's
-  actual target is higher. Positive local log-probability contributions often do
-  not change final top-1 correctness, and margin contribution remains a
-  retrospective diagnostic rather than an approved target.
-- Task 3F-F shows that the full 13-feature representation lowers contribution
-  MSE in all 15 matched settings, including all 15 Tail comparisons, but the
-  predefined primary classification result falls from 36.55% to 36.10% BA and
-  from 7.38% to 6.55% Tail. Better target prediction therefore has not been
-  shown to improve routing.
-- The staged Ridge/Sinkhorn study is implemented. Frozen-price Sinkhorn failed
-  its development gate, so the selected outer candidate was confidence-only
-  residual Ridge without OT. On outer fold 0 it reached 44.7035% BA / 16.9444%
-  Tail versus 42.7006% / 15.8333% for uniform logits, but frozen `fixed_007`
-  and `fixed_010` each exceeded it on both metrics. The expansion gate failed.
+The four experts make distinct correct predictions, including exclusive
+correct predictions in the OOF development data. Several fixed convex logit
+mixtures improve both BA and Tail over uniform. A label-dependent soft
+feasibility oracle also finds correcting mixtures when all expert top-1
+predictions are wrong. These findings show complementarity and possible
+headroom; neither shows that useful per-image weights can be predicted from
+inference-time information. See [OOF results](oof-results.md).
 
-The remaining scientific question is:
+### The tested Ridge models favor Mixup on Tail rows
 
-> Can a model predict useful expert contributions from inference-time
-> information using legitimate OOF supervision?
+The highlighted confidence-only Ridge gives Mixup the highest weight on
+99.45% of Tail development rows. The saved predictor ranks Mixup higher on
+102 of the 103 Tail rows where LAL's measured contribution target is larger.
+Retrospective confidence and disagreement signals identify some cases where
+LAL or BalancedSoftmax is correct while Mixup is wrong, but the saved weights
+do not reduce Mixup on those patterns. The diagnostic subsets are small and
+were not selected as new features.
 
-Task 3F-A freezes and records the contribution target, the two feature sets,
-regularization and weighting grids, the uniform/fixed/global controls, and the
-three-fold fitting procedure. The later staged study tested allocation and a
-residual target under a separately frozen protocol. Its one outer result does
-not establish cross-fold or cross-seed generalization. Outer fold 0 is now
-consumed and cannot be used to choose a replacement method. Sinkhorn remains an
-allocation mechanism rather than a source of routing signal.
+### Contribution prediction error and classification are different outcomes
 
-## 1. Multi-expert architectures for long-tailed recognition
+Across 15 matched comparisons, the full 13-feature Ridge reduces contribution
+MSE relative to confidence-only Ridge in every setting, including Tail. Its
+predefined primary classification result is lower on both BA and Tail. The
+Task 3F-E contribution target is a local true-class log-probability change;
+positive target values rarely correct an incorrect uniform top-1 result at
+the tested finite perturbations. Neither that target nor the retrospective
+margin quantity is an approved routing target.
 
-### RIDE — Long-Tailed Recognition by Routing Diverse Distribution-Aware Experts
+### Tail evidence is sparse
 
-Wang et al., ICLR 2021
-[arXiv:2010.01809](https://arxiv.org/abs/2010.01809), use shared-backbone
-experts with expert-specific batch normalization and distribution-aware
-sampling. A learned router assigns samples to experts. RIDE is the reference
-for the claim that routing diverse experts can improve long-tail recognition;
-its sampling diversity and shared-backbone design differ from this repository's
-separate loss-trained experts.
+The development partition contains 183 Tail images over 30 classes, and 14
+classes have no correct top-1 prediction from any expert in that partition.
+Small changes to a few predictions can change macro Tail accuracy materially.
+Zero observed coverage is not evidence that a class is intrinsically
+unlearnable, and the current data do not identify whether limited Tail data,
+target choice, or feature choice is the main cause of Ridge behavior.
 
-### SADE / TADE — Self-Supervised Aggregation of Diverse Experts
+### Fixed references and evaluation limits bind current conclusions
 
-Zhou et al., NeurIPS 2022
-[arXiv:2107.09249](https://arxiv.org/abs/2107.09249), combine experts trained
-with different losses and use a self-supervised task to weight them. Their
-reported comparison suggests that controlled sampling diversity can add more
-than simply adding related losses. This informed the concern that loss
-diversity alone may not create predictable routing diversity.
+The locked no-OT residual Ridge improved over outer uniform by point estimate,
+but its paired 95% intervals include zero and `fixed_007` and `fixed_010`
+each exceed it on both BA and Tail. Frozen-price Sinkhorn did not pass its
+development gate. The prespecified expansion gate therefore failed; the
+full five-fold, three-seed experiment was not run.
 
-### ACE, BalPoE, MDCS and ELF
+The OOF evidence uses one seed and one outer fold. Inner fold 0 had earlier
+descriptive exposure, and the experts producing fit and selection rows have
+overlapping training populations. The original balanced test set has been
+used for historical full-data work and is unavailable for ordinary method
+development. These constraints limit generalization; they do not prove that
+all future routing methods will fail.
 
-ACE (Cai et al., ICCV 2021,
-[arXiv:2108.02385](https://arxiv.org/abs/2108.02385)) trains complementary
-heads with an explicit diversity objective and combines them by averaging.
-BalPoE/BPCE (Aimar et al., CVPR 2023,
-[arXiv:2206.05260](https://arxiv.org/abs/2206.05260)) provides a long-tail
-precedent for combining calibrated expert scores in log space. MDCS (Zhao et
-al., ICCV 2023, [arXiv:2308.09917](https://arxiv.org/abs/2308.09917)) supports
-controlled rather than unconstrained diversity. ELF (Ghosh et al., ICASSP 2021,
-[arXiv:2006.11979](https://arxiv.org/abs/2006.11979)) motivates confidence
-routing as a baseline.
+### Historical approaches have protocol-specific failures
 
-The project used these ideas as motivation, not as claims that a specific
-architecture was reproduced.
+- On the old split, confidence ranked the correct expert below another
+  expert in 83.9% of 596 samples considered savable by that rule. The old
+  split is superseded and its metrics are not comparable to the current
+  protocol.
+- The retired DACE cascade produced an anti-predictive correctness score
+  (AUROC 0.327), expert scores on incompatible scales, and a three-expert
+  uniform result below its corresponding original pool. This diagnoses that
+  implementation and objective, not every cascade or learned router.
+- A gate fitted on the old split collapsed onto one expert. The tested
+  Correctness, Pairwise, Cluster, and Selective routers did not retain their
+  old-split gains under the canonical protocol.
+- The historical TTA BA/Tail row is invalid because the earlier augmentation
+  path had incorrect normalized-tensor padding and batch-shared crop
+  semantics. Historical routing calibration fields for Uniform, Confidence,
+  and TTA are invalid because they used a class distribution inconsistent
+  with the classifier. No replacement values are reported.
+- Product-of-experts is not a distinct classifier here:
+  `prod_e softmax(z_e)` has the same argmax as summed or averaged logits.
 
-## 2. Routers and mixture-of-experts
+The full mechanism catalogue, with protocol labels and historical metrics,
+is in [routing_mechanism.md](../records/routing_mechanism.md). Historical
+audit provenance is in [archive/bugfix-report.md](archive/bugfix-report.md).
 
-Routers in Vision MoE (Liu and Blondel, TMLR 2024,
-[OpenReview](https://openreview.net/forum?id=5vSXd8cogo)) reports that learned
-routers can benefit from balanced validation supervision. That supervision is
-not available for the original full-data protocol, which is why the OOF
-pipeline is required before fitting a router.
+## Open questions and research boundaries
 
-Divide, Weight, and Route (Wei et al., 2025,
-[arXiv:2508.19630](https://arxiv.org/abs/2508.19630)) uses a difficulty signal
-to route between loss-specialized experts. RICASSO (Zhang et al., 2024,
-[arXiv:2410.10548](https://arxiv.org/abs/2410.10548)) uses an RL router with
-balanced validation supervision. Sparsely-Gated MoE (Shazeer et al., ICLR 2017,
-[arXiv:1701.06538](https://arxiv.org/abs/1701.06538)) provides load-balancing
-precedent. None is implemented here, and none removes the requirement for an
-honest development protocol.
+1. **Can useful contributions be predicted?** A future method must separate
+   router fitting and selection, use inference-time features only, and be
+   assessed on an unconsumed evaluation population.
+2. **Which signals survive independent evaluation?** Confidence,
+   disagreement, predicted class group, local log-probability contribution,
+   and margin diagnostics are retrospective findings. None is a selected
+   feature set.
+3. **Does an improved target help classification?** Lower target MSE did not
+   improve the primary BA–Tail result in the tested feature comparison. A
+   different target needs a frozen definition and direct classifier-level
+   controls.
+4. **Can a router beat fixed composition?** Compare any adaptive method with
+   uniform logits and the frozen fixed-weight references, including their
+   BA–Tail trade-off. A point estimate over uniform alone is insufficient.
+5. **Do results transfer across folds, seeds, and expert populations?** The
+   completed outer result does not answer this. Fold 0 is consumed, so a
+   replacement method needs a separately declared development and evaluation
+   plan.
+6. **What remains of Sinkhorn?** The tested frozen-price allocation did not
+   pass its gate. This rules out the tested scores, priors, and settings; it
+   does not establish that every optimal-transport formulation is ineffective.
 
-## 3. Long-tail loss functions and expert choice
+Any future study must follow the data-role, leakage, artifact, and test-access
+rules in [protocol.md](protocol.md). Do not describe a hypothesis as a
+validated improvement before its prespecified evaluation is complete.
 
-The expert pool uses CE, LAL, BalancedSoftmax and Mixup:
+## Literature and project decisions
 
-| Loss | Literature | Role here |
-|:--|:--|:--|
-| CE | ERM baseline | Used |
-| LAL | Menon et al., ICLR 2021, [arXiv:2007.07314](https://arxiv.org/abs/2007.07314) | Used, tau = 1 |
-| BalancedSoftmax | Ren et al., NeurIPS 2020, [arXiv:2007.10740](https://arxiv.org/abs/2007.10740) | Used |
-| Mixup | Zhang et al., ICLR 2018 | Used, alpha = 1 |
+### Long-tail experts and diversity
 
-LDAM (Cao et al., NeurIPS 2019,
-[arXiv:1906.07413](https://arxiv.org/abs/1906.07413)) supplied the shared
-training schedule. Focal Loss (Lin et al., ICCV 2017,
-[arXiv:1708.02002](https://arxiv.org/abs/1708.02002)), SupCon (Khosla et al.,
-NeurIPS 2020, [arXiv:2004.11362](https://arxiv.org/abs/2004.11362)), KCL
-(Kang et al., ICLR 2021,
-[arXiv:2102.10078](https://arxiv.org/abs/2102.10078)), TSC (Li et al., CVPR
-2022, [arXiv:2111.13998](https://arxiv.org/abs/2111.13998)) and PaCo (Cui et
-al., ICCV 2021, [arXiv:2107.12028](https://arxiv.org/abs/2107.12028)) informed
-possible alternatives but are not current experts.
+RIDE (Wang et al., 2021) combines distribution-aware experts with a learned
+router; SADE/TADE (Zhou et al., 2022) use diverse objectives and a
+self-supervised aggregation task. ACE (Cai et al., 2021) adds explicit
+complementarity, BalPoE/BPCE (Aimar et al., 2023) combines calibrated expert
+scores, and MDCS (Zhao et al., 2023) motivates controlled diversity. These
+works motivate expert mixtures, but use architectures or training signals
+that this project has not reproduced. The measured agreement between experts
+alone does not establish predictable specialization.
 
-Earlier literature suggested that contrastive or sampling diversity might
-produce lower agreement. In this project, measured full-data agreement did not
-separate same-objective from different-objective pairs clearly, and OOF
-diagnostics nevertheless found complementary correctness. The appropriate
-conclusion is that agreement alone is not a sufficient routing criterion.
+### Routing and mixtures of experts
 
-## 4. The Mixup family
+Vision MoE router studies and methods such as Divide, Weight, and Route and
+RICASSO use held-out supervision or other learned routing signals. The
+original full-data track has no validation split, motivating the separate
+OOF pipeline before fitted routers are considered. Sparsely-Gated MoE and
+load-balancing work inform allocation constraints; they do not replace an
+honest data-role design.
 
-Vanilla Mixup (Zhang et al., ICLR 2018) improves calibration and generalization
-but can suppress minority labels under random pairing. Label-Occurrence-Balanced
-Mixup (LOB Mixup, Zhang et al. 2021,
-[arXiv:2110.04964](https://arxiv.org/abs/2110.04964)) explains this mechanism
-and proposes balanced samplers. MAMix (Cheng, Mai and Lin, TAAI 2023,
-[arXiv:2308.15457](https://arxiv.org/abs/2308.15457)) modifies the label factor
-using class-frequency information. Remix (Chou et al., ECCV Workshops 2020) and
-Manifold Mixup (Verma et al., ICML 2019,
-[arXiv:1806.05236](https://arxiv.org/abs/1806.05236)) are related alternatives.
+### Losses, Mixup, and ensembling
 
-The measured full-data Mixup expert is well calibrated and strong on Head but
-weak on Tail. This makes it useful for studying complementarity, not evidence
-that vanilla Mixup is a complete long-tail solution. Rebalanced Mixup variants
-remain unimplemented and are not the current next step.
+The pool uses CE, logit adjustment, BalancedSoftmax, and vanilla Mixup.
+LDAM-DRW informed the shared training schedule. Focal, supervised
+contrastive, KCL, TSC, and PaCo are reviewed alternatives, not current
+experts. Long-tail Mixup variants such as LOB Mixup, MAMix, and Remix
+motivate concern that vanilla Mixup can suppress minority labels; measured
+Mixup is useful for Head accuracy and calibration but weak on Tail, so it is
+included for complementarity rather than treated as a long-tail solution.
 
-## 5. Ensembling
-
-Buchanan et al., The Effects of Ensembling on Long-Tailed Data (NeurIPS 2023
-Heavy Tails Workshop,
-[code](https://github.com/ekellbuch/longtail_ensembles)), motivates reporting
-both logit and probability averaging because they can differ on imbalanced data.
-Tassi and Gawlikowski study the same distinction in
-[this survey/report](http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-3215/19.pdf).
-
-The full-data track finds logit averaging stronger than probability averaging.
-The OOF track also reports both baselines. A product-of-experts rule was
-removed because its argmax is mathematically identical to uniform logit
-averaging.
-
-## 6. What was predicted versus measured
-
-| Idea | Literature expectation | Measured or current interpretation |
-|:--|:--|:--|
-| More diverse experts should route better | RIDE, SADE, TSC | Full-data agreement alone did not establish predictable specialization |
-| A learned gate should help under imbalance | Vision-MoE literature | Requires held-out supervision; OOF is now available only for development |
-| Mixup improves the pool | Calibration and ensemble literature | Calibration/head complementarity improved, Tail remained weak |
-| Logit and probability averaging are interchangeable | Balanced-data intuition | They differ on this imbalanced pool |
-| Product-of-experts is a new baseline | Generic ensemble intuition | It is the same classifier as uniform logit averaging |
-| Soft adaptive weighting may help | Convex-mixture feasibility | The OOF oracle shows existence headroom; Tasks 3F-A and 3F-F find target-prediction improvements without a paired BA–Tail advantage over fixed references |
-| Sinkhorn allocation may improve Ridge scores | Entropic optimal-transport routing | Relaxed, balanced and frozen-price variants were implemented; frozen-price Sinkhorn failed the development gate and did not advance |
-| Residual Ridge may generalize beyond fixed weights | Supervised residual correction around `fixed_007` | The locked no-OT candidate improved over outer uniform by point estimate but was dominated by `fixed_007` and `fixed_010`; paired intervals against uniform included zero |
-
-## 7. Current research roadmap and boundary
-
-Phase 1 audit/correctness hardening and the staged Ridge/Sinkhorn experiment are
-complete in the current worktree. Shared artifact infrastructure,
-fold-integrity validation, router-distribution contracts and focused regression
-coverage are in place. Current status and remaining engineering work are:
-
-1. **Documentation consolidation** — complete for the current handoff.
-2. **OOF domain extraction** — planned behind the current compatibility facade;
-   fold models, validators and serializers must preserve existing schemas.
-3. **OOF application and CLI extraction** — planned separation of planning,
-   execution, storage and reporting from the current runner modules.
-4. **Analysis foundation completion** — planned migration of shared array,
-   combination and validation helpers without changing metric definitions.
-5. **Legacy quarantine** — planned isolation and documentation of DACE/PaCo's
-   stale validation-era protocol before any compatibility decision.
-6. **Ridge/Sinkhorn study** — complete for seed 78 and outer fold 0. The
-   Sinkhorn development gate and the residual Ridge outer expansion gate both
-   failed.
-7. **Further methods** — require a new prespecified protocol and evaluation
-   population. The already accessed outer fold must not be used to select a
-   replacement.
-
-For any future method study, preserve the relevant Task 3F-A controls and the
-fit-versus-selection safeguards in the
-[nested protocol](nested-oof-protocol.md). The original test set remains
-excluded from ordinary method development. Sinkhorn is an allocation
-mechanism, not a source of routing signal.
-
-The old ranked variants and staged sequence are historical hypotheses preserved in
-[archive/superseded-research-proposals.md](archive/superseded-research-proposals.md);
-they are not approved implementation instructions. No future stage should be
-described as validated until it has passed its prespecified protocol.
+Long-tail ensemble work motivates reporting logit and probability averaging
+separately. They differ on this imbalanced pool. The product-of-experts
+identity removes one redundant baseline. Ridge regression motivates the
+tested supervised contribution model, while Sinkhorn and optimal-transport
+work motivate allocation experiments; the current evidence does not validate
+an adaptive routing gain.
 
 ## References
 
-1. Zhang, H. et al. (2018). *mixup: Beyond Empirical Risk Minimization*. ICLR. [code](https://github.com/facebookresearch/mixup-cifar10)
-2. Cai, J., Wang, Y., Hwang, J.-N. (2021). *ACE: Ally Complementary Experts*. ICCV. [arXiv:2108.02385](https://arxiv.org/abs/2108.02385)
-3. Zhou, Z. et al. (2022). *SADE: Self-Supervised Aggregation of Diverse Experts*. NeurIPS. [arXiv:2107.09249](https://arxiv.org/abs/2107.09249)
-4. Aimar, E. S. et al. (2023). *Balanced Product of Calibrated Experts*. CVPR. [arXiv:2206.05260](https://arxiv.org/abs/2206.05260)
-5. Zhao, Q. et al. (2023). *MDCS: More Diverse Experts with Consistency Self-Distillation*. ICCV. [arXiv:2308.09917](https://arxiv.org/abs/2308.09917)
-6. Liu, Z., Blondel, M. (2024). *Routers in Vision Mixture of Experts*. TMLR.
-   [OpenReview](https://openreview.net/forum?id=5vSXd8cogo)
+1. Zhang, H. et al. (2018). *mixup: Beyond Empirical Risk Minimization*. ICLR.
+   [code](https://github.com/facebookresearch/mixup-cifar10)
+2. Cai, J., Wang, Y., Hwang, J.-N. (2021). *ACE: Ally Complementary Experts*.
+   ICCV. [arXiv:2108.02385](https://arxiv.org/abs/2108.02385)
+3. Zhou, Z. et al. (2022). *SADE: Self-Supervised Aggregation of Diverse
+   Experts*. NeurIPS. [arXiv:2107.09249](https://arxiv.org/abs/2107.09249)
+4. Aimar, E. S. et al. (2023). *Balanced Product of Calibrated Experts*.
+   CVPR. [arXiv:2206.05260](https://arxiv.org/abs/2206.05260)
+5. Zhao, Q. et al. (2023). *MDCS: More Diverse Experts with Consistency
+   Self-Distillation*. ICCV. [arXiv:2308.09917](https://arxiv.org/abs/2308.09917)
+6. Liu, Z., Blondel, M. (2024). *Routers in Vision Mixture of Experts*.
+   TMLR. [OpenReview](https://openreview.net/forum?id=5vSXd8cogo)
 7. Ghosh, A. et al. (2021). *ELF: An Early-Exiting Framework for Long-Tailed
    Classification*. ICASSP. [arXiv:2006.11979](https://arxiv.org/abs/2006.11979)
-8. Menon, A. K. et al. (2021). *Long-tail learning via logit adjustment*. ICLR.
-   [arXiv:2007.07314](https://arxiv.org/abs/2007.07314) ·
+8. Menon, A. K. et al. (2021). *Long-tail learning via logit adjustment*.
+   ICLR. [arXiv:2007.07314](https://arxiv.org/abs/2007.07314) ·
    [code](https://github.com/google-research/google-research/tree/master/logit_adjustment)
 9. Ren, J. et al. (2020). *Balanced Meta-Softmax*. NeurIPS.
    [arXiv:2007.10740](https://arxiv.org/abs/2007.10740) ·
    [code](https://github.com/jiawei-ren/BalancedMetaSoftmax-Classification)
-10. Cao, K. et al. (2019). *LDAM: Label-Distribution-Aware Margin Loss*. NeurIPS.
-    [arXiv:1906.07413](https://arxiv.org/abs/1906.07413) ·
+10. Cao, K. et al. (2019). *LDAM: Label-Distribution-Aware Margin Loss*.
+    NeurIPS. [arXiv:1906.07413](https://arxiv.org/abs/1906.07413) ·
     [code](https://github.com/kaidic/LDAM-DRW)
-11. Kang, B. et al. (2020). *Decoupling Representation and Classifier*. ICLR. [arXiv:1910.09217](https://arxiv.org/abs/1910.09217)
-12. Wei, X. et al. (2025). *Divide, Weight, and Route*. [arXiv:2508.19630](https://arxiv.org/abs/2508.19630)
-13. Zhang, X. et al. (2024). *RICASSO*. [arXiv:2410.10548](https://arxiv.org/abs/2410.10548)
-14. Khosla, P. et al. (2020). *Supervised Contrastive Learning*. NeurIPS. [arXiv:2004.11362](https://arxiv.org/abs/2004.11362)
-15. Shazeer, N. et al. (2017). *Outrageously Large Neural Networks*. ICLR. [arXiv:1701.06538](https://arxiv.org/abs/1701.06538)
-16. Li, T. et al. (2022). *Targeted Supervised Contrastive Learning*. CVPR. [arXiv:2111.13998](https://arxiv.org/abs/2111.13998)
-17. Kang, B. et al. (2021). *K-positive Contrastive Learning*. ICLR. [arXiv:2102.10078](https://arxiv.org/abs/2102.10078)
-18. Cui, J. et al. (2021). *Parametric Contrastive Learning*. ICCV. [arXiv:2107.12028](https://arxiv.org/abs/2107.12028)
-19. Lin, T.-Y. et al. (2017). *Focal Loss*. ICCV. [arXiv:1708.02002](https://arxiv.org/abs/1708.02002)
-20. He, K. et al. (2020). *MoCo v2*. CVPR. [arXiv:2003.04297](https://arxiv.org/abs/2003.04297)
-21. Zhang, S., Chen, C., Zhang, X., Peng, S. (2021). *Label-Occurrence-Balanced Mixup*. [arXiv:2110.04964](https://arxiv.org/abs/2110.04964)
-22. Cheng, W.-C., Mai, T.-H., Lin, H.-T. et al. (2023). *From SMOTE to Mixup for
-    Deep Imbalanced Classification* (MAMix). TAAI.
+11. Kang, B. et al. (2020). *Decoupling Representation and Classifier*.
+    ICLR. [arXiv:1910.09217](https://arxiv.org/abs/1910.09217)
+12. Wei, X. et al. (2025). *Divide, Weight, and Route*.
+    [arXiv:2508.19630](https://arxiv.org/abs/2508.19630)
+13. Zhang, X. et al. (2024). *RICASSO*.
+    [arXiv:2410.10548](https://arxiv.org/abs/2410.10548)
+14. Khosla, P. et al. (2020). *Supervised Contrastive Learning*. NeurIPS.
+    [arXiv:2004.11362](https://arxiv.org/abs/2004.11362)
+15. Shazeer, N. et al. (2017). *Outrageously Large Neural Networks*. ICLR.
+    [arXiv:1701.06538](https://arxiv.org/abs/1701.06538)
+16. Li, T. et al. (2022). *Targeted Supervised Contrastive Learning*. CVPR.
+    [arXiv:2111.13998](https://arxiv.org/abs/2111.13998)
+17. Kang, B. et al. (2021). *K-positive Contrastive Learning*. ICLR.
+    [arXiv:2102.10078](https://arxiv.org/abs/2102.10078)
+18. Cui, J. et al. (2021). *Parametric Contrastive Learning*. ICCV.
+    [arXiv:2107.12028](https://arxiv.org/abs/2107.12028)
+19. Lin, T.-Y. et al. (2017). *Focal Loss*. ICCV.
+    [arXiv:1708.02002](https://arxiv.org/abs/1708.02002)
+20. He, K. et al. (2020). *MoCo v2*. CVPR.
+    [arXiv:2003.04297](https://arxiv.org/abs/2003.04297)
+21. Zhang, S., Chen, C., Zhang, X., Peng, S. (2021).
+    *Label-Occurrence-Balanced Mixup*.
+    [arXiv:2110.04964](https://arxiv.org/abs/2110.04964)
+22. Cheng, W.-C., Mai, T.-H., Lin, H.-T. et al. (2023). *From SMOTE to Mixup
+    for Deep Imbalanced Classification* (MAMix). TAAI.
     [arXiv:2308.15457](https://arxiv.org/abs/2308.15457) ·
     [code](https://github.com/ntuclab/imbalanced-DL)
 23. Chou, H.-P. et al. (2020). *Remix: Rebalanced Mixup*. ECCV Workshops.
-24. Verma, V. et al. (2019). *Manifold Mixup*. ICML. [arXiv:1806.05236](https://arxiv.org/abs/1806.05236)
-25. Buchanan, E. K., Pleiss, G., Wang, Y., Cunningham, J. P. (2023). *The Effects
-    of Ensembling on Long-Tailed Data*. NeurIPS Heavy Tails Workshop.
-    [code](https://github.com/ekellbuch/longtail_ensembles)
+24. Verma, V. et al. (2019). *Manifold Mixup*. ICML.
+    [arXiv:1806.05236](https://arxiv.org/abs/1806.05236)
+25. Buchanan, E. K., Pleiss, G., Wang, Y., Cunningham, J. P. (2023).
+    *The Effects of Ensembling on Long-Tailed Data*. NeurIPS Heavy Tails
+    Workshop. [code](https://github.com/ekellbuch/longtail_ensembles)
 26. Tassi, C. R., Gawlikowski, J. *The impact of averaging logits over
     probabilities on ensembles of neural networks*.
     [CEUR-WS Vol-3215](http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-3215/19.pdf)
-27. Wang, X. et al. (2021). *RIDE: Long-Tailed Recognition by Routing
-    Diverse Distribution-Aware Experts*. ICLR.
+27. Wang, X. et al. (2021). *RIDE: Long-Tailed Recognition by Routing Diverse
+    Distribution-Aware Experts*. ICLR.
     [arXiv:2010.01809](https://arxiv.org/abs/2010.01809)
-28. Sinkhorn, R., Knopp, P. (1967). *Concerning Nonnegative Matrices and Doubly
-    Stochastic Matrices*. Pacific Journal of Mathematics 21(2):343–348.
+28. Sinkhorn, R., Knopp, P. (1967). *Concerning Nonnegative Matrices and
+    Doubly Stochastic Matrices*. Pacific Journal of Mathematics 21(2):343–348.
     [DOI](https://doi.org/10.2140/pjm.1967.21.343)
 29. Cuturi, M. (2013). *Sinkhorn Distances: Lightspeed Computation of Optimal
     Transport*. NeurIPS.
@@ -286,26 +228,28 @@ described as validated until it has passed its prespecified protocol.
 30. Peyré, G., Cuturi, M. (2019). *Computational Optimal Transport*.
     Foundations and Trends in Machine Learning.
     [book](https://optimaltransport.github.io/book/)
-31. Hoerl, A. E., Kennard, R. W. (1970). *Ridge Regression: Biased Estimation for
-    Nonorthogonal Problems*. Technometrics 12(1):55–67.
+31. Hoerl, A. E., Kennard, R. W. (1970). *Ridge Regression: Biased
+    Estimation for Nonorthogonal Problems*. Technometrics 12(1):55–67.
     [DOI](https://doi.org/10.1080/00401706.1970.10488634)
 32. Lewis, M. et al. (2021). *BASE Layers: Simplifying Training of Large,
-    Sparse Models*. ICML.
-    [PMLR](https://proceedings.mlr.press/v139/lewis21a.html)
+    Sparse Models*. ICML. [PMLR](https://proceedings.mlr.press/v139/lewis21a.html)
 33. Chizat, L., Peyré, G., Schmitzer, B., Vialard, F.-X. (2018). *Scaling
     Algorithms for Unbalanced Optimal Transport Problems*. Mathematics of
     Computation. [arXiv:1607.05816](https://arxiv.org/abs/1607.05816)
-34. Chapel, L., Flamary, R., Wu, H., Févotte, C., Gasso, G. (2021). *Unbalanced
-    Optimal Transport through Non-negative Penalized Linear Regression*. NeurIPS.
+34. Chapel, L., Flamary, R., Wu, H., Févotte, C., Gasso, G. (2021).
+    *Unbalanced Optimal Transport through Non-negative Penalized Linear
+    Regression*. NeurIPS.
     [proceedings](https://proceedings.neurips.cc/paper_files/paper/2021/hash/c3c617a9b80b3ae1ebd868b0017cc349-Abstract.html)
-35. Blondel, M., Seguy, V., Rolet, A. (2018). *Smooth and Sparse Optimal Transport*. AISTATS. [PMLR](https://proceedings.mlr.press/v84/blondel18a.html)
-36. Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). *On Calibration of
-    Modern Neural Networks*. ICML. [PMLR](https://proceedings.mlr.press/v70/guo17a.html)
+35. Blondel, M., Seguy, V., Rolet, V. (2018). *Smooth and Sparse Optimal
+    Transport*. AISTATS. [PMLR](https://proceedings.mlr.press/v84/blondel18a.html)
+36. Guo, C., Pleiss, G., Sun, Y., Weinberger, K. Q. (2017). *On Calibration
+    of Modern Neural Networks*. ICML.
+    [PMLR](https://proceedings.mlr.press/v70/guo17a.html)
 37. Li, Z., Li, Z., Zhou, T. (2025). *R2-T2: Re-Routing in Test-Time for
     Multimodal Mixture-of-Experts*. ICML.
     [PMLR](https://proceedings.mlr.press/v267/li25bc.html)
-38. Nguyen, D. A. et al. (2026). *Selective Sinkhorn Routing for Improved Sparse
-    Mixture of Experts*. ICML 2026 AdaptFM Workshop.
+38. Nguyen, D. A. et al. (2026). *Selective Sinkhorn Routing for Improved
+    Sparse Mixture of Experts*. ICML 2026 AdaptFM Workshop.
     [OpenReview](https://openreview.net/pdf?id=qRQU6W1vJ4) ·
     [arXiv:2511.08972](https://arxiv.org/abs/2511.08972)
 39. Tian, X. et al. (2026). *Region-Graph Optimal Transport Routing for

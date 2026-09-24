@@ -6,7 +6,7 @@
 > selection. The original balanced CIFAR-100 test set was not accessed.
 
 This document combines the frozen study protocol, implementation contracts,
-reproduction commands, and completed outcome. The [OOF results](oof-results.md)
+reproduction commands, and completed outcome. The [OOF results](../oof-results.md)
 remain the authoritative source for complete metrics, paired intervals,
 provenance, and the leakage audit.
 
@@ -34,9 +34,9 @@ At protocol freeze, the existing confidence-only contribution Ridge reached
 7.0094% for uniform logits. It did not beat the fixed-weight references on
 both metrics. Full-13 features reduced contribution MSE but worsened the
 primary BA/Tail result. The relevant implementation was
-[`scripts/task3f_ridge.py`](../scripts/task3f_ridge.py); its artifacts remain
+[`scripts/task3f_ridge.py`](../../scripts/task3f_ridge.py); its artifacts remain
 immutable controls in
-[`artifacts/oof/task3f_ridge/`](../artifacts/oof/task3f_ridge/).
+[`artifacts/oof/task3f_ridge/`](../../artifacts/oof/task3f_ridge/).
 
 ## 2. Frozen scientific decisions
 
@@ -222,9 +222,9 @@ and `locked_outer_v1` directories. Earlier local v1 and v2 directories remain
 implementation-verification records. Their selection arrays and selected
 metrics match v3; v3 adds complete source and lock hashes and is the
 outer-evaluation input. The locked outer results and paired predictions are
-[`results.json`](../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/results.json)
+[`results.json`](../../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/results.json)
 and
-[`predictions.npz`](../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/predictions.npz).
+[`predictions.npz`](../../artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/predictions.npz).
 
 At implementation time on 2026-09-24, the machine had 12 CPU threads, about
 15 GiB RAM, about 338 GiB free disk, and an RTX 3060 Laptop GPU with 6 GiB

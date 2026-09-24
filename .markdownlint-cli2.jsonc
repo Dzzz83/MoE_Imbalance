@@ -1,5 +1,6 @@
 {
-  // Keep lint behavior stable across local and CI runs.
+  // Lint reader docs, archive records, and the routing-mechanism inventory.
+  // The append-only access log and frozen/generated records stay excluded.
   // Run with: npx --yes markdownlint-cli2@0.18.1
   "config": {
     "default": true,
@@ -17,7 +18,10 @@
     }
   },
   "globs": [
-    "**/*.md"
+    "README.md",
+    "docs/*.md",
+    "docs/archive/**/*.md",
+    "records/routing_mechanism.md"
   ],
   "ignores": [
     ".agents/**",

@@ -15,8 +15,8 @@
 > `python scripts/analyze_subsets.py --seeds 78 88 1034` ·
 > `python scripts/check_runs.py --seeds 78 88 1034`
 >
-> Context: [`project-context.md`](project-context.md) ·
-> [`problem.md`](problem.md) · [`oof-results.md`](oof-results.md) ·
+> Protocol: [`protocol.md`](protocol.md) ·
+> [`research.md`](research.md) · [`oof-results.md`](oof-results.md) ·
 > [`routing_mechanism.md`](../records/routing_mechanism.md)
 
 **Audit status (2026-09-23).** The historical TTA BA/Tail row and its derived
@@ -158,7 +158,7 @@ per-expert calibration remain valid.
 
 *All-wrong floor = fraction of samples where **no** expert's existing top-1
 prediction is right — unreachable by a hard-selection router. This is not a
-limit on adaptive convex logit mixtures: [Task 3E-B](oof-results.md#5-task-3e-b--adaptive-soft-mixture-oracle)
+limit on adaptive convex logit mixtures: [Task 3E-B](oof-results.md#task-3e-fixed-mixtures-and-soft-feasibility)
 found 321 images correctable by a convex mixture even though every expert's
 individual top-1 prediction was wrong. Oracle = fraction where at least one
 expert is right.*
@@ -183,7 +183,7 @@ All pairs lie in a narrow 0.42–0.49 band, and κ never exceeds 0.50 — the
 "κ < 0.80 ⇒ routable" heuristic used earlier is satisfied by every pair, yet
 routing still fails. LAL and BalancedSoftmax implement the *same objective* and
 still show κ ≈ 0.46, i.e. no more agreement than unrelated pairs; see
-[`problem.md`](problem.md) §3.
+[`research.md`](research.md) under “Measured constraints”.
 
 ## 5. Ensemble size (test set, 3 seeds)
 

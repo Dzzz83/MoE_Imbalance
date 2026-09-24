@@ -11,7 +11,7 @@
 
 This record governs the original full-data/test-track comparison. The later
 nested-OOF development protocol is documented separately in
-../docs/nested-oof-protocol.md; it does not retroactively change this frozen
+../docs/protocol.md; it does not retroactively change this frozen
 test-track candidate set.
 
 ## Why this file exists

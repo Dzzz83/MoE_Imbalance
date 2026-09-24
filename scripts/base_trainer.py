@@ -131,7 +131,7 @@ def set_seed(seed: int) -> None:
       verification numerically unrepresentative of the reported Kaggle runs.
 
     The cost is throughput on Ampere-or-newer GPUs; determinism was chosen
-    deliberately over speed (see docs/project-context.md section 7).
+    deliberately over speed.
     """
     random.seed(seed)
     np.random.seed(seed)

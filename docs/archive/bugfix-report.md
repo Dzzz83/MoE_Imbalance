@@ -5,8 +5,8 @@
 > green run (passing after), and this file states what the fixes do to the
 > reported results.
 >
-> Related: [`project-context.md`](../project-context.md) · [`results.md`](../results.md) ·
-> [`problem.md`](../problem.md) · [`../records/routing-preregistration.md`](../../records/routing-preregistration.md)
+> Related: [`protocol.md`](../protocol.md) · [`results.md`](../results.md) ·
+> [`research.md`](../research.md) · [routing-preregistration.md](../../records/routing-preregistration.md)
 
 ---
 
