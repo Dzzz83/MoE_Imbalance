@@ -14,8 +14,10 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
+import tempfile
 from typing import Any, Callable, Mapping
 
 import torch
@@ -29,6 +31,7 @@ from data.nested_oof import (
     OOFProtocolError,
 )
 from data.oof_datamodule import FoldAwareDataModule
+from scripts.analysis import ImmutableArtifactWriter
 from scripts.base_trainer import CheckpointValidationError, validate_checkpoint_metadata
 from scripts.config import TrainingConfig
 from scripts.trainers import build_trainer
@@ -79,6 +82,52 @@ def _safe_component(value: str, *, name: str) -> str:
             f"{name} must be a non-empty path-safe identifier, got {value!r}"
         )
     return value
+
+
+class AtomicMetadataWriter:
+    """Persist mutable OOF run metadata without exposing partial JSON.
+
+    Run metadata is the one intentionally mutable artifact: preparation records
+    ``prepared``, checkpoint validation records ``training_complete`` and
+    prediction persistence records ``complete``.  The replacement is staged in
+    the destination directory, flushed to disk, and installed with
+    :func:`os.replace`, so a failed write leaves the previous metadata file
+    intact.  JSON rendering intentionally matches the historical writer byte
+    for byte.
+    """
+
+    def __init__(self, *, error_type: type[Exception] = OOFArtifactError) -> None:
+        self.error_type = error_type
+
+    def write(self, path: Path, metadata: Mapping[str, Any]) -> None:
+        rendered = json.dumps(dict(metadata), indent=2, sort_keys=True) + "\n"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                newline="",
+                suffix=path.suffix or ".tmp",
+                dir=path.parent,
+                delete=False,
+            ) as handle:
+                temporary = Path(handle.name)
+                handle.write(rendered)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+            temporary = None
+        except OSError as exc:
+            raise self.error_type(
+                f"cannot atomically write OOF run metadata: {path}"
+            ) from exc
+        finally:
+            if temporary is not None and temporary.exists():
+                try:
+                    temporary.unlink()
+                except OSError:
+                    pass
 
 
 @contextmanager
@@ -233,6 +282,8 @@ class OOFArtifactStore:
             )
         self.base_dir = self.root / experiment_id
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        self._metadata_writer = AtomicMetadataWriter(error_type=OOFArtifactError)
+        self._immutable_writer = ImmutableArtifactWriter(error_type=OOFArtifactError)
         self.manager.validate_membership()
 
     @property
@@ -262,7 +313,9 @@ class OOFArtifactStore:
         return self.run_dir(context) / "execution.log"
 
     def write_manifest(self) -> Path:
-        self._write_once(self.manifest_path, self.manager.manifest().to_json())
+        self._immutable_writer.write_text_once(
+            self.manifest_path, self.manager.manifest().to_json()
+        )
         return self.manifest_path
 
     def validate_run_provenance(
@@ -389,7 +442,9 @@ class OOFArtifactStore:
         run_dir = self.run_dir(context)
         (run_dir / "checkpoints").mkdir(parents=True, exist_ok=True)
         config_json = _canonical_json(dict(resolved_config))
-        self._write_once(self.config_path(context), config_json + "\n")
+        self._immutable_writer.write_text_once(
+            self.config_path(context), config_json + "\n"
+        )
 
         metadata = self._static_metadata(context, dict(resolved_config))
         metadata_path = self.metadata_path(context)
@@ -413,7 +468,7 @@ class OOFArtifactStore:
                         "mix incompatible configurations or fold memberships"
                     )
         else:
-            metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
+            self._metadata_writer.write(metadata_path, metadata)
         if not self.log_path(context).exists():
             self.log_path(context).write_text("OOF run prepared\n")
         return run_dir
@@ -484,7 +539,7 @@ class OOFArtifactStore:
         self._validate_run_artifact(context, artifact, checkpoint)
         serialized = artifact.to_json()
         path = self.prediction_path(context)
-        self._write_once(path, serialized)
+        self._immutable_writer.write_text_once(path, serialized)
         metadata["status"] = "complete"
         metadata["prediction"] = {
             "path": str(path.relative_to(self.run_dir(context))),
@@ -814,24 +869,7 @@ class OOFArtifactStore:
         return payload
 
     def _write_metadata(self, context: OOFRunContext, metadata: Mapping[str, Any]) -> None:
-        self.metadata_path(context).write_text(
-            json.dumps(dict(metadata), indent=2, sort_keys=True) + "\n"
-        )
-
-    @staticmethod
-    def _write_once(path: Path, content: str) -> None:
-        if path.exists():
-            try:
-                existing = path.read_text()
-            except OSError as exc:
-                raise OOFArtifactError(f"cannot read existing artifact: {path}") from exc
-            if existing != content:
-                raise OOFArtifactError(
-                    f"refusing to overwrite an incompatible existing artifact: {path}"
-                )
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        self._metadata_writer.write(self.metadata_path(context), metadata)
 
     def _append_log(self, context: OOFRunContext, message: str) -> None:
         with self.log_path(context).open("a") as handle:

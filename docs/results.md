@@ -19,6 +19,17 @@
 > [`problem.md`](problem.md) · [`oof-results.md`](oof-results.md) ·
 > [`routing_mechanism.md`](../records/routing_mechanism.md)
 
+> **Audit status (2026-09-23).** The historical TTA BA/Tail row and its
+> derived comparison values are retained for provenance but are **invalid**:
+> the verified earlier `data/tta.py` implementation used incorrect padding for
+> normalized tensors and batch-shared crop semantics. Those values must not
+> support a conclusion pending a separately authorized reevaluation. Historical
+> routing ECE/average-confidence fields for **Uniform, Confidence and TTA** are
+> also invalid because the evaluator used a distribution that could differ from
+> the classifier used by `predict_class`. Probability routing calibration and
+> all per-expert calibration fields are unaffected. No replacement values are
+> reported here.
+
 ---
 
 ## 1. Experimental setup
@@ -90,7 +101,8 @@ schedule; only the loss/augmentation differs.
 *All values are percentages. BA = balanced accuracy (mean per-class recall).
 Head = 35 classes with ≥100 training samples, Medium = 35 classes with
 20 ≤ n < 100, Tail = 30 classes with <20 (one class has exactly 20 training
-samples and is Medium).*
+samples and is Medium). Per-expert ECE values in this table are unaffected by
+the router-distribution mismatch.*
 
 **Reading the table**
 
@@ -111,7 +123,7 @@ samples and is Medium).*
 | **Uniform (mean of logits)** | **46.98 ±0.69** | 18.76 ±0.86 | — |
 | Probability (mean of softmax) | 45.95 ±0.55 | 18.70 ±0.50 | −1.03 |
 | Confidence (most confident expert) | 44.27 ±0.46 | 18.69 ±0.36 | −2.72 |
-| TTA (confidence over 10 augmented views) | 44.15 ±0.68 | **19.38 ±0.97** | −2.83 |
+| TTA (confidence over 10 augmented views) | **INVALID — 44.15 ±0.68** | **INVALID — 19.38 ±0.97** | **INVALID — −2.83** |
 
 *Averaging softmax probabilities rather than logits is the conventional
 ensemble baseline; both are parameter-free. They differ because the three
@@ -125,10 +137,15 @@ implicitly down-weights Mixup.*
 |:--|:--|:--:|:--:|:--|
 | Probability | −1.19, −1.24, −0.66 | −1.03 | 0.32 | worse, consistent in 3/3 seeds |
 | Confidence | −3.11, −2.98, −2.06 | −2.72 | 0.57 | **significantly worse** |
-| TTA | −2.87, −3.18, −2.45 | −2.83 | 0.37 | **significantly worse on BA**; Tail +0.62 but not consistent (−0.77 on seed 88) |
+| TTA | **INVALID — −2.87, −3.18, −2.45** | **INVALID — −2.83** | **not applicable** | **withdrawn pending authorized reevaluation** |
 
-**Uniform averaging is unbeaten.** No rule achieves BA *and* Tail above uniform,
-which is the pre-registered success condition.
+The valid historical comparisons still show Uniform above Probability and
+Confidence on both reported aggregate BA and Tail. The TTA comparison is
+withdrawn, so the former blanket statement that every rule failed the
+pre-registered BA-and-Tail criterion must not include TTA. The historical
+routing ECE/confidence fields for Uniform, Confidence and TTA require
+recomputation under the current distribution contract; Probability routing and
+per-expert calibration remain valid.
 
 ## 4. Routing headroom (test set, per seed)
 

@@ -30,6 +30,12 @@ only and full 13-feature Ridge results.
 These are exploratory and not independently validated.
 Sinkhorn remains a separate proposed direction.
 
+Phase 1 correctness hardening is complete in the current worktree. It includes
+the shared analysis artifact readers/writer, stricter OOF integrity validation,
+the explicit router `predict_distribution` contract, and focused regression
+coverage. Later OOF/application extraction and legacy quarantine remain planned;
+no canonical metric rerun is implied by these code changes.
+
 ## 2. Canonical data and metric protocol
 
 - Dataset: CIFAR-100-LT with imbalance factor 0.01 (IR=100).
@@ -78,6 +84,8 @@ order CE, LAL, BalancedSoftmax, Mixup.
 | Task 3F-D: Combined Tail-signal diagnostics | Complete; retrospective only |
 | Task 3F-E: Supervised contribution target diagnostics | Complete; retrospective only |
 | Task 3F-F: Ridge feature comparison | Complete; retrospective only |
+| Phase 0: protocol/code characterization | Complete |
+| Phase 1: correctness hardening and regression coverage | Complete |
 | Sinkhorn routing | Not implemented |
 | New specialized experts | Not implemented |
 | Full nested-OOF evaluation across all folds and seeds | Not executed |
@@ -176,26 +184,34 @@ insufficient Tail training data.
 
 ## 6. Next research roadmap
 
-The completed work is documentation and exploratory development evidence. The
-next stages are:
+The completed work is documentation, exploratory development evidence, and
+Phase 1 correctness hardening. The next stages are:
 
 1. **Documentation consolidation** — complete for this handoff; the
    authoritative Markdown now covers the research through Task 3F-F.
-2. **Codebase audit and refactoring** — planned. The audit must preserve
-   executable behavior, artifacts and non-cheating safeguards; its architecture
-   has not been finalized or implemented.
-3. **New Ridge experiments** — planned. Alternative representations, targets
+2. **OOF domain extraction** — planned. Extract fold models, validators and
+   serializers behind the current `data.nested_oof` compatibility facade while
+   preserving schemas and imports.
+3. **OOF application and CLI extraction** — planned. Separate planning,
+   execution, storage and reporting from the current runner modules.
+4. **Analysis foundation completion** — planned. Finish migrating shared array,
+   combination and validation helpers without changing metric definitions.
+5. **Legacy quarantine** — planned. Isolate DACE/PaCo commands and document
+   their stale validation-era protocol before any compatibility decision.
+6. **New Ridge experiments** — planned. Alternative representations, targets
    and weighting strategies may be compared, but no new Ridge approach is
    currently implemented or approved.
-4. **Sinkhorn experiments** — planned. Multiple allocation mechanisms may be
+7. **Sinkhorn experiments** — planned. Multiple allocation mechanisms may be
    compared; their constraints and execution protocol are not yet frozen.
-5. **Ridge + Sinkhorn experiments** — planned. Any allocation effect must be
+8. **Ridge + Sinkhorn experiments** — planned. Any allocation effect must be
    isolated using the same expert pool, suitability scores and evaluation role.
-6. **Independent evaluation** — planned only after candidate methods and
+9. **Independent evaluation** — planned only after candidate methods and
    criteria are frozen before accessing the reserved outer population.
 
-Before stages 3–6, preserve the frozen Task 3F-A supervised target,
-inference-time features and calibration definitions, uniform/probability/fixed-
+Before experimental stages 6–9 (new Ridge, Sinkhorn, Ridge + Sinkhorn and
+independent evaluation), preserve the frozen Task 3F-A supervised target,
+inference-time features and calibration
+definitions, uniform/probability/fixed-
 weight/no-OT controls, fit-versus-selection roles, and safeguards against
 in-sample supervision, test-set selection, expert-pool changes and
 fold-trained/full-data distribution shift. Task 3F-A is a predictive-model
@@ -220,6 +236,9 @@ checkpoints.
 ## 8. Code and artifact map
 
 - Fold membership and provenance: data/nested_oof.py
+- OOF integrity boundary: `data/nested_oof.py::FoldIntegrityValidator`
+- Shared analysis artifacts: `scripts/analysis/artifacts.py` with
+  `ArtifactReader` and `ImmutableArtifactWriter`
 - OOF training and prediction collection: scripts/oof_pipeline.py,
   scripts/run_oof.py, scripts/run_task3c.py
 - Reusable diagnostics: scripts/expert_diagnostics.py
@@ -258,6 +277,16 @@ checkpoints.
 - Task 3F-F outputs:
   artifacts/oof/task3f_feature_comparison/
 
+### Router distribution contract
+
+`BaseRouter.predict_proba` returns expert-contribution weights and is not, by
+itself, a class-probability API. `predict_class` is the decision contract.
+`predict_distribution` must return class probabilities from the exact
+classifier used by `predict_class`: the default hard-selected expert softmax,
+Uniform's softmax of mean logits, ProbabilityAverage's mean softmax, or TTA's
+delegated distribution. Calibration and evaluation code use this method so
+reported confidence and ECE correspond to the reported prediction.
+
 ## 9. Documentation navigation
 
 - [README.md](../README.md) — public overview and reproducibility entry points
@@ -267,6 +296,8 @@ checkpoints.
 - [research.md](research.md) — literature and current research boundary
 - [nested-oof-protocol.md](nested-oof-protocol.md) — frozen fold and leakage protocol
 - [expert-diagnostics.md](expert-diagnostics.md) — reusable diagnostic API
+- [code-audit-report.md](code-audit-report.md) — verified audit findings and result impact
+- [refactor-plan.md](refactor-plan.md) — phased refactor, extraction and quarantine plan
 - [archive/historical-results.md](archive/historical-results.md) — superseded results
 - [archive/bugfix-report.md](archive/bugfix-report.md) — audit history
 - [test-access-log.md](test-access-log.md) — append-only test-set access audit

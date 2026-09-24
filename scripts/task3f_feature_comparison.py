@@ -14,14 +14,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 import hashlib
-import json
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import numpy as np
 
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis import ArtifactReader, ImmutableArtifactWriter
 from scripts.base_trainer import compute_class_groups
 from scripts.task3e_fixed import (
     EXPERT_ORDER,
@@ -105,80 +104,38 @@ def _as_integer_vector(value: Any, *, name: str) -> np.ndarray:
 
 
 def _load_json(path: Path, *, name: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3FFeatureComparisonError(f"cannot load {name}: {path}") from exc
-    if not isinstance(payload, dict):
-        raise Task3FFeatureComparisonError(f"{name} must contain a JSON object")
-    return payload
+    return ArtifactReader(error_type=Task3FFeatureComparisonError).read_json(
+        path, name=name
+    )
 
 
 def _load_npz(path: Path, *, name: str) -> dict[str, np.ndarray]:
-    try:
-        with np.load(path, allow_pickle=False) as archive:
-            return {key: np.array(archive[key]) for key in archive.files}
-    except (OSError, ValueError) as exc:
-        raise Task3FFeatureComparisonError(f"cannot load {name}: {path}") from exc
+    return ArtifactReader(error_type=Task3FFeatureComparisonError).read_npz(
+        path, name=name
+    )
 
 
 def sha256_file(path: str | Path) -> str:
     """Return the SHA-256 hash of one source artifact."""
-    digest = hashlib.sha256()
-    try:
-        with Path(path).open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise Task3FFeatureComparisonError(f"cannot hash source artifact: {path}") from exc
-    return digest.hexdigest()
+    return ArtifactReader(error_type=Task3FFeatureComparisonError).sha256_file(
+        path, description="source artifact"
+    )
 
 
 def _sha256_array(values: np.ndarray) -> str:
     return hashlib.sha256(np.ascontiguousarray(values).tobytes()).hexdigest()
 
 
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
-
-
 def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
-    rendered = json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        try:
-            existing = path.read_text()
-        except OSError as exc:
-            raise Task3FFeatureComparisonError(f"cannot inspect existing output: {path}") from exc
-        if existing != rendered:
-            raise Task3FFeatureComparisonError(
-                f"refusing to overwrite an incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(rendered)
+    ImmutableArtifactWriter(
+        error_type=Task3FFeatureComparisonError
+    ).write_json_once(path, payload)
 
 
 def _write_text_once(path: Path, rendered: str) -> None:
-    if path.exists():
-        try:
-            existing = path.read_text()
-        except OSError as exc:
-            raise Task3FFeatureComparisonError(f"cannot inspect existing output: {path}") from exc
-        if existing != rendered:
-            raise Task3FFeatureComparisonError(
-                f"refusing to overwrite an incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(rendered)
+    ImmutableArtifactWriter(
+        error_type=Task3FFeatureComparisonError
+    ).write_text_once(path, rendered)
 
 
 def _validate_alignment_arrays(
@@ -1276,17 +1233,9 @@ def _render_summary(results: Mapping[str, Any]) -> str:
 
 
 def _git_commit(project_root: Path) -> str | None:
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return completed.stdout.strip() or None
+    return ArtifactReader(error_type=Task3FFeatureComparisonError).git_commit(
+        project_root, required=False
+    )
 
 
 def run_task3f_feature_comparison(

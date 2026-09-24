@@ -369,10 +369,11 @@ def main():
 
     # ── data ──────────────────────────────────────────────────────────
     val_idx = np.load(f'{args.data_root}/processed/lt_val_indices.npy')
-    TestAccessLog(args.access_log).authorize(
+    access_grant = TestAccessLog(args.access_log).authorize(
         ' '.join(sys.argv),
         note='legacy DACE test-set evaluation',
     )
+    access_grant.consume()
     test_set = LongTailCIFAR100(
         root=args.data_root,
         train=False, download=False,

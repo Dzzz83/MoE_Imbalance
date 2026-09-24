@@ -192,8 +192,24 @@ class SoftMixtureOracle:
             raise SoftOracleInputError("Task 3E-B requires exactly four experts")
         if num_classes < 2:
             raise SoftOracleInputError("the LP requires at least two classes")
-        if margin_tolerance <= 0 or feasibility_tolerance <= 0 or verification_tolerance <= 0:
-            raise SoftOracleInputError("oracle tolerances must be positive")
+        tolerances = {
+            "margin_tolerance": margin_tolerance,
+            "feasibility_tolerance": feasibility_tolerance,
+            "verification_tolerance": verification_tolerance,
+        }
+        for name, value in tolerances.items():
+            if isinstance(value, bool):
+                raise SoftOracleInputError("oracle tolerances must be finite positive numbers")
+            try:
+                numeric_value = float(value)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise SoftOracleInputError(
+                    "oracle tolerances must be finite positive numbers"
+                ) from exc
+            if not np.isfinite(numeric_value) or numeric_value <= 0.0:
+                raise SoftOracleInputError(
+                    "oracle tolerances must be finite positive numbers"
+                )
         if method != SOLVER_METHOD:
             raise SoftOracleInputError("Task 3E-B requires the HiGHS linprog method")
         self.num_experts = int(num_experts)

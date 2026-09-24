@@ -63,3 +63,11 @@ class ProbabilityAverageRouter(BaseRouter):
     def averaged_probabilities(self, logits: np.ndarray) -> np.ndarray:
         """Mean softmax probability over experts, shape (N, num_classes)."""
         return softmax(logits).mean(axis=1)
+
+    def predict_distribution(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """The mean softmax distribution used by :meth:`predict_class`."""
+        return self.averaged_probabilities(logits)

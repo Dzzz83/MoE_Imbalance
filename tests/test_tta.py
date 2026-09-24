@@ -30,6 +30,7 @@ import torch
 import importlib
 
 from scripts import evaluation as ev
+from data.cifar_lt import CIFAR100_MEAN, CIFAR100_STD
 
 # Guarded so a not-yet-written module fails one test at a time, not the file.
 try:
@@ -85,6 +86,44 @@ def test_crop_keeps_values_in_range():
     for v in views:
         assert torch.isfinite(v).all(), "view contains non-finite values"
     print("  ✅ views finite")
+
+
+def test_views_match_per_sample_normalized_black_padding():
+    """TTA must match RandomCrop after CIFAR normalization, per sample."""
+    n, h, w = 3, 4, 5
+    images = torch.arange(n * 3 * h * w, dtype=torch.float32).reshape(n, 3, h, w)
+    seed = 17
+    got = AugmentationViews(
+        n_views=1, crop_padding=2, flip_prob=0.0, seed=seed
+    )(images)[0]
+
+    generator = torch.Generator().manual_seed(seed)
+    tops = torch.randint(0, 5, (n,), generator=generator)
+    lefts = torch.randint(0, 5, (n,), generator=generator)
+    black = -torch.tensor(CIFAR100_MEAN) / torch.tensor(CIFAR100_STD)
+    padded = torch.empty(n, 3, h + 4, w + 4)
+    padded[:] = black.view(1, 3, 1, 1)
+    padded[:, :, 2:2 + h, 2:2 + w] = images
+    expected = torch.stack([
+        padded[i, :, tops[i]:tops[i] + h, lefts[i]:lefts[i] + w]
+        for i in range(n)
+    ])
+    assert torch.equal(got, expected), "crop/padding semantics differ from training"
+    assert not torch.equal(got[0], got[1]), "crop coordinates were shared by samples"
+    print("  ✅ per-sample crops use normalized black padding")
+
+
+def test_views_have_same_seeded_values_on_cpu_and_gpu():
+    """The dedicated CPU RNG must make CPU and CUDA views equivalent."""
+    if not torch.cuda.is_available():
+        print("  ⊘ CUDA unavailable; device-equivalence check skipped")
+        return
+    images = _batch(n=3, seed=9)
+    cpu = AugmentationViews(n_views=3, seed=23)(images)
+    gpu = AugmentationViews(n_views=3, seed=23)(images.cuda())
+    for expected, actual in zip(cpu, gpu):
+        assert torch.equal(expected, actual.cpu())
+    print("  ✅ CPU/CUDA TTA values agree under the dedicated seed")
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +308,8 @@ TESTS = [
     ("Views actually augment", test_views_actually_augment),
     ("Views are seeded", test_views_are_seeded_and_reproducible),
     ("Views finite", test_crop_keeps_values_in_range),
+    ("Per-sample normalized crop", test_views_match_per_sample_normalized_black_padding),
+    ("CPU/CUDA seeded views", test_views_have_same_seeded_values_on_cpu_and_gpu),
     ("Averaging in probability space", test_averaging_happens_in_probability_space),
     ("Averaged recovers mean distribution", test_averaged_log_probs_recover_the_mean_distribution),
     ("Single view is a no-op", test_single_view_average_is_a_no_op),

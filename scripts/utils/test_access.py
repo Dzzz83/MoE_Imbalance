@@ -20,9 +20,15 @@ from pathlib import Path
 class TestAccessError(RuntimeError):
     """Raised when a protected test-set read cannot be audited."""
 
+    # This is a utility exception, not a pytest test class.  Keep the public
+    # name for compatibility while preventing pytest collection warnings.
+    __test__ = False
+
 
 class TestAccessGrant:
     """Single-use capability returned after a successful audit-log write."""
+
+    __test__ = False
 
     def __init__(self, owner: 'TestAccessLog', token: object) -> None:
         if token is not owner._grant_token:
@@ -42,6 +48,8 @@ class TestAccessGrant:
 
 class TestAccessLog:
     """Append-only record of every read of the CIFAR-100 test set."""
+
+    __test__ = False
 
     HEADER = (
         "# Test-Set Access Log\n\n"

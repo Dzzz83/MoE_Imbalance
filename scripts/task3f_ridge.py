@@ -14,8 +14,6 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
-import subprocess
-import tempfile
 from typing import Any
 
 import numpy as np
@@ -23,6 +21,7 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import StandardScaler
 
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis import ArtifactReader, ImmutableArtifactWriter
 from scripts.base_trainer import compute_class_groups
 from scripts.evaluation import balanced_accuracy
 from scripts.task3e_fixed import (
@@ -281,13 +280,28 @@ def compute_sample_weights(
 
 def sample_weight_report(labels: np.ndarray, weights: np.ndarray) -> dict[str, Any]:
     """Serialize the observed training-fold weight distribution."""
-    labels_array = np.asarray(labels, dtype=np.int64)
+    labels_array = np.asarray(labels)
+    if labels_array.ndim != 1 or not np.issubdtype(labels_array.dtype, np.number):
+        raise Task3FError("training labels must be a one-dimensional numeric vector")
+    if np.iscomplexobj(labels_array) or not np.isfinite(labels_array).all():
+        raise Task3FError("training labels must be finite integer-valued")
+    if not np.equal(labels_array, np.floor(labels_array)).all():
+        raise Task3FError("training labels must be finite integer-valued")
+    labels_array = labels_array.astype(np.int64, copy=False)
+    if len(labels_array) == 0 or np.any(labels_array < 0):
+        raise Task3FError("training labels must be non-empty and non-negative")
     weights_array = _as_float_array(weights, name="sample weights")
     if weights_array.ndim != 1 or weights_array.shape != labels_array.shape:
         raise Task3FError("sample weights and training labels are misaligned")
     if np.any(weights_array <= 0.0):
         raise Task3FError("sample weights must be positive")
     counts = np.bincount(labels_array)
+    missing_classes = np.flatnonzero(counts == 0)
+    if missing_classes.size:
+        raise Task3FError(
+            "sample_weight_report requires every class up to the maximum label; "
+            f"missing classes: {missing_classes.tolist()}"
+        )
     return {
         "count": int(len(weights_array)),
         "mean": float(weights_array.mean()),
@@ -1385,14 +1399,7 @@ class RidgeCVAnalyzer:
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise Task3FError(f"cannot hash file: {path}") from exc
-    return digest.hexdigest()
+    return ArtifactReader(error_type=Task3FError).sha256_file(path)
 
 
 def _repository_relative(path: Path, project_root: Path) -> str:
@@ -1403,29 +1410,17 @@ def _repository_relative(path: Path, project_root: Path) -> str:
 
 
 def _git_commit(project_root: Path) -> str:
-    try:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise Task3FError("cannot record the source Git commit") from exc
-    commit = completed.stdout.strip()
-    if not commit:
-        raise Task3FError("source Git commit is empty")
+    commit = ArtifactReader(error_type=Task3FError).git_commit(
+        project_root, required=True
+    )
+    assert commit is not None
     return commit
 
 
 def _load_reference_uniform_metrics(path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3FError(f"cannot load Task 3C diagnostics: {path}") from exc
-    if not isinstance(payload, Mapping):
-        raise Task3FError("Task 3C diagnostics must be a JSON object")
+    payload = ArtifactReader(error_type=Task3FError).read_json(
+        path, name="Task 3C diagnostics"
+    )
     primary = payload.get("primary_router_fit_partition")
     if not isinstance(primary, Mapping):
         raise Task3FError("Task 3C diagnostics lack the primary router-fit partition")
@@ -1612,45 +1607,11 @@ def _jsonable_analysis(result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
-    serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        try:
-            existing = path.read_text()
-        except OSError as exc:
-            raise Task3FError(f"cannot inspect existing output: {path}") from exc
-        if existing != serialized:
-            raise Task3FError(f"refusing to overwrite an incompatible output: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(serialized)
+    ImmutableArtifactWriter(error_type=Task3FError).write_json_once(path, payload)
 
 
 def _write_npz_once(path: Path, arrays: Mapping[str, np.ndarray]) -> None:
-    if path.exists():
-        try:
-            with np.load(path, allow_pickle=False) as existing:
-                if set(existing.files) != set(arrays):
-                    raise Task3FError(f"existing output arrays differ: {path}")
-                for key, value in arrays.items():
-                    existing_array = existing[key]
-                    if np.issubdtype(value.dtype, np.inexact):
-                        matches = np.array_equal(existing_array, value, equal_nan=True)
-                    else:
-                        matches = np.array_equal(existing_array, value)
-                    if not matches:
-                        raise Task3FError(f"existing output array differs for {key}: {path}")
-        except (OSError, ValueError) as exc:
-            raise Task3FError(f"cannot validate existing NumPy output: {path}") from exc
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(mode="wb", suffix=".npz", dir=path.parent, delete=False) as handle:
-        temporary = Path(handle.name)
-    try:
-        np.savez_compressed(temporary, **arrays)
-        temporary.replace(path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
+    ImmutableArtifactWriter(error_type=Task3FError).write_npz_once(path, arrays)
 
 
 def _render_summary(

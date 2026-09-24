@@ -134,6 +134,16 @@ def test_sample_weights_use_training_labels_only_and_are_normalized():
     assert np.allclose(compute_sample_weights(labels, gamma=0.0), 1.0)
 
 
+def test_sample_weight_report_rejects_missing_intermediate_classes():
+    from scripts.task3f_ridge import sample_weight_report
+
+    with pytest.raises(Task3FError, match="missing classes"):
+        sample_weight_report(
+            np.array([0, 2], dtype=np.int64),
+            np.ones(2, dtype=np.float64),
+        )
+
+
 def test_scores_to_weights_are_stable_convex_and_support_global_scores():
     scores = np.array([[1000.0, 0.0, -1000.0, 1.0], [0.0, 0.0, 0.0, 0.0]])
     weights = scores_to_weights(scores, temperature=0.5, shrinkage=1.0)

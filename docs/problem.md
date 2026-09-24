@@ -16,10 +16,19 @@ measured.
   three full-data seeds, leaving a 60.27% hard top-1 oracle ceiling. This is a
   statement about the original balanced test population and hard selection
   among the full-data expert predictions.
-- The pre-registered parameter-free confidence, probability-average and TTA
-  rules did not improve both BA and Tail over historical uniform logit
-  averaging. See [results.md](results.md) and the complete catalogue in
+- The pre-registered parameter-free probability-average and confidence rules
+  did not improve both BA and Tail over historical uniform logit averaging.
+  The historical TTA BA/Tail row is **invalid**: the verified earlier
+  augmentation implementation used incorrect normalized-tensor padding and
+  batch-shared crop semantics. Its retained numbers must not support a
+  conclusion pending a separately authorized reevaluation. See
+  [results.md](results.md) and the complete catalogue in
   [records/routing_mechanism.md](../records/routing_mechanism.md).
+- Historical routing ECE/average-confidence fields for Uniform, Confidence and
+  TTA are invalid because the evaluator's class distribution could differ from
+  the classifier used by `predict_class`. Probability routing calibration and
+  per-expert calibration are unaffected; the current
+  `predict_distribution` contract is the required source for future reports.
 - Full-data predicted-label agreement was in a narrow kappa range of
   approximately 0.42–0.49. The pair LAL/BalancedSoftmax, despite implementing
   the same objective at tau = 1, was not more alike than the other measured
@@ -172,9 +181,10 @@ that every future router will fail.
 
 ## 4. Roadmap constraints
 
-Documentation consolidation is complete for this handoff. The next stages are
-codebase audit/refactoring, new Ridge experiments, Sinkhorn experiments,
-Ridge + Sinkhorn experiments, and independent evaluation. New Ridge and Sinkhorn
+Documentation consolidation and Phase 1 correctness hardening are complete for
+this handoff. Later OOF/application extraction and legacy quarantine remain
+planned, followed by new Ridge experiments, Sinkhorn experiments, Ridge +
+Sinkhorn experiments, and independent evaluation. New Ridge and Sinkhorn
 approaches have not been implemented, their exact protocols have not been
 frozen, and no future stage should be described as complete.
 

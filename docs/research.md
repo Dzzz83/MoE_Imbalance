@@ -193,21 +193,31 @@ averaging.
 
 ## 7. Current research roadmap and boundary
 
-The agreed development sequence is:
+Phase 1 audit/correctness hardening is complete in the current worktree;
+shared artifact infrastructure, fold-integrity validation, router-distribution
+contracts and focused regression coverage are in place. The remaining agreed
+development sequence is:
 
 1. **Documentation consolidation** — complete for the current handoff.
-2. **Codebase audit and refactoring** — planned; the architecture is not yet
-   finalized or implemented.
-3. **New Ridge experiments** — planned comparison of multiple representations,
+2. **OOF domain extraction** — planned behind the current compatibility facade;
+   fold models, validators and serializers must preserve existing schemas.
+3. **OOF application and CLI extraction** — planned separation of planning,
+   execution, storage and reporting from the current runner modules.
+4. **Analysis foundation completion** — planned migration of shared array,
+   combination and validation helpers without changing metric definitions.
+5. **Legacy quarantine** — planned isolation and documentation of DACE/PaCo's
+   stale validation-era protocol before any compatibility decision.
+6. **New Ridge experiments** — planned comparison of multiple representations,
    supervised targets and weighting strategies; none is implemented.
-4. **Sinkhorn experiments** — planned comparison of multiple allocation
+7. **Sinkhorn experiments** — planned comparison of multiple allocation
    mechanisms; constraints and execution protocols are not frozen.
-5. **Ridge + Sinkhorn experiments** — planned comparison using the same expert
+8. **Ridge + Sinkhorn experiments** — planned comparison using the same expert
    pool and suitability scores so any allocation effect is isolated.
-6. **Independent evaluation** — planned after candidates and criteria are
+9. **Independent evaluation** — planned after candidates and criteria are
    frozen before the reserved evaluation population is accessed.
 
-Before stages 3–6, preserve the frozen Task 3F-A supervised target,
+Before experimental stages 6–9 (new Ridge, Sinkhorn, Ridge + Sinkhorn and
+independent evaluation), preserve the frozen Task 3F-A supervised target,
 inference-time features, regularization grid, uniform/fixed/global controls,
 and fit-versus-selection procedure. Fit and selection must use the OOF roles in
 the [nested protocol](nested-oof-protocol.md), while the outer evaluation and

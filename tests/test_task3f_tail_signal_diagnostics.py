@@ -140,6 +140,20 @@ def test_disagreement_report_identifies_shared_rebalanced_prediction():
     assert report["by_true_group"]["tail"]["distinct_prediction_counts"]["1"] >= 0
 
 
+@pytest.mark.parametrize("diagnostic", [confidence_diagnostics, disagreement_diagnostics])
+def test_prediction_diagnostics_reject_out_of_range_class_ids(diagnostic):
+    labels = np.array([0, 2, 3, 1, 2, 0], dtype=np.int64)
+    predictions = _predictions().copy()
+    predictions[0, 0] = 4
+    if diagnostic is confidence_diagnostics:
+        confidences = np.full((len(labels), 4), 0.5, dtype=np.float64)
+        with pytest.raises(Task3FCTailDiagnosticError, match="outside class_counts"):
+            diagnostic(confidences, predictions, labels, _class_counts())
+    else:
+        with pytest.raises(Task3FCTailDiagnosticError, match="outside class_counts"):
+            diagnostic(predictions, labels, _class_counts())
+
+
 def test_predicted_group_signal_does_not_change_when_labels_change():
     predictions = _predictions()
     labels = np.array([0, 2, 3, 1, 2, 0], dtype=np.int64)

@@ -72,12 +72,15 @@ each of those classes.
 | Router fit | OOF rows from inner folds 1–3 | Fit a future router |
 | Router selection | OOF rows from inner fold 0 | Select future hyperparameters |
 
-The manager validates set relationships, duplicate and missing samples, class
-counts and class coverage. An OOF row also carries the exact hash of the
-expert-training membership and is rejected when its sample is in that
-membership. Expert order is fixed and recorded. Provenance includes sample
-index, label, fold ID, expert identity, seed, membership hash, checkpoint
-hash, resolved configuration and logits.
+`FoldIntegrityValidator` is the validation boundary: it recomputes outer/inner
+class counts and router-role memberships from the canonical labels and declared
+fold IDs, and rejects duplicate, missing or out-of-role samples. Complete OOF
+artifacts are also checked against the full expected sample/fold/expert key set,
+so extra records cannot be smuggled into an otherwise complete artifact. An OOF
+row carries the exact hash of the expert-training membership and is rejected
+when its sample is in that membership. Expert order is fixed and recorded.
+Provenance includes sample index, label, fold ID, expert identity, seed,
+membership hash, checkpoint hash, resolved configuration and logits.
 
 ## Non-cheating rules
 
@@ -193,9 +196,12 @@ artifacts/oof/task3f_feature_comparison/
   summary.md
 ~~~
 
-Existing files are accepted only when their content and static metadata match;
-incompatible files are rejected rather than overwritten. The canonical
-checkpoints directory is not an OOF artifact root.
+`run_metadata.json` state transitions are atomically replaced. Immutable
+artifacts use the shared write-once `ImmutableArtifactWriter`: existing files
+are accepted only when their content and static metadata match, and
+incompatible files are rejected rather than overwritten. The schema and layout
+above remain unchanged. The canonical checkpoints directory is not an OOF
+artifact root.
 
 ## Methodological limitations
 

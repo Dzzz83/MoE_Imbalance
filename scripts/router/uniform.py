@@ -10,6 +10,7 @@ from __future__ import annotations
 import numpy as np
 
 from scripts.router.base import BaseRouter
+from scripts.utils.features import softmax
 
 
 class UniformRouter(BaseRouter):
@@ -42,3 +43,11 @@ class UniformRouter(BaseRouter):
     ) -> np.ndarray:
         """Average logits across experts, then argmax."""
         return logits.mean(axis=1).argmax(axis=1)
+
+    def predict_distribution(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """Softmax of the mean logits used by :meth:`predict_class`."""
+        return softmax(logits.mean(axis=1))

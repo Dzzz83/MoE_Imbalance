@@ -164,8 +164,7 @@ def main(argv: list[str] | None = None) -> int:
             router = klass(expert_names=pool.loaded)
             rule_logits = select_logits(klass, logits, logits_tta)
             preds = router.predict_class(rule_logits)
-            weights = router.predict_proba(rule_logits)
-            probs = np.einsum('ne,nec->nc', weights, softmax(rule_logits))
+            probs = router.predict_distribution(rule_logits)
             entry['routing'][name] = evaluate_predictions(
                 targets, preds, probs, train_counts)
 

@@ -13,8 +13,10 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 from torch import nn
 from torch.utils.data import Dataset
@@ -32,6 +34,7 @@ from data.oof_datamodule import (  # noqa: E402
     FoldAwareDataModule,
     OOFDataError,
 )
+from scripts import oof_pipeline  # noqa: E402
 from scripts.oof_pipeline import (  # noqa: E402
     OOFArtifactError,
     OOFArtifactStore,
@@ -261,6 +264,74 @@ def test_artifact_store_rejects_incompatible_run_reuse():
             assert "overwrite" in str(exc) or "incompatible" in str(exc)
         else:
             raise AssertionError("incompatible run reuse was accepted")
+
+
+def test_metadata_replace_failure_preserves_previous_bytes():
+    """A failed metadata replacement must leave the last valid state readable."""
+    manager = _manager()
+    context = OOFRunSpec(
+        experiment_id="synthetic",
+        expert="ce",
+        training_seed=78,
+        outer_fold_id=0,
+        inner_fold_id=0,
+    ).resolve(manager)
+    with tempfile.TemporaryDirectory() as tmp:
+        store = OOFArtifactStore(
+            root=Path(tmp) / "artifacts" / "oof",
+            manager=manager,
+            experiment_id="synthetic",
+            canonical_checkpoint_dir=Path(tmp) / "canonical-checkpoints",
+        )
+        config = _config_payload()
+        store.prepare_run(context, config)
+        metadata_path = store.metadata_path(context)
+        before = metadata_path.read_bytes()
+        checkpoint_path = store.checkpoint_path(context)
+        checkpoint_sha = _checkpoint(checkpoint_path)
+
+        def fail_replace(_temporary, _destination):
+            raise OSError("simulated metadata replacement failure")
+
+        with patch.object(oof_pipeline.os, "replace", fail_replace):
+            with pytest.raises(OOFArtifactError, match="metadata"):
+                store.record_checkpoint(context, checkpoint_path, checkpoint_sha)
+
+        assert metadata_path.read_bytes() == before
+        assert json.loads(metadata_path.read_text())["status"] == "prepared"
+
+
+def test_metadata_status_transition_is_atomic_and_valid_after_success():
+    """A successful replacement keeps the normal prepared -> complete state valid."""
+    manager = _manager()
+    context = OOFRunSpec(
+        experiment_id="synthetic",
+        expert="ce",
+        training_seed=78,
+        outer_fold_id=0,
+        inner_fold_id=0,
+    ).resolve(manager)
+    with tempfile.TemporaryDirectory() as tmp:
+        store = OOFArtifactStore(
+            root=Path(tmp) / "artifacts" / "oof",
+            manager=manager,
+            experiment_id="synthetic",
+            canonical_checkpoint_dir=Path(tmp) / "canonical-checkpoints",
+        )
+        config = _config_payload()
+        store.prepare_run(context, config)
+        checkpoint_path = store.checkpoint_path(context)
+        checkpoint_sha = _checkpoint(checkpoint_path)
+
+        store.record_checkpoint(context, checkpoint_path, checkpoint_sha)
+
+        metadata = json.loads(store.metadata_path(context).read_text())
+        assert metadata["status"] == "training_complete"
+        restored, resolved = store.validate_run_provenance(
+            context, expected_config=config
+        )
+        assert restored["status"] == "training_complete"
+        assert resolved == config
 
 
 def test_prediction_collection_is_deterministic_and_records_provenance():
@@ -537,6 +608,8 @@ TESTS = [
     ("membership tampering is rejected early", test_membership_tampering_is_rejected_before_dataset_construction),
     ("canonical checkpoint guard", test_artifact_store_refuses_canonical_checkpoint_directory),
     ("incompatible run reuse is rejected", test_artifact_store_rejects_incompatible_run_reuse),
+    ("metadata replacement failure preserves bytes", test_metadata_replace_failure_preserves_previous_bytes),
+    ("metadata status transition remains valid", test_metadata_status_transition_is_atomic_and_valid_after_success),
     ("deterministic prediction provenance", test_prediction_collection_is_deterministic_and_records_provenance),
     ("checkpoint identity validation", test_prediction_collection_rejects_wrong_checkpoint_identity),
     ("prediction completeness and duplicates", test_store_rejects_incomplete_duplicate_or_mismatched_prediction_records),

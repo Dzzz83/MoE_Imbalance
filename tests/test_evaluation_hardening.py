@@ -724,6 +724,55 @@ def test_legacy_loader_cannot_read_test_data_when_logging_fails():
     assert "test-set" in message.lower()
 
 
+def test_legacy_test_loader_consumes_its_access_grant():
+    """The legacy loader must use the scoped authorization it requests."""
+    import scripts.utils.data as data_utils
+
+    class TrackingGrant:
+        def __init__(self):
+            self.consumed = False
+
+        def consume(self):
+            assert not self.consumed
+            self.consumed = True
+
+    class TrackingLog:
+        grant = TrackingGrant()
+
+        def __init__(self, _path):
+            pass
+
+        def authorize(self, *_args, **_kwargs):
+            return self.grant
+
+    class SyntheticTestDataset:
+        def __init__(self, *args, **kwargs):
+            self.targets = [0, 1]
+
+        def __len__(self):
+            return len(self.targets)
+
+        def __getitem__(self, index):
+            return torch.zeros(3, 32, 32), self.targets[index]
+
+        def get_class_counts(self):
+            return np.array([1, 1], dtype=np.int64)
+
+    original_log = data_utils.TestAccessLog
+    original_dataset = data_utils.LongTailCIFAR100
+    data_utils.TestAccessLog = TrackingLog
+    data_utils.LongTailCIFAR100 = SyntheticTestDataset
+    try:
+        data_utils.create_cifar_loader(
+            "test", data_root=tempfile.mkdtemp(prefix="evaluation_access_data_"),
+            num_workers=0, pin_memory=False,
+        )
+    finally:
+        data_utils.TestAccessLog = original_log
+        data_utils.LongTailCIFAR100 = original_dataset
+    assert TrackingLog.grant.consumed
+
+
 def test_training_loader_does_not_trigger_test_access_logging():
     import scripts.utils.data as data_utils
 
@@ -804,6 +853,7 @@ TESTS = [
     ("failed logging blocks evaluation", test_failed_evaluation_logging_prevents_dataset_access),
     ("legacy loader guard", test_legacy_loader_cannot_read_test_data_when_logging_fails),
     ("training loader avoids test guard", test_training_loader_does_not_trigger_test_access_logging),
+    ("legacy loader consumes access grant", test_legacy_test_loader_consumes_its_access_grant),
     ("legacy DACE guard", test_legacy_dace_reader_declares_the_central_guard),
 ]
 

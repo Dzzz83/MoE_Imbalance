@@ -22,10 +22,12 @@ CIFAR-100 test set.
 Sinkhorn routing, new specialized experts, and a full multi-fold/multi-seed
 nested evaluation are not implemented or complete. Tasks 3F-A–3F-F are
 exploratory development analyses only; they do not authorize independent
-evaluation. Documentation consolidation is complete for this handoff. The
-next planned stages are a codebase audit/refactor, new Ridge experiments,
-Sinkhorn experiments, Ridge + Sinkhorn experiments, and then an independently
-frozen evaluation.
+evaluation. Documentation consolidation and Phase 1 correctness hardening are
+complete for this handoff. The shared analysis artifact layer, fold-integrity
+validation, explicit router distribution contract, and regression coverage are
+now in the current worktree. Later OOF extraction, analysis-foundation
+completion, legacy quarantine, new Ridge/Sinkhorn experiments, and an
+independently frozen evaluation remain planned.
 
 ## Experimental protocol
 
@@ -115,6 +117,9 @@ scripts/task3f_feature_comparison.py
                                   Task 3F-F feature comparison
 scripts/run_task3f_feature_comparison.py
                                   Task 3F-F CLI entry point
+scripts/analysis/artifacts.py    ArtifactReader and ImmutableArtifactWriter
+data/nested_oof.py               FoldIntegrityValidator and OOF compatibility facade
+scripts/router/                  parameter-free routers and distribution contract
 artifacts/oof/task3c_oof/        aligned OOF data and diagnostics
 artifacts/oof/task3e_fixed_feasibility/
                                   fixed-weight outputs
@@ -134,6 +139,18 @@ artifacts/oof/task3f_feature_comparison/
 checkpoints/                     original full-data checkpoints and reports
 records/                         routing catalogue and frozen historical preregistration
 ~~~
+
+The current router API keeps two probability concepts separate. `predict_proba`
+returns expert-contribution weights. `predict_class` chooses a class using the
+router's rule, and `predict_distribution` returns the class distribution from
+that same classifier: the default hard-selected expert softmax, Uniform's
+softmax of mean logits, ProbabilityAverage's mean softmax, or TTA's delegated
+distribution. Evaluation and calibration must consume `predict_distribution`.
+
+The shared `ArtifactReader` and `ImmutableArtifactWriter` live in
+`scripts/analysis/artifacts.py`; `FoldIntegrityValidator` remains the
+validation boundary in `data/nested_oof.py` while the later package extraction
+is planned.
 
 ## Reproducing the saved analyses
 
@@ -229,6 +246,8 @@ For a cheap implementation check without training a reported model:
 - [docs/research.md](docs/research.md) — literature and current research direction
 - [docs/nested-oof-protocol.md](docs/nested-oof-protocol.md) — frozen fold and non-cheating rules
 - [docs/expert-diagnostics.md](docs/expert-diagnostics.md) — reusable diagnostic framework
+- [docs/code-audit-report.md](docs/code-audit-report.md) — verified defects, fixes and result impact
+- [docs/refactor-plan.md](docs/refactor-plan.md) — phased refactor, extraction and quarantine plan
 - [docs/archive/historical-results.md](docs/archive/historical-results.md) — superseded protocols and numbers
 - [docs/archive/bugfix-report.md](docs/archive/bugfix-report.md) — audit history
 - [docs/test-access-log.md](docs/test-access-log.md) — append-only original test-set access log

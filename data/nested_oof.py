@@ -190,6 +190,161 @@ class OuterFoldDefinition:
         return _hash_indices(self.expert_training_indices)
 
 
+class FoldIntegrityValidator:
+    """Recompute fold metadata from canonical labels and memberships.
+
+    Fold definitions are immutable value objects, but a manager or a restored
+    manifest can still be assembled from externally supplied objects.  This
+    validator keeps the derived class counts and router-role memberships tied
+    to the canonical population instead of trusting serialized tuples.
+
+    The validator intentionally has no knowledge of images, models, or test
+    data.  It is shared by :class:`FoldManifest` and
+    :class:`NestedOOFFoldManager` so construction-time and deserialization-time
+    checks cannot drift apart.
+    """
+
+    def __init__(
+        self,
+        canonical_indices: Sequence[int],
+        canonical_labels: Sequence[int],
+        num_classes: int,
+    ) -> None:
+        if len(canonical_indices) != len(canonical_labels):
+            raise FoldMembershipError(
+                "canonical training indices and labels have different lengths"
+            )
+        self._labels_by_index = dict(
+            zip(
+                (int(index) for index in canonical_indices),
+                (int(label) for label in canonical_labels),
+            )
+        )
+        if len(self._labels_by_index) != len(canonical_indices):
+            raise FoldMembershipError("canonical training indices contain duplicates")
+        self.num_classes = int(num_classes)
+
+    def class_counts(self, indices: Iterable[int]) -> tuple[int, ...]:
+        """Return class counts recomputed from canonical labels."""
+        return _class_counts(indices, self._labels_by_index, self.num_classes)
+
+    def validate_outer_counts(self, outer: OuterFoldDefinition) -> None:
+        """Reject stale class-count metadata on one outer fold."""
+        if outer.expert_training_class_counts != self.class_counts(
+            outer.expert_training_indices
+        ):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} training class counts are inconsistent"
+            )
+        if outer.evaluation_class_counts != self.class_counts(
+            outer.evaluation_indices
+        ):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} held-out class counts are inconsistent"
+            )
+
+    def validate_inner_counts(
+        self,
+        outer: OuterFoldDefinition,
+        inner: InnerFoldDefinition,
+    ) -> None:
+        """Reject stale class counts or membership hashes on one inner fold."""
+        inner_training = set(inner.expert_training_indices)
+        prediction = set(inner.prediction_indices)
+        if inner.expert_training_class_counts != self.class_counts(inner_training):
+            raise FoldMembershipError(
+                f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
+                "training class counts are inconsistent"
+            )
+        if inner.prediction_class_counts != self.class_counts(prediction):
+            raise FoldMembershipError(
+                f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
+                "held-out class counts are inconsistent"
+            )
+        if inner.expert_training_membership_hash != _hash_indices(inner_training):
+            raise FoldMembershipError(
+                f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
+                "training membership hash is inconsistent"
+            )
+
+    def validate_router_membership(
+        self,
+        outer: OuterFoldDefinition,
+        *,
+        inner_count: int,
+        selection_inner_fold_ids: Sequence[int],
+    ) -> None:
+        """Tie router rows exactly to the declared inner-fold IDs.
+
+        Fold IDs are a set-level partition, while the persisted sample-index
+        arrays are canonical sorted tuples.  We therefore reject duplicate or
+        overlapping IDs and compare the derived index tuples exactly.
+        """
+        router = outer.router_development
+        fit_ids = tuple(int(value) for value in router.fit_inner_fold_ids)
+        selection_ids = tuple(int(value) for value in router.selection_inner_fold_ids)
+        if len(set(fit_ids)) != len(fit_ids) or len(set(selection_ids)) != len(
+            selection_ids
+        ):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router fold IDs contain duplicates"
+            )
+        if set(fit_ids) & set(selection_ids):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router fold IDs overlap"
+            )
+        if set(fit_ids) | set(selection_ids) != set(range(inner_count)):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router fold IDs do not cover inner folds"
+            )
+        expected_selection_ids = tuple(int(value) for value in selection_inner_fold_ids)
+        if selection_ids != expected_selection_ids:
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router-selection IDs disagree "
+                "with experiment_config"
+            )
+
+        actual_inner_ids = tuple(inner.inner_fold_id for inner in outer.inner_folds)
+        if actual_inner_ids != tuple(range(inner_count)):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} inner IDs must be 0..{inner_count - 1}"
+            )
+        inner_by_id = {inner.inner_fold_id: inner for inner in outer.inner_folds}
+        expected_fit_indices = tuple(
+            sorted(
+                index
+                for inner_id in fit_ids
+                for index in inner_by_id[inner_id].prediction_indices
+            )
+        )
+        expected_selection_indices = tuple(
+            sorted(
+                index
+                for inner_id in selection_ids
+                for index in inner_by_id[inner_id].prediction_indices
+            )
+        )
+        if tuple(router.fit_indices) != expected_fit_indices:
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router-fit indices do not match "
+                "their declared inner folds"
+            )
+        if tuple(router.selection_indices) != expected_selection_indices:
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router-selection indices do not "
+                "match their declared inner folds"
+            )
+        if router.fit_class_counts != self.class_counts(expected_fit_indices):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router-fit class counts are inconsistent"
+            )
+        if router.selection_class_counts != self.class_counts(expected_selection_indices):
+            raise FoldMembershipError(
+                f"outer fold {outer.outer_fold_id} router-selection class counts "
+                "are inconsistent"
+            )
+
+
 @dataclass(frozen=True)
 class FoldManifest:
     """Versioned, JSON-serializable description of a nested fold map."""
@@ -536,6 +691,11 @@ class FoldManifest:
         recorded_counts = tuple(config["canonical_class_counts"])
         if tuple(int(value) for value in recorded_counts) != actual_counts:
             raise FoldMembershipError("manifest canonical class counts are inconsistent")
+        integrity_validator = FoldIntegrityValidator(
+            self.canonical_training_indices,
+            self.canonical_training_labels,
+            num_classes,
+        )
 
         canonical = set(self.canonical_training_indices)
         outer_ids = [outer.outer_fold_id for outer in self.outer_folds]
@@ -562,18 +722,7 @@ class FoldManifest:
                 raise FoldMembershipError(
                     f"outer fold {outer.outer_fold_id} is not a canonical partition"
                 )
-            if outer.expert_training_class_counts != _class_counts(
-                training, labels_by_index, num_classes
-            ):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} training class counts are inconsistent"
-                )
-            if outer.evaluation_class_counts != _class_counts(
-                evaluation, labels_by_index, num_classes
-            ):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} held-out class counts are inconsistent"
-                )
+            integrity_validator.validate_outer_counts(outer)
             if [inner.inner_fold_id for inner in outer.inner_folds] != list(range(inner_count)):
                 raise FoldMembershipError(
                     f"outer fold {outer.outer_fold_id} inner IDs must be 0..{inner_count - 1}"
@@ -594,25 +743,7 @@ class FoldManifest:
                         f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
                         "is not a partition of outer training"
                     )
-                if inner.expert_training_class_counts != _class_counts(
-                    inner_training, labels_by_index, num_classes
-                ):
-                    raise FoldMembershipError(
-                        f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
-                        "training class counts are inconsistent"
-                    )
-                if inner.prediction_class_counts != _class_counts(
-                    prediction, labels_by_index, num_classes
-                ):
-                    raise FoldMembershipError(
-                        f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
-                        "held-out class counts are inconsistent"
-                    )
-                if inner.expert_training_membership_hash != _hash_indices(inner_training):
-                    raise FoldMembershipError(
-                        f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
-                        "training membership hash is inconsistent"
-                    )
+                integrity_validator.validate_inner_counts(outer, inner)
                 if any(count == 0 for count in inner.expert_training_class_counts):
                     raise FoldMembershipError(
                         f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} drops a class"
@@ -631,32 +762,11 @@ class FoldManifest:
                 raise FoldMembershipError(
                     f"outer fold {outer.outer_fold_id} router partitions are inconsistent"
                 )
-            if set(router.fit_inner_fold_ids) & set(router.selection_inner_fold_ids):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} router fold IDs overlap"
-                )
-            if set(router.fit_inner_fold_ids) | set(router.selection_inner_fold_ids) != set(
-                range(inner_count)
-            ):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} router fold IDs do not cover inner folds"
-                )
-            if tuple(router.selection_inner_fold_ids) != configured_selection_ids:
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} router-selection IDs disagree "
-                    "with experiment_config"
-                )
-            if router.fit_class_counts != _class_counts(fit, labels_by_index, num_classes):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} router-fit class counts are inconsistent"
-                )
-            if router.selection_class_counts != _class_counts(
-                selection, labels_by_index, num_classes
-            ):
-                raise FoldMembershipError(
-                    f"outer fold {outer.outer_fold_id} router-selection class counts "
-                    "are inconsistent"
-                )
+            integrity_validator.validate_router_membership(
+                outer,
+                inner_count=inner_count,
+                selection_inner_fold_ids=configured_selection_ids,
+            )
             if any(count == 0 for count in router.fit_class_counts) or any(
                 count == 0 for count in router.selection_class_counts
             ):
@@ -953,6 +1063,11 @@ class NestedOOFFoldManager:
     def validate_membership(self) -> None:
         """Assert all outer, inner, and router-development invariants."""
         canonical = set(self.canonical_indices)
+        integrity_validator = FoldIntegrityValidator(
+            self.canonical_indices,
+            self.training_labels,
+            self.num_classes,
+        )
         outer_evaluation = [
             index for fold in self._outer_folds for index in fold.evaluation_indices
         ]
@@ -982,6 +1097,7 @@ class NestedOOFFoldManager:
                 raise FoldMembershipError(
                     f"outer fold {outer.outer_fold_id} does not partition the canonical population"
                 )
+            integrity_validator.validate_outer_counts(outer)
 
             inner_prediction = [
                 index for inner in outer.inner_folds for index in inner.prediction_indices
@@ -1011,6 +1127,7 @@ class NestedOOFFoldManager:
                         f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
                         "does not partition outer training"
                     )
+                integrity_validator.validate_inner_counts(outer, inner)
                 if any(count == 0 for count in inner.expert_training_class_counts):
                     raise FoldMembershipError(
                         f"outer {outer.outer_fold_id}, inner {inner.inner_fold_id} "
@@ -1035,6 +1152,11 @@ class NestedOOFFoldManager:
                     f"outer fold {outer.outer_fold_id} outer evaluation leaked into "
                     "router development"
                 )
+            integrity_validator.validate_router_membership(
+                outer,
+                inner_count=self.inner_fold_count,
+                selection_inner_fold_ids=(0,),
+            )
             if any(count == 0 for count in router.fit_class_counts) or any(
                 count == 0 for count in router.selection_class_counts
             ):
@@ -1498,14 +1620,14 @@ class OOFPredictionArtifact:
                                     expert_id,
                                 )
                             )
-            actual = {
-                (sample, outer, inner, expert)
-                for sample, outer, inner, expert in seen
-                if inner is not None
-            }
+            # A complete artifact is specifically the all-inner-OOF
+            # population.  Compare the full key set so an otherwise valid
+            # outer-evaluation record cannot be smuggled into a complete
+            # development artifact and silently ignored.
+            actual = set(seen)
             if actual != expected:
-                missing = sorted(expected - actual)
-                extra = sorted(actual - expected)
+                missing = sorted(expected - actual, key=repr)
+                extra = sorted(actual - expected, key=repr)
                 raise OOFArtifactValidationError(
                     "OOF artifact is incomplete or contains unexpected rows; "
                     f"missing={missing[:3]}, extra={extra[:3]}"

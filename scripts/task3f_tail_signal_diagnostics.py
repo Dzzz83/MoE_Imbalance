@@ -10,15 +10,13 @@ correctness reports.
 from __future__ import annotations
 
 from collections.abc import Mapping
-import hashlib
-import json
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import numpy as np
 
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis import ArtifactReader, ImmutableArtifactWriter
 from scripts.base_trainer import compute_class_groups
 from scripts.task3e_fixed import (
     EXPERT_ORDER,
@@ -90,6 +88,7 @@ def _validate_expert_matrix(
     name: str,
     num_samples: int | None = None,
     integer: bool = False,
+    num_classes: int | None = None,
 ) -> np.ndarray:
     array = _as_numeric(value, name=name)
     if array.ndim != 2 or array.shape[1] != len(EXPERT_ORDER):
@@ -100,7 +99,12 @@ def _validate_expert_matrix(
         raise Task3FCTailDiagnosticError(f"{name} is not sample-aligned")
     if integer and not np.equal(array, np.floor(array)).all():
         raise Task3FCTailDiagnosticError(f"{name} must contain integer class IDs")
-    return array.astype(np.int64 if integer else np.float64, copy=False)
+    result = array.astype(np.int64 if integer else np.float64, copy=False)
+    if integer and num_classes is not None and (
+        np.any(result < 0) or np.any(result >= num_classes)
+    ):
+        raise Task3FCTailDiagnosticError(f"{name} fall outside class_counts")
+    return result
 
 
 def _validate_weights(weights: Any, *, num_samples: int) -> np.ndarray:
@@ -258,15 +262,18 @@ def confidence_diagnostics(
     class_counts: Any,
 ) -> dict[str, Any]:
     """Report raw confidence distributions and retrospective correctness splits."""
-    predictions = _validate_expert_matrix(
-        expert_predictions, name="expert predictions", integer=True
-    )
     labels_array = _as_integer_vector(labels, name="labels")
-    if len(labels_array) != len(predictions):
-        raise Task3FCTailDiagnosticError("labels and expert predictions are misaligned")
     counts = _validate_class_counts(class_counts)
     if np.any(labels_array < 0) or np.any(labels_array >= len(counts)):
         raise Task3FCTailDiagnosticError("labels fall outside class_counts")
+    predictions = _validate_expert_matrix(
+        expert_predictions,
+        name="expert predictions",
+        integer=True,
+        num_classes=len(counts),
+    )
+    if len(labels_array) != len(predictions):
+        raise Task3FCTailDiagnosticError("labels and expert predictions are misaligned")
     confidence_array = _validate_confidences(
         confidences, num_samples=len(labels_array)
     )
@@ -383,13 +390,18 @@ def disagreement_diagnostics(
     class_counts: Any,
 ) -> dict[str, Any]:
     """Summarize prediction agreement, distinct-class counts, and correctness."""
-    predictions = _validate_expert_matrix(
-        expert_predictions, name="expert predictions", integer=True
-    )
     labels_array = _as_integer_vector(labels, name="labels")
+    counts = _validate_class_counts(class_counts)
+    if np.any(labels_array < 0) or np.any(labels_array >= len(counts)):
+        raise Task3FCTailDiagnosticError("labels fall outside class_counts")
+    predictions = _validate_expert_matrix(
+        expert_predictions,
+        name="expert predictions",
+        integer=True,
+        num_classes=len(counts),
+    )
     if len(labels_array) != len(predictions):
         raise Task3FCTailDiagnosticError("labels and expert predictions are misaligned")
-    counts = _validate_class_counts(class_counts)
     true_groups = assign_class_groups(labels_array, counts)
     all_agree = np.all(predictions == predictions[:, [0]], axis=1)
     lal_balanced_agree = predictions[:, 1] == predictions[:, 2]
@@ -665,29 +677,19 @@ def ridge_weight_pattern_diagnostics(
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return ArtifactReader(error_type=Task3FCTailDiagnosticError).sha256_file(path)
 
 
 def _load_json(path: Path, *, name: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3FCTailDiagnosticError(f"cannot load {name}: {path}") from exc
-    if not isinstance(payload, dict):
-        raise Task3FCTailDiagnosticError(f"{name} must be a JSON object")
-    return payload
+    return ArtifactReader(error_type=Task3FCTailDiagnosticError).read_json(
+        path, name=name
+    )
 
 
 def _load_npz(path: Path, *, name: str) -> dict[str, np.ndarray]:
-    try:
-        with np.load(path, allow_pickle=False) as archive:
-            return {key: np.array(archive[key]) for key in archive.files}
-    except (OSError, ValueError) as exc:
-        raise Task3FCTailDiagnosticError(f"cannot load {name}: {path}") from exc
+    return ArtifactReader(error_type=Task3FCTailDiagnosticError).read_npz(
+        path, name=name
+    )
 
 
 def _require(condition: bool, message: str) -> None:
@@ -695,53 +697,22 @@ def _require(condition: bool, message: str) -> None:
         raise Task3FCTailDiagnosticError(message)
 
 
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
-
-
 def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
-    text = json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        if path.read_text() != text:
-            raise Task3FCTailDiagnosticError(
-                f"refusing to overwrite incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    ImmutableArtifactWriter(error_type=Task3FCTailDiagnosticError).write_json_once(
+        path, payload
+    )
 
 
 def _write_text_once(path: Path, text: str) -> None:
-    if path.exists():
-        if path.read_text() != text:
-            raise Task3FCTailDiagnosticError(
-                f"refusing to overwrite incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    ImmutableArtifactWriter(error_type=Task3FCTailDiagnosticError).write_text_once(
+        path, text
+    )
 
 
 def _git_commit(project_root: Path) -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return result.stdout.strip() or None
+    return ArtifactReader(error_type=Task3FCTailDiagnosticError).git_commit(
+        project_root, required=False
+    )
 
 
 def _find_unique_index(values: Any, target: str, *, name: str) -> int:

@@ -194,9 +194,23 @@ def compute_energy(logits: np.ndarray, temperature: float = 1.0) -> np.ndarray:
     """Energy score: ``-temperature * log(sum(exp(logits / temperature)))``.
 
     Lower energy → higher confidence. Useful for OOD detection and
-    cross-expert comparison.
+    cross-expert comparison. The log-sum-exp calculation is shifted by the
+    row maximum so large but finite logits do not overflow.
     """
-    return -temperature * np.log(np.sum(np.exp(logits / temperature), axis=1))
+    if not np.isscalar(temperature) or not np.isfinite(temperature) or temperature <= 0:
+        raise ValueError(f"temperature must be finite and > 0, got {temperature!r}")
+    logits = np.asarray(logits)
+    if logits.ndim != 2:
+        raise ValueError(f"logits must have shape (N, C), got {logits.shape}")
+    if not np.isfinite(logits).all():
+        raise ValueError("logits must contain only finite values")
+
+    scaled = logits.astype(np.float64, copy=False) / float(temperature)
+    row_max = np.max(scaled, axis=1, keepdims=True)
+    log_sum_exp = row_max[:, 0] + np.log(
+        np.exp(scaled - row_max).sum(axis=1)
+    )
+    return -float(temperature) * log_sum_exp
 
 
 # ── 89-d and 92-d Features ──────────────────────────────────────────────

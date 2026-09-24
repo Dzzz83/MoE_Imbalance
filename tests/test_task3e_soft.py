@@ -103,6 +103,14 @@ def test_invalid_logits_dimensions_and_nonfinite_values_are_explicit_failures():
         _oracle().solve(bad, 0)
 
 
+@pytest.mark.parametrize(
+    "name", ["margin_tolerance", "feasibility_tolerance", "verification_tolerance"]
+)
+def test_soft_oracle_rejects_nonfinite_tolerances(name):
+    with pytest.raises(Task3EError, match="finite positive"):
+        SoftMixtureOracle(**{name: np.nan})
+
+
 def test_lp_objective_direction_unrestricted_margin_and_all_99_constraints():
     logits = _logits_100()
     logits[0, 0] = 4.0

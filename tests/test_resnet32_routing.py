@@ -18,7 +18,7 @@ _proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _proj_root not in sys.path:
     sys.path.insert(0, _proj_root)
 
-from models.resnet32 import RoutingHead, ResNet32WithRouting, ResNet32
+from models.resnet32 import RoutingHead, ResNet32WithRouting, ResNet32, PaCoResNet32
 
 # Fixtures below are random; seed them so a threshold assertion cannot
 # flip between runs.
@@ -155,6 +155,35 @@ def test_load_resnet32_checkpoint():
     )
 
 
+def test_paco_queue_handles_batches_larger_than_queue():
+    """Circular queue replacement must support any batch size."""
+    model = PaCoResNet32(num_classes=3, dim=2, K=3, mlp=False)
+    model.queue.zero_()
+    model.queue_label.zero_()
+    model.queue_ptr.fill_(1)
+    keys = torch.arange(14, dtype=torch.float32).reshape(7, 2)
+    labels = torch.arange(7, dtype=torch.long)
+
+    model._dequeue_and_enqueue(keys, labels)
+
+    # Last K keys are written starting at (old_ptr + B - K) % K = 2.
+    expected_queue = torch.tensor([[10., 11.], [12., 13.], [8., 9.]])
+    expected_labels = torch.tensor([5, 6, 4])
+    assert torch.equal(model.queue, expected_queue)
+    assert torch.equal(model.queue_label, expected_labels)
+    assert int(model.queue_ptr) == 2
+    print("  ✅ PaCo queue handles batches larger than 2K")
+
+
+def test_paco_rejects_nonpositive_queue_size():
+    try:
+        PaCoResNet32(num_classes=3, dim=2, K=0, mlp=False)
+    except ValueError as exc:
+        assert "K" in str(exc)
+        return
+    raise AssertionError("PaCoResNet32 must reject K=0")
+
+
 if __name__ == "__main__":
     tests = [
         ("RoutingHead shape", test_routing_head_shape),
@@ -166,6 +195,8 @@ if __name__ == "__main__":
         ("Classifier gradient flows", test_classifier_gradient_flows),
         ("Routing head gradient flows to backbone", test_routing_head_gradient_flows_to_backbone),
         ("Load ResNet32 checkpoint", test_load_resnet32_checkpoint),
+        ("PaCo queue handles large batches", test_paco_queue_handles_batches_larger_than_queue),
+        ("PaCo queue validates size", test_paco_rejects_nonpositive_queue_size),
     ]
 
     passed = 0

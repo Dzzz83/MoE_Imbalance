@@ -272,6 +272,14 @@ class PaCoResNet32(nn.Module):
         mlp: bool = True,
     ):
         super().__init__()
+        if num_classes < 1:
+            raise ValueError(f"num_classes must be positive, got {num_classes}")
+        if dim < 1:
+            raise ValueError(f"dim must be positive, got {dim}")
+        if K < 1:
+            raise ValueError(f"K must be positive, got {K}")
+        if not 0.0 <= m <= 1.0:
+            raise ValueError(f"m must be in [0, 1], got {m}")
         self.dim = dim
         self.K = K
         self.m = m
@@ -355,21 +363,41 @@ class PaCoResNet32(nn.Module):
 
     @torch.no_grad()
     def _dequeue_and_enqueue(self, keys, labels):
+        if keys.ndim != 2 or keys.shape[1] != self.dim:
+            raise ValueError(
+                f"keys must have shape (B, {self.dim}), got {tuple(keys.shape)}"
+            )
+        if labels.ndim != 1 or labels.shape[0] != keys.shape[0]:
+            raise ValueError(
+                "labels must have shape (B,) matching keys, got "
+                f"{tuple(labels.shape)} for B={keys.shape[0]}"
+            )
+
+        # The queue is a circular buffer.  Keep the *last* K entries when a
+        # batch is larger than the queue, then write the selected contiguous
+        # segment with modular indices.  This handles arbitrary batch sizes,
+        # including batches larger than 2K, without shape-dependent slicing.
+        keys = keys.to(device=self.queue.device)
+        labels = labels.to(device=self.queue_label.device)
         batch_size = keys.shape[0]
         ptr = int(self.queue_ptr)
-        # queue must hold an integer number of batches
-        if ptr + batch_size > self.K:
-            # wrap around to start if not enough space
-            remaining = self.K - ptr
-            self.queue[ptr:self.K] = keys[:remaining]
-            self.queue_label[ptr:self.K] = labels[:remaining]
-            self.queue[:batch_size - remaining] = keys[remaining:]
-            self.queue_label[:batch_size - remaining] = labels[remaining:]
-            self.queue_ptr[0] = (ptr + batch_size) % self.K
+        if batch_size == 0:
+            return
+
+        if batch_size >= self.K:
+            keys = keys[-self.K:]
+            labels = labels[-self.K:]
+            start = (ptr + batch_size - self.K) % self.K
         else:
-            self.queue[ptr:ptr + batch_size] = keys
-            self.queue_label[ptr:ptr + batch_size] = labels
-            self.queue_ptr[0] = (ptr + batch_size) % self.K
+            start = ptr
+
+        positions = (
+            torch.arange(keys.shape[0], device=self.queue.device, dtype=torch.long)
+            + start
+        ) % self.K
+        self.queue.index_copy_(0, positions, keys)
+        self.queue_label.index_copy_(0, positions.to(self.queue_label.device), labels)
+        self.queue_ptr[0] = (ptr + batch_size) % self.K
 
     def forward(self, im_q, im_k=None, labels=None):
         if not self.training:

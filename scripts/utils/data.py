@@ -248,10 +248,15 @@ def create_cifar_loader(
         )
 
     if dataset_type == "test":
-        TestAccessLog(test_access_log).authorize(
+        access_grant = TestAccessLog(test_access_log).authorize(
             ' '.join(sys.argv),
             note='legacy create_cifar_loader test-set read',
         )
+        # Consume the scoped capability immediately before constructing the
+        # protected dataset.  Merely writing the audit row is not sufficient:
+        # callers must prove that this specific authorization was used for the
+        # read, and a grant must not be reusable.
+        access_grant.consume()
         # Original CIFAR-100 test set (10K balanced) — the only evaluation set
         dataset = LongTailCIFAR100(
             root=str(root),

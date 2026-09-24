@@ -155,6 +155,27 @@ def test_tail_gain_loss_accounting_keeps_per_image_expert_and_weight_records():
     assert report["lost_cases"][0]["sample_id"] == 103
 
 
+def test_tail_gain_loss_accounting_rejects_fractional_or_out_of_range_predictions():
+    common = dict(
+        sample_ids=np.array([100], dtype=np.int64),
+        labels=np.array([3], dtype=np.int64),
+        uniform_predictions=np.array([0], dtype=np.int64),
+        ridge_predictions=np.array([3], dtype=np.int64),
+        ridge_weights=np.full((1, 4), 0.25, dtype=np.float64),
+        class_counts=_class_counts(),
+    )
+    with pytest.raises(Task3FBDiagnosticError, match="integer class IDs"):
+        tail_gain_loss_accounting(
+            expert_predictions=np.full((1, 4), 0.5, dtype=np.float64),
+            **common,
+        )
+    with pytest.raises(Task3FBDiagnosticError, match="outside class_counts"):
+        tail_gain_loss_accounting(
+            expert_predictions=np.full((1, 4), 4, dtype=np.int64),
+            **common,
+        )
+
+
 def test_mixup_weight_factor_one_preserves_predictions_and_zero_is_valid():
     weights = np.array(
         [[0.2, 0.3, 0.1, 0.4], [0.25, 0.25, 0.25, 0.25]],

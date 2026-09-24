@@ -201,6 +201,45 @@ def test_uniform_router_equals_logit_averaging():
     print("  ✅ UniformRouter == logit averaging")
 
 
+def test_router_distribution_matches_predicted_classifier():
+    """Class probabilities must correspond to each router's class decision."""
+    from scripts.router import ROUTERS
+
+    logits = _synthetic_logits(n=32, seed=31)
+    for name, klass in ROUTERS.items():
+        router = klass(expert_names=['A', 'B', 'C'])
+        distribution = router.predict_distribution(logits)
+        assert distribution.shape == (32, 100), f"{name}: {distribution.shape}"
+        assert np.all(np.isfinite(distribution)), f"{name}: non-finite distribution"
+        assert np.allclose(distribution.sum(axis=1), 1.0), f"{name}: not normalized"
+        assert np.array_equal(distribution.argmax(axis=1), router.predict_class(logits)), (
+            f"{name}: distribution argmax disagrees with predict_class"
+        )
+    print("  ✅ every router exposes probabilities for its actual classifier")
+
+
+def test_combining_router_distributions_use_their_exact_decisions():
+    """Uniform and Probability must expose different, decision-matching outputs."""
+    from scripts.router import ProbabilityAverageRouter, UniformRouter
+    from scripts.utils.features import softmax
+
+    logits = np.zeros((1, 3, 3), dtype=np.float64)
+    logits[0, 0, 0] = 100.0
+    logits[0, 1, 1] = 10.0
+    logits[0, 2, 1] = 10.0
+
+    uniform = UniformRouter(expert_names=['A', 'B', 'C'])
+    expected_uniform = softmax(logits.mean(axis=1))
+    assert np.allclose(uniform.predict_distribution(logits), expected_uniform)
+    assert uniform.predict_distribution(logits).argmax(axis=1).tolist() == [0]
+
+    probability = ProbabilityAverageRouter(expert_names=['A', 'B', 'C'])
+    expected_probability = softmax(logits).mean(axis=1)
+    assert np.allclose(probability.predict_distribution(logits), expected_probability)
+    assert probability.predict_distribution(logits).argmax(axis=1).tolist() == [1]
+    print("  ✅ Uniform and Probability distributions match their decisions")
+
+
 def test_product_is_provably_the_logit_average():
     """Why ProductRouter was removed: it is the same classifier as UniformRouter.
 
@@ -458,6 +497,8 @@ TESTS = [
     ("ConfidenceRouter uncalibrated", test_confidence_router_has_no_calibration),
     ("All routers predict without fitting", test_every_router_predicts_without_fitting),
     ("Uniform == logit averaging", test_uniform_router_equals_logit_averaging),
+    ("Router distribution contract", test_router_distribution_matches_predicted_classifier),
+    ("Combining distribution contract", test_combining_router_distributions_use_their_exact_decisions),
     ("Probability == mean softmax", test_probability_average_equals_mean_of_softmax),
     ("Probability resists a dominant expert", test_probability_average_resists_a_dominant_expert),
     ("Probability != logit average", test_probability_average_is_not_a_duplicate_of_logit_average),

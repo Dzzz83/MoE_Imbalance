@@ -70,6 +70,14 @@ class TTARouter(BaseRouter):
         """Class predictions from the base router."""
         return self.base_router.predict_class(logits, features)
 
+    def predict_distribution(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """Class distribution from the delegated base router."""
+        return self.base_router.predict_distribution(logits, features)
+
     def __repr__(self) -> str:
         return (f"TTARouter(base={self.base_router.name}, n_augs={self.n_augs}, "
                 f"experts={self.expert_names})")

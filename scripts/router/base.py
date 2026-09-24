@@ -23,6 +23,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from scripts.utils.metrics import compute_routing_metrics
+from scripts.utils.features import softmax
 
 
 class BaseRouter(ABC):
@@ -83,12 +84,40 @@ class BaseRouter(ABC):
     ) -> np.ndarray:
         """Return routing weights of shape (N, num_experts).
 
-        Default: one-hot from ``predict``. Override for soft routing.
+        Default: one-hot from ``predict``. Override for soft routing. These
+        are expert-contribution weights, not class probabilities; use
+        :meth:`predict_distribution` for the class distribution produced by
+        the router's classifier.
         """
         indices = self.predict(logits, features)
         weights = np.zeros((logits.shape[0], self.num_experts))
         weights[np.arange(len(indices)), indices] = 1.0
         return weights
+
+    def predict_distribution(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """Return class probabilities for the classifier used by the router.
+
+        The default router selects one expert per sample, so its class
+        distribution is the softmax of that expert's logits. Combining
+        routers override this method because their classifier is not one of
+        the individual experts. Keeping this separate from ``predict_proba``
+        avoids confusing routing weights with class probabilities.
+        """
+        expert_indices = self.predict(logits, features)
+        chosen_logits = logits[np.arange(len(expert_indices)), expert_indices]
+        return softmax(chosen_logits)
+
+    def predict_probabilities(
+        self,
+        logits: np.ndarray,
+        features: dict | None = None,
+    ) -> np.ndarray:
+        """Alias for :meth:`predict_distribution` with an explicit name."""
+        return self.predict_distribution(logits, features)
 
     def predict_class(
         self,

@@ -11,14 +11,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 import hashlib
-import json
 from pathlib import Path
-import subprocess
 from typing import Any
 
 import numpy as np
 
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
+from scripts.analysis import ArtifactReader, ImmutableArtifactWriter
 from scripts.task3e_fixed import (
     EXPERT_ORDER,
     RestrictedAnalysisDataset,
@@ -636,38 +635,21 @@ def compare_combined_signals(
 
 
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    try:
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-    except OSError as exc:
-        raise Task3FDCombinedSignalDiagnosticError(
-            f"cannot hash input artifact: {path}"
-        ) from exc
-    return digest.hexdigest()
+    return ArtifactReader(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).sha256_file(path)
 
 
 def _load_json(path: Path, *, name: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Task3FDCombinedSignalDiagnosticError(
-            f"cannot load {name}: {path}"
-        ) from exc
-    if not isinstance(payload, dict):
-        raise Task3FDCombinedSignalDiagnosticError(f"{name} must be a JSON object")
-    return payload
+    return ArtifactReader(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).read_json(path, name=name)
 
 
 def _load_npz(path: Path, *, name: str) -> dict[str, np.ndarray]:
-    try:
-        with np.load(path, allow_pickle=False) as archive:
-            return {key: np.array(archive[key]) for key in archive.files}
-    except (OSError, ValueError) as exc:
-        raise Task3FDCombinedSignalDiagnosticError(
-            f"cannot load {name}: {path}"
-        ) from exc
+    return ArtifactReader(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).read_npz(path, name=name)
 
 
 def _require(condition: bool, message: str) -> None:
@@ -675,53 +657,22 @@ def _require(condition: bool, message: str) -> None:
         raise Task3FDCombinedSignalDiagnosticError(message)
 
 
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, np.ndarray):
-        return value.tolist()
-    if isinstance(value, np.generic):
-        return value.item()
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [_jsonable(item) for item in value]
-    return value
-
-
 def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
-    text = json.dumps(_jsonable(payload), indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        if path.read_text() != text:
-            raise Task3FDCombinedSignalDiagnosticError(
-                f"refusing to overwrite incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    ImmutableArtifactWriter(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).write_json_once(path, payload)
 
 
 def _write_text_once(path: Path, text: str) -> None:
-    if path.exists():
-        if path.read_text() != text:
-            raise Task3FDCombinedSignalDiagnosticError(
-                f"refusing to overwrite incompatible output: {path}"
-            )
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
+    ImmutableArtifactWriter(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).write_text_once(path, text)
 
 
 def _git_commit(project_root: Path) -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=project_root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except (OSError, subprocess.CalledProcessError):
-        return None
-    return result.stdout.strip() or None
+    return ArtifactReader(
+        error_type=Task3FDCombinedSignalDiagnosticError
+    ).git_commit(project_root, required=False)
 
 
 def _find_unique_index(values: Any, target: str, *, name: str) -> int:

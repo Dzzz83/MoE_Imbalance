@@ -19,6 +19,15 @@
 > [`routing-preregistration.md`](routing-preregistration.md) (the frozen
 > candidate set) · [`research.md`](../docs/research.md) (literature)
 
+> **Audit status (2026-09-23).** The historical TTA BA/Tail row below is
+> retained for provenance but is **invalid** because the earlier
+> `data/tta.py` implementation used incorrect padding for normalized tensors
+> and batch-shared crop semantics. It must not support a conclusion pending a
+> separately authorized reevaluation. Historical routing ECE/average-confidence
+> fields for Uniform, Confidence and TTA are also invalid from the old
+> distribution mismatch; Probability routing calibration and per-expert
+> calibration are unaffected.
+
 ---
 
 ## 1. Active rules — parameter-free, four of them
@@ -33,19 +42,20 @@ of tuning on the test set. The interface enforces this — `BaseRouter` has **no
 | **Uniform** | Mean of expert **logits**, then argmax | **46.98 ±0.69** | 18.76 ±0.86 |
 | Probability | Mean of expert **softmax probabilities**, then argmax | 45.95 ±0.55 | 18.70 ±0.50 |
 | Confidence | Take the single most-confident expert's answer | 44.27 ±0.46 | 18.69 ±0.36 |
-| TTA | Confidence, over 10 augmented views per image | 44.15 ±0.68 | 19.38 ±0.97 |
+| TTA | Confidence, over 10 augmented views per image | **INVALID — 44.15 ±0.68** | **INVALID — 19.38 ±0.97** |
 
-**None beats Uniform on both BA and Tail**, which is the pre-registered success
-condition. Confidence and TTA are *significantly worse* on BA (paired difference
-exceeds its own std, negative in all 3 seeds). TTA's Tail is nominally higher
-(+0.62) but not consistent across seeds. See [`results.md`](../docs/results.md)
-§3.
+Among the valid historical rows, neither Probability nor Confidence beats
+Uniform on both BA and Tail. The TTA comparison is withdrawn, so its former
+significance and Tail statements cannot support the pre-registered conclusion.
+See [`results.md`](../docs/results.md) §3.
 
-*Rendering the images 10 augmented ways (TTA) is implemented for real: per-view
-softmax probabilities are averaged, then the logits are recovered as
-log-mean-probability. An earlier version of this rule delegated on the same
-single-view logits and was therefore bit-identical to Confidence — a duplicate
-row that measured nothing.*
+The current TTA implementation renders ten augmented views, averages their
+per-view softmax probabilities, and recovers logits as log-mean-probability.
+That implementation has been corrected, but the historical row was produced
+before the normalized-padding and per-sample-crop fixes. A new value requires a
+separately authorized reevaluation. The router contract now also exposes
+`predict_distribution`, which must use the same classifier as `predict_class`;
+calibration code must consume that distribution rather than expert weights.
 
 ## 2. Removed mechanisms — needed a validation split
 

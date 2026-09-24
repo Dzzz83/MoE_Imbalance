@@ -6,6 +6,7 @@ the CIFAR-100 test split, checkpoints, or model predictions.
 
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 import os
 import sys
@@ -20,6 +21,7 @@ if _PROJECT_ROOT not in sys.path:
 from data.nested_oof import (
     FoldConfigurationError,
     FoldManifest,
+    FoldMembershipError,
     NestedOOFFoldManager,
     OOFArtifactValidationError,
     OOFPredictionArtifact,
@@ -428,6 +430,53 @@ def test_manifest_rejects_tampered_membership_hash_and_reports_distributions():
     assert report["head_medium_tail"]["source"] == "scripts.base_trainer.compute_class_groups"
 
 
+def test_manager_rejects_tampered_derived_class_counts():
+    """Membership validation must not trust serialized class-count tuples."""
+    indices, labels = _synthetic_population()
+    manager = NestedOOFFoldManager(
+        indices, labels, seed=17, num_classes=3, expert_order=("A", "B")
+    )
+    outer = manager.outer_fold(0)
+    tampered = replace(
+        outer,
+        expert_training_class_counts=(999,) + outer.expert_training_class_counts[1:],
+    )
+    manager._outer_folds = (tampered,) + manager.outer_folds[1:]
+
+    try:
+        manager.validate_membership()
+    except FoldMembershipError as exc:
+        assert "training class counts" in str(exc)
+    else:
+        raise AssertionError("tampered outer class counts were accepted")
+
+
+def test_manifest_rejects_router_indices_inconsistent_with_declared_inner_folds():
+    indices, labels = _synthetic_population()
+    manager = NestedOOFFoldManager(
+        indices, labels, seed=17, num_classes=3, expert_order=("A", "B")
+    )
+    payload = manager.manifest().to_dict()
+    router = payload["outer_folds"][0]["router_development"]
+    router["fit_indices"], router["selection_indices"] = (
+        router["selection_indices"],
+        router["fit_indices"],
+    )
+    router["fit_class_counts"], router["selection_class_counts"] = (
+        router["selection_class_counts"],
+        router["fit_class_counts"],
+    )
+
+    try:
+        FoldManifest.from_dict(payload)
+    except FoldMembershipError as exc:
+        assert "indices do not match" in str(exc)
+    else:
+        raise AssertionError(
+            "router indices inconsistent with declared inner folds were accepted"
+        )
+
+
 def test_complete_oof_artifact_requires_each_inner_sample_and_expert():
     indices, labels = _synthetic_population()
     manager = NestedOOFFoldManager(
@@ -469,6 +518,35 @@ def test_complete_oof_artifact_requires_each_inner_sample_and_expert():
         assert "incomplete" in str(exc)
     else:
         raise AssertionError("incomplete OOF artifact was accepted")
+
+    outer = manager.outer_fold(0)
+    labels_by_index = _label_map(indices, labels)
+    outer_record = OOFPredictionRecord.create(
+        sample_index=outer.evaluation_indices[0],
+        training_label=labels_by_index[outer.evaluation_indices[0]],
+        outer_fold_id=0,
+        inner_fold_id=None,
+        expert_id="A",
+        training_seed=78,
+        expert_training_membership_hash=outer.expert_training_membership_hash,
+        checkpoint_path="synthetic/outer-checkpoint.pt",
+        checkpoint_sha256="d" * 64,
+        resolved_config={"expert": "A", "seed": 78, "outer": True},
+        logits=np.zeros(3),
+    )
+    with_outer = OOFPredictionArtifact(
+        expert_order=manager.expert_order,
+        num_classes=manager.num_classes,
+        records=tuple(records) + (outer_record,),
+    )
+    try:
+        with_outer.validate(manager, require_complete=True)
+    except OOFArtifactValidationError as exc:
+        assert "unexpected rows" in str(exc)
+    else:
+        raise AssertionError(
+            "complete inner OOF artifact accepted an extra outer-evaluation record"
+        )
 
 
 TESTS = [
@@ -516,6 +594,11 @@ TESTS = [
     (
         "manifest tamper rejection and reporting",
         test_manifest_rejects_tampered_membership_hash_and_reports_distributions,
+    ),
+    ("derived class-count tamper rejection", test_manager_rejects_tampered_derived_class_counts),
+    (
+        "router membership tamper rejection",
+        test_manifest_rejects_router_indices_inconsistent_with_declared_inner_folds,
     ),
     (
         "complete OOF artifact",

@@ -15,7 +15,8 @@ risk a denormalise/renormalise mismatch.
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
+
+from data.cifar_lt import CIFAR100_MEAN, CIFAR100_STD
 
 
 class AugmentationViews:
@@ -55,22 +56,57 @@ class AugmentationViews:
         """Return ``n_views`` augmented copies of ``images`` (N, C, H, W)."""
         if images.dim() != 4:
             raise ValueError(f"images must be (N, C, H, W), got {tuple(images.shape)}")
-        n, _, height, width = images.shape
-        padded = F.pad(
-            images,
-            (self.crop_padding, self.crop_padding, self.crop_padding, self.crop_padding),
-        )
+        n, channels, height, width = images.shape
+        if channels != len(CIFAR100_MEAN):
+            raise ValueError(
+                "normalized TTA expects CIFAR-100 RGB images with 3 channels, "
+                f"got {channels}"
+            )
+
+        # ``LongTailCIFAR100`` applies RandomCrop to a PIL image before
+        # ToTensor/Normalize.  RandomCrop's constant fill is black (0 in the
+        # uint8 image), which becomes -mean/std after normalization.  Padding
+        # an already-normalized tensor with zero would instead insert a
+        # mean-colour pixel and changes the distribution seen by TTA.
+        if self.crop_padding:
+            padding = images.new_tensor(CIFAR100_MEAN) / images.new_tensor(CIFAR100_STD)
+            black = -padding.view(1, channels, 1, 1)
+            padded = images.new_empty(
+                n,
+                channels,
+                height + 2 * self.crop_padding,
+                width + 2 * self.crop_padding,
+            )
+            padded[:] = black
+            padded[
+                :,
+                :,
+                self.crop_padding:self.crop_padding + height,
+                self.crop_padding:self.crop_padding + width,
+            ] = images
+        else:
+            padded = images
         side = 2 * self.crop_padding
         span_h = side + 1
         span_w = side + 1
 
         views = []
         for _ in range(self.n_views):
-            tops = torch.randint(0, span_h, (1,), generator=self._generator).item()
-            lefts = torch.randint(0, span_w, (1,), generator=self._generator).item()
-            view = padded[:, :, tops:tops + height, lefts:lefts + width]
+            # Draw every crop independently, matching RandomCrop being called
+            # once per dataset sample.  The dedicated CPU generator keeps the
+            # random stream stable across CPU and CUDA inputs; only the index
+            # tensors are transferred to the input device.
+            tops = torch.randint(0, span_h, (n,), generator=self._generator)
+            lefts = torch.randint(0, span_w, (n,), generator=self._generator)
+            view = torch.stack([
+                padded[index, :, int(tops[index]):int(tops[index]) + height,
+                       int(lefts[index]):int(lefts[index]) + width]
+                for index in range(n)
+            ])
             if self.flip_prob > 0.0:
-                flips = torch.rand(n, generator=self._generator) < self.flip_prob
+                flips = (
+                    torch.rand(n, generator=self._generator) < self.flip_prob
+                ).to(images.device)
                 view = torch.where(flips.view(n, 1, 1, 1), view.flip(-1), view)
             views.append(view.contiguous())
         return views
