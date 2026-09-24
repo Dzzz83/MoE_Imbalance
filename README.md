@@ -113,6 +113,25 @@ One seed, inner folds 1–3 (6,507 rows):
 
 These are development results, not independent test performance.
 
+### Sinkhorn allocation diagnostic
+
+Sinkhorn optimal transport was tested on inner fold 0 as an allocation layer
+over frozen Ridge scores. It adjusted per-image weights toward a declared
+global expert-use prior. The strongest reported frozen-price diagnostic traded
+BA for Tail accuracy:
+
+| Selection-fold method | BA | Tail |
+|:--|--:|--:|
+| Contribution Ridge, no OT | 38.0458 | 10.8333 |
+| Frozen-price Sinkhorn, `rho = 10` | 37.9514 | 14.7222 |
+
+Relative to the same no-OT Ridge kernel, this Sinkhorn setting changed BA by
+−0.0944 points and Tail by +3.8889 points. None of the prespecified
+frozen-price strengths improved both metrics, so the Sinkhorn gate failed and
+no Sinkhorn candidate advanced to the outer evaluation. Batch-coupled
+Sinkhorn remained diagnostic because a prediction can depend on the other
+images in its batch.
+
 ### Locked outer-fold-0 evaluation
 
 One held-out fold (2,170 rows); columns show the primary macro metrics:
