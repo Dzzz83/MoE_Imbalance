@@ -1,0 +1,46 @@
+{
+  "alpha": 0.1,
+  "candidate_id": "residual_p1_g0_a0.1_s1",
+  "canonical_training_index_sha256": "10846747f461656ffe720299517e70724ed9a0959b258202b3efa80bb1d1298f",
+  "development_config_sha256": "4275d62a9963b826a6ad20fac87c21a34dd5ecf81167d46690df295154d20d67",
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "family": "residual_no_ot",
+  "feature_set": "confidence_only",
+  "fitted_price_diagnostics": null,
+  "gamma": 0.0,
+  "inference_inputs": "four expert original logits only",
+  "inference_output": "weighted original-logit soft mixture",
+  "model_arrays_sha256": "ce1f094f6a46873bf58fd2a8ad62eb311020dd5a9007526923eee93e0ca4499e",
+  "ot": false,
+  "penalty": 1.0,
+  "prior": null,
+  "refit_role": "all_four_inner_oof_folds_after_selection_lock",
+  "refit_sample_count": 8677,
+  "rho": null,
+  "scale": 1.0,
+  "schema_version": "ridge_sinkhorn_locked_outer.v1",
+  "selection_decision_sha256": "bc1471891dcc48dceef46bbeef3ecfb01a427ced3bcee6b75c8e01649658f0d8",
+  "source_files": {
+    "aligned_oof_arrays": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof.npz",
+      "sha256": "bcfa26aa425f4c232caebad6bb69c3ec7035b9f41342bc8c8cb1960b33641c7f"
+    },
+    "aligned_oof_metadata": {
+      "path": "artifacts/oof/task3c_oof/aligned_oof_metadata.json",
+      "sha256": "c12462b2554dcd1e3ea76810dccd05780b2310568ccc71e9ef03c96aa06f645e"
+    },
+    "task3c_batch_manifest": {
+      "path": "artifacts/oof/task3c_oof/batch_manifest.json",
+      "sha256": "4e1525aa10985675b30fb75880201d98d7f057eb98d84bf2f6a594fb58166d85"
+    },
+    "task3c_fold_manifest": {
+      "path": "artifacts/oof/task3c_oof/fold_manifest.json",
+      "sha256": "664f92673f7b5d0bea1ba4dbdaa8471a5f1a757586184a8dabda30d007a2e622"
+    }
+  }
+}

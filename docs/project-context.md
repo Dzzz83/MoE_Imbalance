@@ -298,6 +298,7 @@ reported confidence and ECE correspond to the reported prediction.
 - [expert-diagnostics.md](expert-diagnostics.md) — reusable diagnostic API
 - [code-audit-report.md](code-audit-report.md) — verified audit findings and result impact
 - [refactor-plan.md](refactor-plan.md) — phased refactor, extraction and quarantine plan
+- [ridge-sinkhorn-implementation-handoff.md](ridge-sinkhorn-implementation-handoff.md) — agreed next-study plan and agent handoff; planning only
 - [archive/historical-results.md](archive/historical-results.md) — superseded results
 - [archive/bugfix-report.md](archive/bugfix-report.md) — audit history
 - [test-access-log.md](test-access-log.md) — append-only test-set access audit
