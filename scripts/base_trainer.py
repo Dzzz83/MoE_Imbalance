@@ -22,6 +22,7 @@ import json
 import random
 import time
 from pathlib import Path
+from typing import Callable, Mapping, Any
 
 import numpy as np
 import torch
@@ -257,6 +258,7 @@ class BaseTrainer:
         decay_factors: tuple[float, float] = (0.01, 0.0001),
         checkpoint_dir: str = './checkpoints',
         seed: int = 0,
+        metrics_sink: Callable[[Mapping[str, Any]], None] | None = None,
     ):
         self.device = device
         self.model = model.to(device)
@@ -287,6 +289,7 @@ class BaseTrainer:
 
         self.epoch = 0
         self.history: list[dict] = []
+        self.metrics_sink = metrics_sink
 
     # ── to be overridden by subclasses ─────────────────────────────────
 
@@ -473,6 +476,10 @@ class BaseTrainer:
                     log[f'train_{k}'] = v
 
             self.history.append(log)
+            if self.metrics_sink is not None:
+                # Give the observer its own snapshot so instrumentation cannot
+                # mutate the in-memory history or affect training behavior.
+                self.metrics_sink(dict(log))
 
             if epoch == self.epochs:
                 path = self._save_checkpoint(log, is_final=True)

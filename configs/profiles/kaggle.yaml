@@ -1,0 +1,13 @@
+schema_version: expert_method.runtime_profile.v1
+profile_id: kaggle
+data_root: /kaggle/input/cifar100
+run_root: /kaggle/working/rs3/runs
+reuse_roots:
+  rs3: /kaggle/input/rs3-reuse
+device: cuda
+shard_index: 0
+shard_count: 4
+max_jobs: 8
+bundle_inputs: []
+bundle_output_dir: /kaggle/working/rs3/bundles
+

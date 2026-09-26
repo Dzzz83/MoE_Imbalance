@@ -18,6 +18,8 @@ ensemble diversity. Both are kept for comparability with the recorded results.
 
 from __future__ import annotations
 
+from typing import Any, Callable, Mapping
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -73,17 +75,29 @@ class TrainerRegistry:
         config: TrainingConfig,
         class_counts: np.ndarray | None = None,
         device: str | None = None,
+        metrics_sink: Callable[[Mapping[str, Any]], None] | None = None,
     ) -> 'ConfigDrivenTrainer':
-        return cls.get(config.expert)(config, class_counts=class_counts, device=device)
+        return cls.get(config.expert)(
+            config,
+            class_counts=class_counts,
+            device=device,
+            metrics_sink=metrics_sink,
+        )
 
 
 def build_trainer(
     config: TrainingConfig,
     class_counts: np.ndarray | None = None,
     device: str | None = None,
+    metrics_sink: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> 'ConfigDrivenTrainer':
     """Build the trainer described by `config`."""
-    return TrainerRegistry.build(config, class_counts=class_counts, device=device)
+    return TrainerRegistry.build(
+        config,
+        class_counts=class_counts,
+        device=device,
+        metrics_sink=metrics_sink,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +115,7 @@ class ConfigDrivenTrainer(BaseTrainer):
         config: TrainingConfig,
         class_counts: np.ndarray | None = None,
         device: str | None = None,
+        metrics_sink: Callable[[Mapping[str, Any]], None] | None = None,
     ) -> None:
         self.config = config
         counts = None if class_counts is None else np.asarray(class_counts)
@@ -132,6 +147,7 @@ class ConfigDrivenTrainer(BaseTrainer):
             decay_factors=config.schedule.decay_factors,
             checkpoint_dir=config.checkpoint.dir,
             seed=config.seed,
+            metrics_sink=metrics_sink,
         )
 
     # ── to be overridden ──────────────────────────────────────────────

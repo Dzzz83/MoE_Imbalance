@@ -1,0 +1,71 @@
+schema_version: expert_method.study.v1
+study_id: ridge_sinkhorn_3seed_v1
+
+# Scientific choices live here. Machine-specific paths, devices, and batch
+# limits belong in configs/profiles/ and are excluded from the study hash.
+protocol:
+  dataset: cifar100_lt
+  imbalance_ratio: 100
+  training_samples: 10847
+  num_classes: 100
+  training_seeds: [78, 88, 1034]
+  fold_generation_seed: 42
+  outer_folds: 5
+  inner_folds: 4
+  fold_algorithm: numpy.default_rng.per_class_balanced_remainder.v1
+  expert_order: [CE, LAL, BalancedSoftmax, Mixup]
+  epochs: 200
+  checkpoint_selection: final_epoch
+  grids:
+    contribution_alpha: [0.1, 10, 1000]
+    gamma: [0, 1]
+    contribution_temperature: [1, 2]
+    contribution_shrinkage: [0.5, 0.75, 1]
+    residual_penalty: [0.1, 1, 10]
+    residual_alpha: [0.1, 10, 1000]
+    residual_scale: [0.5, 0.75, 1]
+    sinkhorn_rho: [0.1, 1, 10]
+    selective_tau: [0.1, 0.25, 0.5, 1]
+  priors:
+    uniform: [0.25, 0.25, 0.25, 0.25]
+    fixed_006: [0.0125, 0.25, 0.25, 0.4875]
+    fixed_007: [0.0125, 0.25, 0.4875, 0.25]
+    fixed_010: [0.0125, 0.4875, 0.25, 0.25]
+    fixed_011: [0.0125, 0.4875, 0.4875, 0.0125]
+  metrics: [balanced_accuracy, head_accuracy, medium_accuracy, tail_accuracy, ordinary_accuracy]
+  bootstrap:
+    kind: stratified_class_then_sample_paired
+    seed: 20260924
+    replicates: 10000
+  methods:
+    - contribution_ridge
+    - contribution_ridge_sinkhorn
+    - residual_ridge
+    - residual_ridge_sinkhorn
+    - selective_residual_ridge_sinkhorn
+  controls:
+    - uniform_logit
+    - uniform_probability
+    - fixed_006
+    - fixed_007
+    - fixed_010
+    - fixed_011
+    - residual_anchor
+    - prior_only_control
+  selection:
+    objective: maximin_delta_balanced_accuracy_tail
+    tie_breaks:
+      - balanced_accuracy
+      - tail_accuracy
+      - stronger_regularization
+      - less_routing_or_ot
+      - stable_configuration_id
+  outer_population_note: >-
+    retrospective nested-OOF evidence; the population and some inner-fold
+    history influenced earlier development
+
+expert_configs:
+  ce: configs/experts/ce.yaml
+  logit_adjusted: configs/experts/lal.yaml
+  balanced_softmax: configs/experts/balanced_softmax.yaml
+  mixup: configs/experts/mixup.yaml

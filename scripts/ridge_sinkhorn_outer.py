@@ -9,7 +9,7 @@ import numpy as np
 
 from data.nested_oof import NestedOOFFoldManager
 from scripts.analysis import ArtifactReader, ImmutableArtifactWriter
-from scripts.oof_pipeline import OOFArtifactStore, OOFRunSpec
+from expert_method.oof.pipeline import OOFArtifactStore, OOFRunSpec
 from scripts.ridge_sinkhorn_study import ANCHOR, evaluate
 from scripts.task3e_fixed import EXPERT_KEYS, EXPERT_ORDER
 from scripts.task3f_ridge import (

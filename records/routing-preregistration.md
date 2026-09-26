@@ -30,10 +30,10 @@ long-tailed training set, seeds {78, 88, 1034}:
 
 | Config | Label | Loss |
 |:--|:--|:--|
-| `configs/ce.yaml` | `CE` | cross-entropy (ERM) |
-| `configs/lal.yaml` | `LAL` | logit-adjusted, tau=1.0 |
-| `configs/balanced_softmax.yaml` | `BalancedSoftmax` | balanced softmax |
-| `configs/mixup.yaml` | `Mixup` | CE + mixup, alpha=1.0 |
+| `configs/experts/ce.yaml` | `CE` | cross-entropy (ERM) |
+| `configs/experts/lal.yaml` | `LAL` | logit-adjusted, tau=1.0 |
+| `configs/experts/balanced_softmax.yaml` | `BalancedSoftmax` | balanced softmax |
+| `configs/experts/mixup.yaml` | `Mixup` | CE + mixup, alpha=1.0 |
 
 **Recorded caveat:** with tau=1.0 the logit-adjusted loss and balanced softmax
 differ only by a class-independent constant, so they are the *same objective*.
@@ -98,7 +98,7 @@ The denominator does not depend on the class `c`, so the argmax over `c` is
 exactly the argmax of the mean logits — which is what `UniformRouter` computes.
 Measured confirmation: identical BA **and** Tail on all three seeds, and the
 equivalence holds on 64/64 synthetic samples in
-`tests/test_router_contract.py::test_product_is_provably_the_logit_average`,
+`tests/unit/test_router_contract.py::test_product_is_provably_the_logit_average`,
 which is retained so the justification survives the deletion.
 
 It was never a distinct result, so removing it changes no reported number.

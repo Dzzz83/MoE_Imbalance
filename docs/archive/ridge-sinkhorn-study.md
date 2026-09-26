@@ -260,10 +260,10 @@ jobs have already completed; these commands document that run and would start
 training again if invoked.
 
 ```bash
-python scripts/run_oof.py --config configs/ce.yaml --expert ce --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/lal.yaml --expert logit_adjusted --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/balanced_softmax.yaml --expert balanced_softmax --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/mixup.yaml --expert mixup --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
+python scripts/run_oof.py --config configs/experts/ce.yaml --expert ce --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
+python scripts/run_oof.py --config configs/experts/lal.yaml --expert logit_adjusted --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
+python scripts/run_oof.py --config configs/experts/balanced_softmax.yaml --expert balanced_softmax --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
+python scripts/run_oof.py --config configs/experts/mixup.yaml --expert mixup --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
 ```
 
 The run directories include final checkpoints, prediction JSON, metadata, and

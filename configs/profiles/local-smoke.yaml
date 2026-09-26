@@ -1,0 +1,12 @@
+schema_version: expert_method.runtime_profile.v1
+profile_id: local-smoke
+data_root: data
+run_root: runs/local-smoke
+reuse_roots: {}
+device: cpu
+shard_index: 0
+shard_count: 1
+max_jobs: 1
+bundle_inputs: []
+bundle_output_dir: runs/local-smoke/bundles
+

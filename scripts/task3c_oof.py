@@ -26,7 +26,7 @@ import numpy as np
 from data.nested_oof import NestedOOFFoldManager, OOFProtocolError
 from scripts.config import ConfigError, TrainingConfig
 from scripts.expert_diagnostics import ExpertDiagnostics
-from scripts.oof_pipeline import (
+from expert_method.oof.pipeline import (
     OOFArtifactError,
     OOFArtifactMissingError,
     OOFArtifactStore,
@@ -170,7 +170,7 @@ class Task3CBatchPlan:
         self,
         *,
         data_root: str | Path = "./data",
-        config_root: str | Path = "configs",
+        config_root: str | Path = "configs/experts",
         artifact_root: str | Path = "artifacts/oof",
         pilot_root: str | Path = TASK3C_PILOT_DEFAULT,
         experiment_id: str = TASK3C_EXPERIMENT_ID,

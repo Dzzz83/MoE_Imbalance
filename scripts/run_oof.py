@@ -6,14 +6,14 @@ Examples
 Short local smoke test (non-reportable)::
 
     python scripts/run_oof.py \
-        --config configs/ce.yaml --expert ce --seed 78 \
+        --config configs/experts/ce.yaml --expert ce --seed 78 \
         --outer-fold 0 --inner-fold 0 --experiment-id task3b_smoke \
         --device cpu --epochs 1 --max-batches 1
 
 Full Kaggle pilot (requires explicit authorization at execution time)::
 
     python scripts/run_oof.py \
-        --config configs/ce.yaml --expert ce --seed 78 \
+        --config configs/experts/ce.yaml --expert ce --seed 78 \
         --outer-fold 0 --inner-fold 0 \
         --experiment-id task3b_pilot_ce_s78_o0_i0 \
         --device cuda --epochs 200 --execute-full
@@ -36,7 +36,7 @@ if _PROJECT_ROOT not in sys.path:
 
 from data.nested_oof import OOFProtocolError, NestedOOFFoldManager  # noqa: E402
 from scripts.config import ConfigError, TrainingConfig  # noqa: E402
-from scripts.oof_pipeline import (  # noqa: E402
+from expert_method.oof.pipeline import (  # noqa: E402
     OOFArtifactError,
     OOFArtifactStore,
     OOFPipeline,

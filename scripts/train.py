@@ -6,9 +6,9 @@ Every expert is described by a YAML file under ``configs/``; nothing about a run
 is decided in this script. One entry point, one code path, four configs.
 
 Usage:
-    python scripts/train.py --config configs/ce.yaml
-    python scripts/train.py --config configs/lal.yaml --seed 42
-    python scripts/train.py --config configs/mixup.yaml --device cpu --max-batches 2  # dry run
+    python scripts/train.py --config configs/experts/ce.yaml
+    python scripts/train.py --config configs/experts/lal.yaml --seed 42
+    python scripts/train.py --config configs/experts/mixup.yaml --device cpu --max-batches 2  # dry run
 
 The final-epoch checkpoint is the reported model; checkpoints at every 20th epoch
 from epoch 160 exist for inspection only and must never be selected on test
@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         description='Train a CIFAR-100-LT expert from a config file'
     )
     parser.add_argument('--config', required=True,
-                        help='path to a config file, e.g. configs/ce.yaml')
+                        help='path to a config file, e.g. configs/experts/ce.yaml')
     parser.add_argument('--seed', type=int, default=None,
                         help='override the config seed (one LT split, 3 training seeds)')
     parser.add_argument('--device', default=None,

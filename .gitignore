@@ -32,6 +32,9 @@ __pycache__/
 # reproducible run outputs and must never be confused with canonical checkpoints.
 # /artifacts/
 
+# New config-driven study outputs are generated artifacts, not source files.
+/runs/
+
 # ── macOS ──
 .DS_Store
 

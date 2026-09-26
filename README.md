@@ -18,6 +18,41 @@ improve both overall class balance and rare-class recognition?
 | OOF evidence | Seed 78, outer fold 0 |
 | Current status | Expansion gate failed |
 
+## Start here: run or reproduce an experiment
+
+New experiment work uses the config-driven CLI, not one-off command flags.
+The study YAML defines scientific choices; the profile YAML defines paths,
+device, shard, and session limits. Begin with validation and read-only
+preflight:
+
+```bash
+python -m expert_method \
+  --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
+  --profile configs/profiles/local-smoke.yaml study validate
+python -m expert_method \
+  --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
+  --profile configs/profiles/local-smoke.yaml study doctor
+```
+
+Before full runs, follow the [experiment workflow](docs/experiment-workflow.md)
+for clean-commit freezing, Kaggle setup, resumable bundles, artifact layout,
+and final reporting. See [configuration guidance](configs/README.md) for the
+roles of expert recipes, studies, and runtime profiles. Historical scripts
+remain available as compatibility utilities; they are not the canonical
+interface.
+
+On Kaggle, treat `configs/profiles/kaggle.yaml` as a template: copy it outside
+the checkout and edit that copy, never the tracked file. For example:
+
+```bash
+export PROFILE=/kaggle/working/rs3-profile.yaml
+cp configs/profiles/kaggle.yaml "$PROFILE"
+```
+
+Use `--profile "$PROFILE"` for subsequent commands. This preserves the clean
+frozen checkout; the profile may vary by session except for its logical reuse
+root names.
+
 ## Abstract
 
 This study compares uniform ensembling, fixed expert mixtures, and adaptive

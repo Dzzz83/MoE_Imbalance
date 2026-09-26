@@ -79,7 +79,7 @@ def load_lt_train_indices(data_root: str = './data') -> np.ndarray:
             f"    (b) regenerate it (deterministic, needs data/cifar-100-python):\n"
             f"        python utils/create_lt_split.py\n"
             f"  If it was regenerated, verify it still matches the committed split "
-            f"before training:  python tests/test_protocol_splits.py"
+            f"before training:  python -m pytest tests/regression/test_protocol_splits.py"
         )
     return np.load(str(path))
 

@@ -3,7 +3,7 @@
 
 The runner is intentionally resumable. A dry run or validation scan never
 trains. ``--run-missing`` executes only missing/partial non-pilot jobs through
-the existing :class:`scripts.oof_pipeline.OOFPipeline`; a validated completed
+the existing :class:`expert_method.oof.pipeline.OOFPipeline`; a validated completed
 job is skipped. The CE Task 3B pilot is always referenced at its original path
 and is never copied, rewritten, or retrained.
 
@@ -76,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="validate all jobs, align their logits, and write diagnostics",
     )
     parser.add_argument("--data-root", default="./data")
-    parser.add_argument("--config-root", default="configs")
+    parser.add_argument("--config-root", default="configs/experts")
     parser.add_argument("--artifact-root", default="artifacts/oof")
     parser.add_argument("--pilot-root", default=TASK3C_PILOT_DEFAULT)
     parser.add_argument("--experiment-id", default=TASK3C_EXPERIMENT_ID)
