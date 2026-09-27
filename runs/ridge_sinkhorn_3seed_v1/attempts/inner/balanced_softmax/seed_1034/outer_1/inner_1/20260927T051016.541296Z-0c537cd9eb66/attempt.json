@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20260927T051016.541296Z-0c537cd9eb66",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "6301991e4ad4",
+    "pid": 4200,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-09-27T05:22:46.721047Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/inner/balanced_softmax/seed_1034/outer_1/inner_1",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_1/inner_1/20260927T051016.541296Z-0c537cd9eb66",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_1/inner_1",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_1/inner_1/checkpoints/BalancedSoftmax_seed1034_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_1/inner_1/20260927T051016.541296Z-0c537cd9eb66/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_1/inner_1/20260927T051016.541296Z-0c537cd9eb66/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_1/inner_1/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_1/inner_1/20260927T051016.541296Z-0c537cd9eb66/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_1/inner_1/20260927T051016.541296Z-0c537cd9eb66/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "inner",
+  "started_at": "2026-09-27T05:10:16.541690Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-09-27T05:22:46.720892Z"
+}
