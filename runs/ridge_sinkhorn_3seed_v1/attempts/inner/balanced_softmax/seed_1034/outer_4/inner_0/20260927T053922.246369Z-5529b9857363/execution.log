@@ -1,0 +1,39 @@
+[LongTailCIFAR100] Train set created:
+  Total samples          : 6,508
+  Head class (0) count   : 300
+  Tail class (99) count  : 3
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : Yes
+[BalancedSoftmax seed=1034] Epoch   1/200 | LR 0.020000 | Train Loss 4.3225 | Train Acc 2.40% | GradNorm 3.30
+[BalancedSoftmax seed=1034] Epoch  10/200 | LR 0.100000 | Train Loss 2.7709 | Train Acc 24.28% | GradNorm 1.34
+[BalancedSoftmax seed=1034] Epoch  20/200 | LR 0.100000 | Train Loss 2.0217 | Train Acc 39.38% | GradNorm 1.52
+[BalancedSoftmax seed=1034] Epoch  30/200 | LR 0.100000 | Train Loss 1.5235 | Train Acc 50.03% | GradNorm 1.70
+[BalancedSoftmax seed=1034] Epoch  40/200 | LR 0.100000 | Train Loss 1.1154 | Train Acc 60.43% | GradNorm 1.80
+[BalancedSoftmax seed=1034] Epoch  50/200 | LR 0.100000 | Train Loss 0.8415 | Train Acc 67.93% | GradNorm 1.80
+[BalancedSoftmax seed=1034] Epoch  60/200 | LR 0.100000 | Train Loss 0.6551 | Train Acc 74.29% | GradNorm 1.83
+[BalancedSoftmax seed=1034] Epoch  70/200 | LR 0.100000 | Train Loss 0.5146 | Train Acc 79.49% | GradNorm 1.76
+[BalancedSoftmax seed=1034] Epoch  80/200 | LR 0.100000 | Train Loss 0.4099 | Train Acc 82.84% | GradNorm 1.68
+[BalancedSoftmax seed=1034] Epoch  90/200 | LR 0.100000 | Train Loss 0.3629 | Train Acc 84.59% | GradNorm 1.67
+[BalancedSoftmax seed=1034] Epoch 100/200 | LR 0.100000 | Train Loss 0.3283 | Train Acc 85.77% | GradNorm 1.66
+[BalancedSoftmax seed=1034] Epoch 110/200 | LR 0.100000 | Train Loss 0.2604 | Train Acc 89.00% | GradNorm 1.49
+[BalancedSoftmax seed=1034] Epoch 120/200 | LR 0.100000 | Train Loss 0.2904 | Train Acc 87.49% | GradNorm 1.63
+[BalancedSoftmax seed=1034] Epoch 130/200 | LR 0.100000 | Train Loss 0.2436 | Train Acc 88.77% | GradNorm 1.52
+[BalancedSoftmax seed=1034] Epoch 140/200 | LR 0.100000 | Train Loss 0.2585 | Train Acc 88.64% | GradNorm 1.60
+[BalancedSoftmax seed=1034] Epoch 150/200 | LR 0.100000 | Train Loss 0.2330 | Train Acc 89.64% | GradNorm 1.57
+[BalancedSoftmax seed=1034] Epoch 160/200 | LR 0.100000 | Train Loss 0.2183 | Train Acc 90.24% | GradNorm 1.48
+[BalancedSoftmax seed=1034] Epoch 170/200 | LR 0.001000 | Train Loss 0.0588 | Train Acc 97.48% | GradNorm 0.60
+[BalancedSoftmax seed=1034] Epoch 180/200 | LR 0.001000 | Train Loss 0.0457 | Train Acc 98.46% | GradNorm 0.51
+[BalancedSoftmax seed=1034] Epoch 190/200 | LR 0.000010 | Train Loss 0.0420 | Train Acc 98.31% | GradNorm 0.48
+[BalancedSoftmax] checkpoint -> BalancedSoftmax_seed1034_final.pt
+[BalancedSoftmax seed=1034] Epoch 200/200 | LR 0.000010 | Train Loss 0.0409 | Train Acc 98.29% | GradNorm 0.47
+[BalancedSoftmax seed=1034] done in 727s (200 epochs, final-epoch model is the reported model)
+History saved to /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_4/inner_0/20260927T053922.246369Z-5529b9857363/expert_BalancedSoftmax/seed_1034/outer_4/inner_0/training_history.json
+Loaded checkpoint from /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_4/inner_0/20260927T053922.246369Z-5529b9857363/expert_BalancedSoftmax/seed_1034/outer_4/inner_0/checkpoints/BalancedSoftmax_seed1034_final.pt (epoch 200, seed 1034)
+[LongTailCIFAR100] Val set created:
+  Total samples          : 2,170
+  Head class (0) count   : 100
+  Tail class (99) count  : 1
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : No
