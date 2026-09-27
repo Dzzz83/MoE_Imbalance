@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20260927T044147.379225Z-af35c89525bd",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "6301991e4ad4",
+    "pid": 116,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-09-27T04:54:13.495622Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/inner/balanced_softmax/seed_1034/outer_0/inner_1",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_0/inner_1/20260927T044147.379225Z-af35c89525bd",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_0/inner_1",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_0/inner_1/checkpoints/BalancedSoftmax_seed1034_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_0/inner_1/20260927T044147.379225Z-af35c89525bd/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_0/inner_1/20260927T044147.379225Z-af35c89525bd/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_0/inner_1/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_0/inner_1/20260927T044147.379225Z-af35c89525bd/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_0/inner_1/20260927T044147.379225Z-af35c89525bd/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "inner",
+  "started_at": "2026-09-27T04:41:47.379722Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-09-27T04:54:13.495414Z"
+}
