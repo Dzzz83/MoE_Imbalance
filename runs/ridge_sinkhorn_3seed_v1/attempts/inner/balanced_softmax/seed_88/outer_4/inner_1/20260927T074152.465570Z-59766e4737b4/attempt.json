@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20260927T074152.465570Z-59766e4737b4",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "6301991e4ad4",
+    "pid": 24620,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-09-27T07:54:23.509646Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/inner/balanced_softmax/seed_88/outer_4/inner_1",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_88/outer_4/inner_1/20260927T074152.465570Z-59766e4737b4",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_88/outer_4/inner_1",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_88/outer_4/inner_1/checkpoints/BalancedSoftmax_seed88_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_88/outer_4/inner_1/20260927T074152.465570Z-59766e4737b4/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_88/outer_4/inner_1/20260927T074152.465570Z-59766e4737b4/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_88/outer_4/inner_1/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_88/outer_4/inner_1/20260927T074152.465570Z-59766e4737b4/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_88/outer_4/inner_1/20260927T074152.465570Z-59766e4737b4/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "inner",
+  "started_at": "2026-09-27T07:41:52.466021Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-09-27T07:54:23.509448Z"
+}
