@@ -1,0 +1,39 @@
+[LongTailCIFAR100] Train set created:
+  Total samples          : 6,509
+  Head class (0) count   : 300
+  Tail class (99) count  : 3
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : Yes
+[CE seed=78] Epoch   1/200 | LR 0.020000 | Train Loss 4.3368 | Train Acc 9.11% | GradNorm 2.97
+[CE seed=78] Epoch  10/200 | LR 0.100000 | Train Loss 2.6968 | Train Acc 31.40% | GradNorm 1.42
+[CE seed=78] Epoch  20/200 | LR 0.100000 | Train Loss 1.9284 | Train Acc 48.81% | GradNorm 1.58
+[CE seed=78] Epoch  30/200 | LR 0.100000 | Train Loss 1.4546 | Train Acc 58.95% | GradNorm 1.71
+[CE seed=78] Epoch  40/200 | LR 0.100000 | Train Loss 1.0799 | Train Acc 68.23% | GradNorm 1.74
+[CE seed=78] Epoch  50/200 | LR 0.100000 | Train Loss 0.8339 | Train Acc 74.76% | GradNorm 1.76
+[CE seed=78] Epoch  60/200 | LR 0.100000 | Train Loss 0.6562 | Train Acc 80.17% | GradNorm 1.81
+[CE seed=78] Epoch  70/200 | LR 0.100000 | Train Loss 0.4773 | Train Acc 84.85% | GradNorm 1.68
+[CE seed=78] Epoch  80/200 | LR 0.100000 | Train Loss 0.4114 | Train Acc 87.39% | GradNorm 1.66
+[CE seed=78] Epoch  90/200 | LR 0.100000 | Train Loss 0.3869 | Train Acc 87.99% | GradNorm 1.69
+[CE seed=78] Epoch 100/200 | LR 0.100000 | Train Loss 0.3015 | Train Acc 90.43% | GradNorm 1.57
+[CE seed=78] Epoch 110/200 | LR 0.100000 | Train Loss 0.2992 | Train Acc 90.81% | GradNorm 1.58
+[CE seed=78] Epoch 120/200 | LR 0.100000 | Train Loss 0.2699 | Train Acc 91.26% | GradNorm 1.58
+[CE seed=78] Epoch 130/200 | LR 0.100000 | Train Loss 0.2522 | Train Acc 92.07% | GradNorm 1.54
+[CE seed=78] Epoch 140/200 | LR 0.100000 | Train Loss 0.2394 | Train Acc 92.24% | GradNorm 1.56
+[CE seed=78] Epoch 150/200 | LR 0.100000 | Train Loss 0.2591 | Train Acc 91.30% | GradNorm 1.63
+[CE seed=78] Epoch 160/200 | LR 0.100000 | Train Loss 0.1983 | Train Acc 93.82% | GradNorm 1.43
+[CE seed=78] Epoch 170/200 | LR 0.001000 | Train Loss 0.0655 | Train Acc 98.60% | GradNorm 0.68
+[CE seed=78] Epoch 180/200 | LR 0.001000 | Train Loss 0.0445 | Train Acc 99.08% | GradNorm 0.54
+[CE seed=78] Epoch 190/200 | LR 0.000010 | Train Loss 0.0453 | Train Acc 99.19% | GradNorm 0.53
+[CE] checkpoint -> CE_seed78_final.pt
+[CE seed=78] Epoch 200/200 | LR 0.000010 | Train Loss 0.0446 | Train Acc 99.43% | GradNorm 0.52
+[CE seed=78] done in 666s (200 epochs, final-epoch model is the reported model)
+History saved to /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/ce/seed_78/outer_3/inner_2/20260928T143014.536825Z-e15355b97d52/expert_CE/seed_78/outer_3/inner_2/training_history.json
+Loaded checkpoint from /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/ce/seed_78/outer_3/inner_2/20260928T143014.536825Z-e15355b97d52/expert_CE/seed_78/outer_3/inner_2/checkpoints/CE_seed78_final.pt (epoch 200, seed 78)
+[LongTailCIFAR100] Val set created:
+  Total samples          : 2,169
+  Head class (0) count   : 100
+  Tail class (99) count  : 1
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : No
