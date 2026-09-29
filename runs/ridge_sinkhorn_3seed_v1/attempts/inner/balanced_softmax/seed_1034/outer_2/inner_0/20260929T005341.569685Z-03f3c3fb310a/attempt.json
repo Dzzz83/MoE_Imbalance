@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20260929T005341.569685Z-03f3c3fb310a",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "bb9afd49a34c",
+    "pid": 55460,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-09-29T01:05:14.817964Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/inner/balanced_softmax/seed_1034/outer_2/inner_0",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_2/inner_0/20260929T005341.569685Z-03f3c3fb310a",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_2/inner_0",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_2/inner_0/checkpoints/BalancedSoftmax_seed1034_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_2/inner_0/20260929T005341.569685Z-03f3c3fb310a/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_2/inner_0/20260929T005341.569685Z-03f3c3fb310a/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_1034/outer_2/inner_0/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_2/inner_0/20260929T005341.569685Z-03f3c3fb310a/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/balanced_softmax/seed_1034/outer_2/inner_0/20260929T005341.569685Z-03f3c3fb310a/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "inner",
+  "started_at": "2026-09-29T00:53:41.570094Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-09-29T01:05:14.817800Z"
+}
