@@ -1,0 +1,39 @@
+[LongTailCIFAR100] Train set created:
+  Total samples          : 6,509
+  Head class (0) count   : 300
+  Tail class (99) count  : 3
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : Yes
+[Mixup seed=88] Epoch   1/200 | LR 0.020000 | Train Loss 4.3512 | GradNorm 2.61
+[Mixup seed=88] Epoch  10/200 | LR 0.100000 | Train Loss 3.4604 | GradNorm 0.91
+[Mixup seed=88] Epoch  20/200 | LR 0.100000 | Train Loss 3.0709 | GradNorm 1.00
+[Mixup seed=88] Epoch  30/200 | LR 0.100000 | Train Loss 2.8329 | GradNorm 1.10
+[Mixup seed=88] Epoch  40/200 | LR 0.100000 | Train Loss 2.7919 | GradNorm 1.13
+[Mixup seed=88] Epoch  50/200 | LR 0.100000 | Train Loss 2.6193 | GradNorm 1.17
+[Mixup seed=88] Epoch  60/200 | LR 0.100000 | Train Loss 2.5016 | GradNorm 1.18
+[Mixup seed=88] Epoch  70/200 | LR 0.100000 | Train Loss 2.2070 | GradNorm 1.19
+[Mixup seed=88] Epoch  80/200 | LR 0.100000 | Train Loss 2.3361 | GradNorm 1.26
+[Mixup seed=88] Epoch  90/200 | LR 0.100000 | Train Loss 2.2663 | GradNorm 1.23
+[Mixup seed=88] Epoch 100/200 | LR 0.100000 | Train Loss 2.2950 | GradNorm 1.24
+[Mixup seed=88] Epoch 110/200 | LR 0.100000 | Train Loss 2.1785 | GradNorm 1.27
+[Mixup seed=88] Epoch 120/200 | LR 0.100000 | Train Loss 2.1157 | GradNorm 1.28
+[Mixup seed=88] Epoch 130/200 | LR 0.100000 | Train Loss 2.0695 | GradNorm 1.23
+[Mixup seed=88] Epoch 140/200 | LR 0.100000 | Train Loss 2.0039 | GradNorm 1.25
+[Mixup seed=88] Epoch 150/200 | LR 0.100000 | Train Loss 2.1801 | GradNorm 1.31
+[Mixup seed=88] Epoch 160/200 | LR 0.100000 | Train Loss 1.9762 | GradNorm 1.26
+[Mixup seed=88] Epoch 170/200 | LR 0.001000 | Train Loss 1.9612 | GradNorm 1.11
+[Mixup seed=88] Epoch 180/200 | LR 0.001000 | Train Loss 1.8059 | GradNorm 1.04
+[Mixup seed=88] Epoch 190/200 | LR 0.000010 | Train Loss 1.8466 | GradNorm 1.08
+[Mixup] checkpoint -> Mixup_seed88_final.pt
+[Mixup seed=88] Epoch 200/200 | LR 0.000010 | Train Loss 1.8826 | GradNorm 1.08
+[Mixup seed=88] done in 697s (200 epochs, final-epoch model is the reported model)
+History saved to /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_3/inner_2/20260930T045512.118807Z-da96a24dbd29/expert_Mixup/seed_88/outer_3/inner_2/training_history.json
+Loaded checkpoint from /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_3/inner_2/20260930T045512.118807Z-da96a24dbd29/expert_Mixup/seed_88/outer_3/inner_2/checkpoints/Mixup_seed88_final.pt (epoch 200, seed 88)
+[LongTailCIFAR100] Val set created:
+  Total samples          : 2,169
+  Head class (0) count   : 100
+  Tail class (99) count  : 1
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : No
