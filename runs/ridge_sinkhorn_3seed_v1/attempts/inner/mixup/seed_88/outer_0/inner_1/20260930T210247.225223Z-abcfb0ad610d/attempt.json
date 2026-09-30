@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20260930T210247.225223Z-abcfb0ad610d",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "c53fe7b556eb",
+    "pid": 35140,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-09-30T21:14:38.002118Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/inner/mixup/seed_88/outer_0/inner_1",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_0/inner_1/20260930T210247.225223Z-abcfb0ad610d",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_Mixup/seed_88/outer_0/inner_1",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_Mixup/seed_88/outer_0/inner_1/checkpoints/Mixup_seed88_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_0/inner_1/20260930T210247.225223Z-abcfb0ad610d/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_0/inner_1/20260930T210247.225223Z-abcfb0ad610d/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_Mixup/seed_88/outer_0/inner_1/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_0/inner_1/20260930T210247.225223Z-abcfb0ad610d/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/inner/mixup/seed_88/outer_0/inner_1/20260930T210247.225223Z-abcfb0ad610d/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "inner",
+  "started_at": "2026-09-30T21:02:47.225575Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-09-30T21:14:38.001933Z"
+}
