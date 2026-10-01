@@ -1,0 +1,119 @@
+{
+  "bootstrap": {
+    "kind": "stratified_class_then_sample_paired",
+    "replicates": 10000,
+    "seed": 20260924
+  },
+  "expert_order": [
+    "CE",
+    "LAL",
+    "BalancedSoftmax",
+    "Mixup"
+  ],
+  "grids": {
+    "contribution_alpha": [
+      0.1,
+      10.0,
+      1000.0
+    ],
+    "contribution_shrinkage": [
+      0.5,
+      0.75,
+      1.0
+    ],
+    "contribution_temperature": [
+      1.0,
+      2.0
+    ],
+    "gamma": [
+      0.0,
+      1.0
+    ],
+    "residual_alpha": [
+      0.1,
+      10.0,
+      1000.0
+    ],
+    "residual_penalty": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "residual_scale": [
+      0.5,
+      0.75,
+      1.0
+    ],
+    "selective_tau": [
+      0.1,
+      0.25,
+      0.5,
+      1.0
+    ],
+    "sinkhorn_rho": [
+      0.1,
+      1.0,
+      10.0
+    ]
+  },
+  "inner_folds": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "metrics": [
+    "balanced_accuracy",
+    "head_accuracy",
+    "medium_accuracy",
+    "tail_accuracy",
+    "ordinary_accuracy"
+  ],
+  "outer_folds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "outer_population_note": "retrospective nested-OOF evidence; the population and some inner-fold history influenced earlier development",
+  "priors": {
+    "fixed_006": [
+      0.0125,
+      0.25,
+      0.25,
+      0.4875
+    ],
+    "fixed_007": [
+      0.0125,
+      0.25,
+      0.4875,
+      0.25
+    ],
+    "fixed_010": [
+      0.0125,
+      0.4875,
+      0.25,
+      0.25
+    ],
+    "fixed_011": [
+      0.0125,
+      0.4875,
+      0.4875,
+      0.0125
+    ],
+    "uniform": [
+      0.25,
+      0.25,
+      0.25,
+      0.25
+    ]
+  },
+  "schema_version": "ridge_sinkhorn_3seed_study.v1",
+  "seeds": [
+    78,
+    88,
+    1034
+  ],
+  "study_id": "ridge_sinkhorn_3seed_v1"
+}
