@@ -1,0 +1,32 @@
+{
+  "attempt_id": "20261001T174301.570751Z-51cc7305fd45",
+  "environment": {
+    "cuda_available": true,
+    "device": "cuda",
+    "hostname": "e4284b110f99",
+    "pid": 346,
+    "platform": "Linux-6.12.90+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "torch": "2.10.0+cu128"
+  },
+  "failure": null,
+  "finished_at": "2026-10-01T17:58:07.243422Z",
+  "job_id": "ridge_sinkhorn_3seed_v1/outer/balanced_softmax/seed_78/outer_2/outer_eval",
+  "locations": {
+    "attempt": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/balanced_softmax/seed_78/outer_2/outer_eval/20261001T174301.570751Z-51cc7305fd45",
+    "canonical_job": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_78/outer_2/outer_eval",
+    "checkpoint": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_78/outer_2/outer_eval/checkpoints/BalancedSoftmax_seed78_final.pt",
+    "execution_log": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/balanced_softmax/seed_78/outer_2/outer_eval/20261001T174301.570751Z-51cc7305fd45/execution.log",
+    "metrics": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/balanced_softmax/seed_78/outer_2/outer_eval/20261001T174301.570751Z-51cc7305fd45/metrics.jsonl",
+    "prediction": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/expert_BalancedSoftmax/seed_78/outer_2/outer_eval/predictions.json",
+    "resolved_config": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/balanced_softmax/seed_78/outer_2/outer_eval/20261001T174301.570751Z-51cc7305fd45/resolved_config.json",
+    "status": "/kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/balanced_softmax/seed_78/outer_2/outer_eval/20261001T174301.570751Z-51cc7305fd45/attempt.json"
+  },
+  "phase": "promoted",
+  "schema_version": "expert_method.job_attempt.v1",
+  "stage": "outer",
+  "started_at": "2026-10-01T17:43:01.571172Z",
+  "status": "succeeded",
+  "study_id": "ridge_sinkhorn_3seed_v1",
+  "updated_at": "2026-10-01T17:58:07.243242Z"
+}
