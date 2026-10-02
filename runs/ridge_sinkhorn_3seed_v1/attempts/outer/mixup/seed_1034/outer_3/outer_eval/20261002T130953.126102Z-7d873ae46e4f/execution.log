@@ -1,0 +1,39 @@
+[LongTailCIFAR100] Train set created:
+  Total samples          : 8,678
+  Head class (0) count   : 400
+  Tail class (99) count  : 4
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : Yes
+[Mixup seed=1034] Epoch   1/200 | LR 0.020000 | Train Loss 4.2667 | GradNorm 2.65
+[Mixup seed=1034] Epoch  10/200 | LR 0.100000 | Train Loss 3.3210 | GradNorm 0.98
+[Mixup seed=1034] Epoch  20/200 | LR 0.100000 | Train Loss 2.9299 | GradNorm 1.05
+[Mixup seed=1034] Epoch  30/200 | LR 0.100000 | Train Loss 2.7742 | GradNorm 1.06
+[Mixup seed=1034] Epoch  40/200 | LR 0.100000 | Train Loss 2.6367 | GradNorm 1.08
+[Mixup seed=1034] Epoch  50/200 | LR 0.100000 | Train Loss 2.5158 | GradNorm 1.17
+[Mixup seed=1034] Epoch  60/200 | LR 0.100000 | Train Loss 2.3748 | GradNorm 1.16
+[Mixup seed=1034] Epoch  70/200 | LR 0.100000 | Train Loss 2.3208 | GradNorm 1.19
+[Mixup seed=1034] Epoch  80/200 | LR 0.100000 | Train Loss 2.3552 | GradNorm 1.25
+[Mixup seed=1034] Epoch  90/200 | LR 0.100000 | Train Loss 2.1772 | GradNorm 1.23
+[Mixup seed=1034] Epoch 100/200 | LR 0.100000 | Train Loss 2.1720 | GradNorm 1.24
+[Mixup seed=1034] Epoch 110/200 | LR 0.100000 | Train Loss 2.1994 | GradNorm 1.21
+[Mixup seed=1034] Epoch 120/200 | LR 0.100000 | Train Loss 1.8905 | GradNorm 1.25
+[Mixup seed=1034] Epoch 130/200 | LR 0.100000 | Train Loss 1.9050 | GradNorm 1.29
+[Mixup seed=1034] Epoch 140/200 | LR 0.100000 | Train Loss 1.9762 | GradNorm 1.20
+[Mixup seed=1034] Epoch 150/200 | LR 0.100000 | Train Loss 1.9875 | GradNorm 1.26
+[Mixup seed=1034] Epoch 160/200 | LR 0.100000 | Train Loss 2.0929 | GradNorm 1.29
+[Mixup seed=1034] Epoch 170/200 | LR 0.001000 | Train Loss 1.6761 | GradNorm 1.05
+[Mixup seed=1034] Epoch 180/200 | LR 0.001000 | Train Loss 1.8607 | GradNorm 1.05
+[Mixup seed=1034] Epoch 190/200 | LR 0.000010 | Train Loss 1.8168 | GradNorm 1.05
+[Mixup] checkpoint -> Mixup_seed1034_final.pt
+[Mixup seed=1034] Epoch 200/200 | LR 0.000010 | Train Loss 1.8651 | GradNorm 1.10
+[Mixup seed=1034] done in 911s (200 epochs, final-epoch model is the reported model)
+History saved to /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/mixup/seed_1034/outer_3/outer_eval/20261002T130953.126102Z-7d873ae46e4f/expert_Mixup/seed_1034/outer_3/outer_eval/training_history.json
+Loaded checkpoint from /kaggle/working/rs3/runs/ridge_sinkhorn_3seed_v1/attempts/outer/mixup/seed_1034/outer_3/outer_eval/20261002T130953.126102Z-7d873ae46e4f/expert_Mixup/seed_1034/outer_3/outer_eval/checkpoints/Mixup_seed1034_final.pt (epoch 200, seed 1034)
+[LongTailCIFAR100] Val set created:
+  Total samples          : 2,169
+  Head class (0) count   : 100
+  Tail class (99) count  : 1
+  Target imbalance ratio : 100.0
+  Achieved IR            : 100.00
+  Augmentations           : No
