@@ -3,6 +3,17 @@
 # append-only evaluation audit. These files are part of the repository.
 # AGENTS.md remains local-only and is ignored below.
 /AGENTS.md
+
+# Local agent skill installations
+/.agents/skills/
+/skills-lock.json
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
+!.env.sample
+/.aws/
 # ── Python virtual environment ──
 .venv/
 
@@ -27,6 +38,19 @@ __pycache__/
 *.pyd
 *.egg-info/
 
+# Python tooling caches and generated reports
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.ipynb_checkpoints/
+/build/
+/dist/
+
 # ── Nested-OOF development artifacts ──
 # Fold manifests, fold-expert checkpoints, predictions, and execution logs are
 # reproducible run outputs and must never be confused with canonical checkpoints.
@@ -37,6 +61,8 @@ __pycache__/
 
 # ── macOS ──
 .DS_Store
+Thumbs.db
+Desktop.ini
 
 # ── IDE ──
 .vscode/
