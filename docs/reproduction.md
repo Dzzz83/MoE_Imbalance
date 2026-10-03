@@ -1,26 +1,21 @@
-# Reproduction Commands and Artifacts
+# Reproducing saved studies
 
-This page collects entry points and artifact locations for the completed
-full-data and OOF work. Canonical data roles and safeguards are in
-[protocol.md](protocol.md); headline measurements are in
-[results.md](results.md) and [oof-results.md](oof-results.md).
+This guide points to existing inputs and safe reproduction commands. Canonical
+data roles and metric definitions are in [protocol.md](protocol.md). New study
+sessions belong in [experiment-workflow.md](experiment-workflow.md); the
+read-only diagnostic procedure belongs in [diagnostics.md](diagnostics.md).
 
-## Full-data benchmark
+## Historical full-data benchmark
 
-Training uses the four recipes in `configs/experts/`, seeds 78, 88, and 1034, and
-final-epoch checkpoints. The original full-data protocol has no validation
-split. To rebuild a run, use:
+The full-data benchmark used the four recipes in
+`configs/experts/`, seeds 78, 88, and 1034, and final-epoch checkpoints.
+To retrain one expert/seed:
 
 ```bash
 ./.venv/bin/python scripts/train.py --config configs/experts/ce.yaml --seed 78
 ```
 
-Repeat for `lal.yaml`, `balanced_softmax.yaml`, and `mixup.yaml`, and for
-each configured seed. Full training is expensive; the existing checkpoint
-names are `checkpoints/{expert}_seed{seed}_final.pt`, with resolved configs
-beside them.
-
-The historical test evaluation and analyses were run with:
+The historical test evaluation and aggregate analyses use:
 
 ```bash
 ./.venv/bin/python scripts/evaluate_experts.py --seeds 78 88 1034
@@ -28,16 +23,16 @@ The historical test evaluation and analyses were run with:
 ./.venv/bin/python scripts/check_runs.py --seeds 78 88 1034
 ```
 
-`evaluate_experts.py` reads the balanced CIFAR-100 test set and appends an
-entry to [test-access-log.md](test-access-log.md). The test set has already
-influenced historical decisions; do not run this evaluation for method
-selection or router development.
+Evaluation reads the balanced test examples and appends to the
+[access log](test-access-log.md). The test set has already informed historical
+decisions; do not use these commands for method selection or router
+development. Existing results and known invalid historical rows are described
+in [results.md](results.md).
 
-## Task 3E and Task 3F analyses
+## Saved Task 3E–3F analyses
 
-These CPU array analyses use the existing aligned OOF artifact and default to
-the recorded output directories. Run Task 3E-A before 3E-B, then Task 3F-A
-before diagnostics B–F:
+These CPU array analyses consume saved OOF artifacts. Run Task 3E-A before
+3E-B, then Task 3F-A before diagnostics B–F:
 
 ```bash
 ./.venv/bin/python scripts/run_task3e_fixed.py
@@ -50,116 +45,80 @@ before diagnostics B–F:
 ./.venv/bin/python scripts/run_task3f_feature_comparison.py
 ```
 
-| Analysis | Primary artifacts |
+| Analysis | Saved evidence |
 |:--|:--|
 | Task 3C aligned OOF input | `artifacts/oof/task3c_oof/` |
-| Task 3E-A fixed weights | `artifacts/oof/task3e_fixed_feasibility/` |
+| Task 3E-A fixed mixtures | `artifacts/oof/task3e_fixed_feasibility/` |
 | Task 3E-B soft feasibility | `artifacts/oof/task3e_soft_feasibility/` |
-| Task 3F-A Ridge fits and scores | `artifacts/oof/task3f_ridge/` |
-| Task 3F-B through 3F-F diagnostics | `artifacts/oof/task3f_*_diagnostics/`, `task3f_feature_comparison/` |
+| Task 3F-A Ridge | `artifacts/oof/task3f_ridge/` |
+| Task 3F-B–F diagnostics | `artifacts/oof/task3f_*/`, `artifacts/oof/task3f_feature_comparison/` |
 
-The existing artifacts are immutable evidence. A rerun accepts matching
-content and static metadata; incompatible outputs fail rather than overwrite
-them. For a changed implementation, use a new output directory and retain the
-existing artifacts.
+Existing evidence is immutable. Use a new output directory for changed
+analysis code or arguments; do not overwrite saved results.
 
-## Ridge/Sinkhorn staged study and locked evaluation
+## Completed Ridge/Sinkhorn evidence
 
-The staged CPU development analysis and report from saved outer artifacts use:
+The seed-78 / outer-fold-0 study artifacts are under
+`artifacts/oof/ridge_sinkhorn_v3/`; its locked outer results are in
+`outer_evaluation_v1/results.json`. The four original outer expert runs are in
+`artifacts/oof/ridge_sinkhorn_outer_s78_o0/`. Outer fold 0 is consumed and
+cannot select a replacement method. To regenerate its saved analyses:
 
 ```bash
 ./.venv/bin/python scripts/run_ridge_sinkhorn.py
 ./.venv/bin/python scripts/run_ridge_sinkhorn_outer.py
 ```
 
-The second command reads the already consumed outer-fold-0 evaluation
-artifacts. It must not be used to tune or select a replacement. These
-commands do not load the original balanced test set.
+The second command reads the consumed outer results and cannot validate or tune
+a replacement. Neither command loads original test examples. Full context is
+in the [OOF results record](oof-results.md).
 
-| Artifact | Location |
-|:--|:--|
-| Staged development and lock | `artifacts/oof/ridge_sinkhorn_v3/` |
-| Locked outer result | `artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/results.json` |
-| Outer paired predictions | `artifacts/oof/ridge_sinkhorn_v3/outer_evaluation_v1/predictions.npz` |
-| Four outer expert runs | `artifacts/oof/ridge_sinkhorn_outer_s78_o0/` |
-| Detailed frozen study record | [archive/ridge-sinkhorn-study.md](archive/ridge-sinkhorn-study.md) |
+The completed `ridge_sinkhorn_3seed_v1` report and validated artifacts are
+summarized in [rs3-final-report.md](rs3-final-report.md).
 
-## Historical Kaggle outer jobs
+### Evaluation ID and provenance
 
-The following commands record the four seed-78, outer-fold-0 expert jobs that
-were completed on Kaggle. Running them again starts full training for the
-already consumed outer fold; these commands document provenance and are not a
-path to a new method comparison.
+Use a fresh, single-use `--evaluation-id` to evaluate frozen expert artifacts
+from a separate evaluator checkout. The frozen study keeps its training
+commit; the run records that identity alongside the evaluator commit. Without
+an evaluation ID, the CLI requires the evaluator checkout to match the
+training commit.
 
-```bash
-python scripts/run_oof.py --config configs/experts/ce.yaml --expert ce --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/experts/lal.yaml --expert logit_adjusted --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/experts/balanced_softmax.yaml --expert balanced_softmax --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-python scripts/run_oof.py --config configs/experts/mixup.yaml --expert mixup --seed 78 --outer-fold 0 --experiment-id ridge_sinkhorn_outer_s78_o0 --device cuda --execute-full
-```
+Each run is written under
+`<run_root>/<study_id>/evaluation_runs/<evaluation-id>/`. Evaluation
+publishes fold JSON and NPZ files under `outputs/`; reporting reads only a
+completed evaluation with unchanged sidecars, then publishes under `report/`.
+Stage records hash-link provenance, all 300 expert artifacts, fold
+memberships, settings, environments, and published outputs. IDs cannot be
+reused or overwritten. This option changes provenance and output placement;
+it does not change scoring, selection, aggregation, or bootstrap settings.
 
-Each expert trained on 8,677 outer-training IDs and predicted on the disjoint
-2,170 outer-evaluation IDs. Outer fold 0 is consumed and cannot select,
-validate, or tune another method. The original balanced test set was not read
-by these OOF jobs or by the locked outer evaluator.
-
-## Planned three-seed Ridge/Sinkhorn matrix
-
-`ridge_sinkhorn_3seed_v1` is a separately declared exploratory study, not a
-reproduction of the completed `ridge_sinkhorn_v3` study. Its expansion gate
-remains failed, and the larger nested-OOF matrix is retrospective evidence;
-it does not establish independent confirmation. The canonical operator guide
-is [experiment-workflow.md](experiment-workflow.md), including Kaggle bundle
-recovery, lock gates, artifact layout, and failure debugging.
-
-For read-only descriptive reporting from the saved inner rows, follow the
-[inner diagnostics guide](diagnostics.md). It uses the separate result snapshot
-pinned to `5993d26eead9575160886d6130dce744ee9e02e6` and also requires the
-audited historical 16-job reuse source under its frozen `rs3` name. The native
-result snapshot alone does not include those historical prediction payloads.
-The guide covers environment setup, input validation, the diagnostics command,
-immutable outputs, and interpretation limits; it does not start training,
-selection, outer evaluation, or test-set evaluation.
-
-Use the package CLI with the scientific study and runtime profile rather than
-repeating protocol parameters on each command:
+The exact formal rerun
+used evaluator checkout
+`/mnt/hdd2/phatht/phat/MoE_Imbalance-evaluation-provenance` at commit
+`64401e8e4cf076d618948185a2d008ef650d68c2` and this interpreter and runtime
+profile:
 
 ```bash
-# In each Kaggle session, keep edits outside the frozen Git checkout.
-export PROFILE=/kaggle/working/rs3-profile.yaml
-cp configs/profiles/kaggle.yaml "$PROFILE"
-# Edit this external copy for the current reuse choice, shard, and bundles.
-
-python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
-  --profile "$PROFILE" study validate
-python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
-  --profile "$PROFILE" study doctor
-python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
-  --profile "$PROFILE" study plan --stage inner
-python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
-  --profile "$PROFILE" study freeze
-python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
-  --profile "$PROFILE" study session --stage inner --execute-full
+cd /mnt/hdd2/phatht/phat/MoE_Imbalance-evaluation-provenance
+RS3_EVALUATION_ID=rs3-reproduction-v1
+PYTHONDONTWRITEBYTECODE=1 /mnt/hdd2/phatht/phat/MoE_Imbalance/.rs3-server/venv/bin/python -m expert_method \
+  --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
+  --profile /mnt/hdd2/phatht/phat/MoE_Imbalance/.rs3-server/server-gpu2.yaml \
+  study evaluate --evaluation-id "$RS3_EVALUATION_ID"
+PYTHONDONTWRITEBYTECODE=1 /mnt/hdd2/phatht/phat/MoE_Imbalance/.rs3-server/venv/bin/python -m expert_method \
+  --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
+  --profile /mnt/hdd2/phatht/phat/MoE_Imbalance/.rs3-server/server-gpu2.yaml \
+  study report --evaluation-id "$RS3_EVALUATION_ID"
 ```
 
-Never edit the tracked `configs/profiles/kaggle.yaml`; the clean checkout is
-required for freezing and must remain on the exact commit in every session.
-Set the external profile's `shard_index` to the desired shard (0–3), attach
-prior cumulative bundles and list them in its `bundle_inputs`. Runtime paths,
-device, shard, job limit, and bundle settings may change without changing the
-freeze identity. The logical names under `reuse_roots` are frozen: keep those
-names unchanged, while their mounted paths may vary if they still validate
-against the audit. Choose reuse names before the first freeze. After inner
-completion, run explicit `study lock`, export its lock bundle, then restore
-inner bundles and locks before planning or running outer shards. Finish with
-explicit `study evaluate` and `study report`. The old
-`scripts/run_ridge_sinkhorn_matrix.py` and
-`scripts/run_ridge_sinkhorn_3seed.py` command forms are compatibility wrappers
-only. No command in this flow reads the original balanced CIFAR-100 test set.
+The frozen training identity remained
+`e7357a7c5028c87f49739d0b390a5e4e6a258fba`; no training or lock creation
+was performed.
 
-## Provenance
-
-Detailed development decisions, exact fit/selection boundaries, command
-history, and completed-study evidence are preserved in the
-[Ridge/Sinkhorn study archive](archive/ridge-sinkhorn-study.md). Full-data
-test reads are audited separately in [test-access-log.md](test-access-log.md).
+The separate inner-diagnostics reproduction needs a pinned native result
+snapshot and the audited historical reuse root. The
+[diagnostics guide](diagnostics.md) records the exact snapshot commit
+`5993d26eead9575160886d6130dce744ee9e02e6`, the required 16 historical
+inputs, validation steps, and immutable output rules. A clone of that snapshot
+alone is insufficient.

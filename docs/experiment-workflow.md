@@ -17,11 +17,16 @@ study and the machine-specific runtime profile are separate YAML files:
 - [`configs/experts/`](../configs/experts/) owns the four human-edited training
   recipes. The study references these files; there are no copies in the study.
 
-The supported full inventory is 300 expert jobs: 240 inner-fold jobs and 60
-outer-fold jobs. Planning, validation, doctor, status, bundle operations, and
-array-only analysis do not train experts. None of these commands reads the
-original CIFAR-100 test set. The outer evaluation consumes only the frozen OOF
-outer-fold artifacts.
+The `ridge_sinkhorn_3seed_v1` inventory of 300 expert jobs (240 inner and 60 outer)
+is complete. This page records its frozen operational sequence; new research
+requires a new study identity and plan. The original 300-job inventory is not
+a request to train again. Planning, validation, doctor, status, bundle operations, and
+array-only analysis do not train experts or load/score original test examples
+or labels. During the completed v1 evaluation, constructing the fold manager
+with `CIFAR100(train=True)` caused torchvision to compute MD5 over the extracted
+test split file; it was not unpickled. See the
+[test-file access qualification](protocol.md#test-file-access-qualification).
+The outer evaluation consumes only the frozen OOF outer-fold artifacts.
 
 ## Before the first freeze
 
@@ -37,7 +42,8 @@ Start from a real, clean Git checkout. Commit both the implementation and
 
 ```bash
 cd /kaggle/working/expert_method
-git checkout <FROZEN_COMMIT>
+FROZEN_COMMIT="$(git rev-parse HEAD)"
+git checkout "$FROZEN_COMMIT"
 # Never edit the tracked Kaggle profile: freeze requires a clean checkout.
 export PROFILE=/kaggle/working/rs3-profile.yaml
 cp configs/profiles/kaggle.yaml "$PROFILE"
@@ -151,8 +157,10 @@ python -m expert_method --config configs/studies/ridge_sinkhorn_3seed_v1.yaml \
 ```
 
 `evaluate` and `report` require the complete validated matrix and lock set.
-They use only the frozen OOF predictions and do not read the original test
-set. Outputs are under the profile run root in
+They use frozen OOF predictions and do not load or score test examples or
+labels. The v1 evaluation's constructor-level checksum read is documented in
+[protocol.md](protocol.md#test-file-access-qualification). Outputs are under
+the profile run root in
 `ridge_sinkhorn_3seed_v1/study_analysis/`.
 
 ## Status and artifacts

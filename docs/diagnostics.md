@@ -326,29 +326,16 @@ population.
 
 ## Developer notes
 
-`InnerArtifactReader` owns frozen-identity, lock, membership, and hash
-validation and loads only aligned inner arrays. `StudyDiagnosticsRunner`
-coordinates the 15 seed/fold pairs and uses saved locked inference outputs; it
-does not fit an expert, router, or replacement method. The numerical modules
-(`complementarity`, `router`, `stability`, `sinkhorn`, and `prior`) are pure
-array functions. `aggregation` summarizes pair rows, and `reporting` writes
-JSON, CSV, Markdown, and figure artifacts.
+`InnerArtifactReader` validates frozen identities, locks, row membership, and
+hashes. `StudyDiagnosticsRunner` coordinates the 15 pairs using saved router
+outputs; it does not fit experts or select methods. Numerical modules
+(`complementarity`, `router`, `stability`, `sinkhorn`, `prior`) are pure
+array functions.
 
-To add a diagnostic, define a typed array-only function in the relevant
-numerical module (or a new focused module), document input shapes and the
-denominator behind each metric, and return JSON-safe values with `null` for
-undefined cases such as absent classes or constant profiles. Add a synthetic
-unit test for the metric's boundary cases. Wire its rows into the runner,
-aggregate at the pair-table layer, and update the report/export only when the
-new metric needs a persisted table or figure. Keep `InnerArtifactReader`
-read-only and do not modify frozen manifests, locks, source artifacts, or the
-scientific selection path for descriptive reporting.
-
-Preserve the evidence labels **Expert OOF**, **Selection CV**, and **Router
-fit set**. Aggregate five folds within each seed before calculating the mean
-and sample SD across the three seed means. The 15 seed/fold pairs are not
-independent observations; do not add independent-pair significance tests or
-call fit-set gains generalization. A hard-selection oracle is label-dependent
-and is not a soft-mixture bound. A nonzero Sinkhorn marginal residual is a
-fit-population constraint discrepancy, not by itself evidence of solver
-nonconvergence; use saved convergence and objective diagnostics for that.
+New metrics should document input shapes and denominators, return JSON-safe
+values with `null` for undefined cases, and have synthetic boundary tests.
+Wire results through pair-level aggregation; add persisted tables or figures
+only when needed. Keep the reader read-only and preserve the labels **Expert
+OOF**, **Selection CV**, and **Router fit set**. Aggregate five folds within
+each seed before calculating the mean and sample SD across the three seed
+means.

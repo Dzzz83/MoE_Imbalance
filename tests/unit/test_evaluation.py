@@ -531,6 +531,7 @@ def test_cli_evaluates_every_seed_and_aggregates():
     multi-seed path without reading the real test set.
     """
     import importlib
+    from unittest.mock import patch
     from torch.utils.data import DataLoader, TensorDataset
     evr = importlib.import_module('scripts.evaluate_experts')
 
@@ -546,18 +547,17 @@ def test_cli_evaluates_every_seed_and_aggregates():
                       torch.randint(0, 100, (n,), generator=g)),
         batch_size=32,
     )
-    original = evr.build_test_loader
-    evr.build_test_loader = lambda *a, **k: fake_loader
+    class_counts = np.array([500] * 30 + [50] * 36 + [5] * 34, dtype=np.int64)
     log_path = os.path.join(tempfile.mkdtemp(prefix='dsh_log_'), 'access.md')
     out = os.path.join(d, 'results.json')
-    try:
+    with patch.object(evr, 'build_test_loader', return_value=fake_loader), patch.object(
+        evr.LongTailDataModule, 'class_counts', lambda _self: class_counts.copy()
+    ):
         rc = evr.main([
             '--checkpoint-dir', d, '--experts', 'CE', 'LAL',
             '--seeds', '78', '88', '--device', 'cpu',
             '--tta-augs', '2', '--access-log', log_path, '--output', out,
         ])
-    finally:
-        evr.build_test_loader = original
 
     assert rc == 0, f"CLI returned {rc}"
     payload = json.load(open(out))
@@ -574,6 +574,7 @@ def test_cli_evaluates_every_seed_and_aggregates():
 def test_cli_access_log_is_written_once_per_run():
     """One evaluation = one access-log entry, regardless of seed count."""
     import importlib
+    from unittest.mock import patch
     from torch.utils.data import DataLoader, TensorDataset
     evr = importlib.import_module('scripts.evaluate_experts')
 
@@ -588,16 +589,15 @@ def test_cli_access_log_is_written_once_per_run():
                       torch.randint(0, 100, (32,), generator=g)),
         batch_size=32,
     )
-    original = evr.build_test_loader
-    evr.build_test_loader = lambda *a, **k: fake_loader
+    class_counts = np.array([500] * 30 + [50] * 36 + [5] * 34, dtype=np.int64)
     log_path = os.path.join(tempfile.mkdtemp(prefix='dsh_log_'), 'access.md')
-    try:
+    with patch.object(evr, 'build_test_loader', return_value=fake_loader), patch.object(
+        evr.LongTailDataModule, 'class_counts', lambda _self: class_counts.copy()
+    ):
         evr.main(['--checkpoint-dir', d, '--experts', 'CE', 'LAL',
                   '--seeds', '78', '88', '--device', 'cpu', '--tta-augs', '1',
                   '--access-log', log_path,
                   '--output', os.path.join(d, 'r.json')])
-    finally:
-        evr.build_test_loader = original
 
     entries = TestAccessLog(log_path).entries()
     assert len(entries) == 1, f"expected 1 access entry, got {len(entries)}"
