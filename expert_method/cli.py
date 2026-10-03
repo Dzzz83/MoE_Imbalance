@@ -50,8 +50,13 @@ def build_parser() -> argparse.ArgumentParser:
     session = study_commands.add_parser("session", help="restore, run a bounded batch, revalidate, and export")
     session.add_argument("--stage", choices=("inner", "outer"), required=True)
     session.add_argument("--execute-full", action="store_true", help="confirm full 200-epoch expert training")
-    for command in ("lock", "evaluate", "report"):
-        study_commands.add_parser(command, help=f"run the explicit {command} stage")
+    study_commands.add_parser("lock", help="run the explicit lock stage")
+    for command in ("evaluate", "report"):
+        stage = study_commands.add_parser(command, help=f"run the explicit {command} stage")
+        stage.add_argument(
+            "--evaluation-id",
+            help="write/read an isolated evaluation run with separate evaluator provenance",
+        )
 
     bundle = groups.add_parser("bundle", help="restore and export portable experiment artifacts")
     bundle_commands = bundle.add_subparsers(dest="bundle_command", required=True)
@@ -111,7 +116,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.group == "study" and args.study_command in {"lock", "evaluate", "report"}:
             from expert_method.workflow import run_analysis_stage
 
-            _emit(run_analysis_stage(study, profile, stage=args.study_command))
+            _emit(run_analysis_stage(
+                study,
+                profile,
+                stage=args.study_command,
+                evaluation_id=getattr(args, "evaluation_id", None),
+            ))
             return 0
         if args.group == "bundle" and args.bundle_command == "restore":
             from expert_method.workflow import restore_bundles
@@ -459,6 +469,7 @@ def _make_planner(
     *,
     read_only: bool = True,
     freeze_sha256: str | None = None,
+    training_identity: Any | None = None,
 ) -> Any:
     """Construct the matrix planner from the loaded science and expert YAML."""
     from scripts.config import TrainingConfig
@@ -478,6 +489,7 @@ def _make_planner(
         study_config=study.to_study_config(),
         training_epochs=study.protocol["epochs"],
         freeze_sha256=freeze_sha256,
+        training_identity=training_identity,
         read_only=read_only,
     )
 
@@ -601,6 +613,17 @@ def _validate_frozen_identity(
     """Require the current checkout, study YAML, and protocol to match freeze."""
     if source.get("dirty") or source.get("commit") != freeze.get("source_commit"):
         raise ConfigError("current checkout is dirty or differs from the frozen study commit")
+    _validate_frozen_training_inputs(study, profile, freeze)
+
+
+def _validate_frozen_training_inputs(
+    study: StudyDefinition,
+    profile: RuntimeProfile,
+    freeze: Mapping[str, Any],
+) -> None:
+    """Validate frozen study science without requiring the evaluator commit to match."""
+    if freeze.get("source_tree_dirty") is not False:
+        raise ConfigError("frozen training source was recorded as dirty")
     if study.study_id != freeze.get("study_id"):
         raise ConfigError("study ID differs from the frozen study")
     plan_path = study.source_path.parents[2] / "docs" / "PLAN.md"
@@ -612,6 +635,10 @@ def _validate_frozen_identity(
         raise ConfigError("resolved study configuration differs from the frozen study")
     if json.loads(study.canonical_scientific_json) != freeze.get("resolved_study_config"):
         raise ConfigError("resolved study snapshot differs from the frozen study")
+    if _expert_config_hashes(study) != freeze.get("expert_config_sha256"):
+        raise ConfigError("resolved expert recipes differ from the frozen training configuration")
+    if sorted(profile.reuse_roots) != freeze.get("runtime_root_names"):
+        raise ConfigError("named reuse roots differ from the frozen study configuration")
 
 
 def _require_sha256(value: Any, name: str, *, lengths: set[int] | None = None) -> None:

@@ -41,6 +41,7 @@ from expert_method.oof.pipeline import (
     _sha256_text,
 )
 from data.nested_oof import OOFPredictionArtifact
+from expert_method.provenance import StudyTrainingIdentity
 from expert_method.ridge_sinkhorn.three_seed_study import StudyConfig
 
 
@@ -524,6 +525,7 @@ class OOFMatrixPlanner:
         study_config: StudyConfig | None = None,
         training_epochs: int | None = None,
         freeze_sha256: str | None = None,
+        training_identity: StudyTrainingIdentity | None = None,
         config_root: str | Path = Path(__file__).resolve().parents[2] / "configs" / "experts",
         read_only: bool = False,
     ) -> None:
@@ -531,6 +533,13 @@ class OOFMatrixPlanner:
         self.study_id = study_id
         self.study_config = study_config or StudyConfig()
         self.freeze_sha256 = freeze_sha256
+        if training_identity is not None and (
+            not read_only
+            or training_identity.study_id != study_id
+            or training_identity.freeze_sha256 != freeze_sha256
+        ):
+            raise MatrixError("a frozen training identity is limited to its matching read-only analysis plan")
+        self.training_identity = training_identity
         self.config_root = Path(config_root).expanduser().resolve()
         self.artifact_root_locator = Path(artifact_root).expanduser().absolute()
         self.artifact_root = Path(artifact_root).expanduser().resolve()
@@ -1117,13 +1126,16 @@ class OOFMatrixPlanner:
         except MatrixError as exc:
             raise MatrixError(f"cannot hash frozen plan {_PLAN_PATH}: {exc}") from exc
         try:
-            source_commit = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=_PLAN_PATH.parents[1],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
+            if self.training_identity is not None:
+                source_commit = self.training_identity.source_commit
+            else:
+                source_commit = subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=_PLAN_PATH.parents[1],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                ).stdout.strip()
         except (OSError, subprocess.CalledProcessError):
             source_commit = "unavailable"
 
@@ -1307,7 +1319,7 @@ class OOFMatrixPlanner:
 
     def freeze(self, *, stage: str = "inner", freeze_sha256: str | None = None) -> Path:
         """Freeze inventory and the requested stage's historical reuse audit."""
-        if self.read_only:
+        if self.read_only or self.training_identity is not None:
             raise MatrixError("a read-only matrix planner cannot freeze artifacts")
         if stage not in {"inner", "outer"}:
             raise MatrixError("freeze stage must be 'inner' or 'outer'")
@@ -1385,6 +1397,7 @@ class StudyValidationSession:
             _training_recipe_fingerprint(planner.training_configs),
             planner.training_epochs,
             planner.freeze_sha256,
+            planner.training_identity,
             planner.config_root,
         )
 

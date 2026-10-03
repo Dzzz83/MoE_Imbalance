@@ -3,18 +3,25 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime, timezone
 import glob
 import hashlib
 import io
 import json
 import fcntl
+from importlib.metadata import PackageNotFoundError, version
+import platform
 from pathlib import PurePosixPath
 from pathlib import Path
 import os
 import shutil
 import tarfile
 import tempfile
+import sys
+import time
 from typing import Any, Mapping, Sequence
+
+import numpy as np
 
 from expert_method.attempts import AttemptWorkspace, summarize_attempts
 from expert_method.config import ConfigError, RuntimeProfile, StudyDefinition
@@ -97,16 +104,35 @@ def _frozen_context(
     read_only: bool = True,
     retain_prediction_stages: Sequence[str] = (),
     use_validation_session: bool = False,
+    separate_evaluator: bool = False,
 ) -> tuple[dict[str, Any], Any, Any]:
     """Load and validate the immutable freeze plus native matrix manifests."""
     from expert_method import cli
 
     freeze_path = cli._freeze_path(profile, study)
     freeze = cli._read_freeze(freeze_path)
-    source = cli._source_identity(study.source_path.parents[2])
-    cli._validate_frozen_identity(study, profile, freeze, source)
-    if sorted(profile.reuse_roots) != freeze.get("runtime_root_names"):
-        raise ConfigError("named reuse roots differ from the frozen study configuration")
+    training_identity = None
+    if separate_evaluator:
+        if not read_only:
+            raise WorkflowError("a separate evaluation identity is restricted to read-only analysis")
+        evaluator_root = Path(__file__).resolve().parents[1]
+        study_root = study.source_path.parents[2].resolve()
+        if study_root != evaluator_root:
+            raise WorkflowError(
+                "evaluation config must come from the same checkout as the loaded evaluator code"
+            )
+        source = cli._source_identity(evaluator_root)
+        if source.get("dirty") or not source.get("commit"):
+            raise WorkflowError("separate evaluation requires a clean committed evaluator checkout")
+        cli._validate_frozen_training_inputs(study, profile, freeze)
+        from expert_method.provenance import StudyTrainingIdentity
+
+        training_identity = StudyTrainingIdentity.from_freeze(freeze)
+    else:
+        source = cli._source_identity(study.source_path.parents[2])
+        cli._validate_frozen_identity(study, profile, freeze, source)
+        if sorted(profile.reuse_roots) != freeze.get("runtime_root_names"):
+            raise ConfigError("named reuse roots differ from the frozen study configuration")
     manager = cli._load_manager(study, profile)
     planner = cli._make_planner(
         study,
@@ -114,6 +140,7 @@ def _frozen_context(
         manager,
         read_only=read_only,
         freeze_sha256=freeze["freeze_sha256"],
+        training_identity=training_identity,
     )
     if use_validation_session:
         from expert_method.ridge_sinkhorn.matrix import StudyValidationSession
@@ -131,6 +158,451 @@ def _frozen_context(
             raise WorkflowError("study freeze changed while analysis was starting")
     _validate_matrix_manifests(study, profile, freeze, planner)
     return freeze, manager, planner
+
+
+class _EvaluationRunContext:
+    """Own one isolated evaluation/report run and its publication integrity gate."""
+
+    def __init__(
+        self,
+        study: StudyDefinition,
+        profile: RuntimeProfile,
+        evaluation_id: str,
+        *,
+        stage: str,
+    ) -> None:
+        from expert_method.provenance import EvaluationRunStore
+
+        self.study = study
+        self.profile = profile
+        self.stage = stage
+        self.store = EvaluationRunStore(
+            Path(profile.run_root).expanduser().resolve() / study.study_id,
+            evaluation_id,
+        )
+        self.started_at: str | None = None
+        self.started_monotonic: float | None = None
+        self.start_record_sha256: str | None = None
+        self.evaluator_identity: dict[str, Any] | None = None
+        self.training_identity: dict[str, Any] | None = None
+        self.configuration_inputs: dict[str, Any] | None = None
+        self.scientific_settings: dict[str, Any] | None = None
+        self.command: list[str] = []
+        self.staged_directory: Path | None = None
+        self.previous_evaluation: dict[str, Any] | None = None
+        self.previous_evaluation_sidecar_hashes: dict[str, str] = {}
+        self.owns_run = False
+
+    def begin(self) -> Path:
+        from expert_method import cli
+        from expert_method.provenance import StudyTrainingIdentity
+
+        evaluator_root = Path(__file__).resolve().parents[1]
+        if self.study.source_path.parents[2].resolve() != evaluator_root:
+            raise WorkflowError(
+                "evaluation config must come from the same checkout as the loaded evaluator code"
+            )
+        evaluator = cli._source_identity(evaluator_root)
+        if evaluator.get("dirty") or not evaluator.get("commit"):
+            raise WorkflowError("separate evaluation requires a clean committed evaluator checkout")
+        freeze_path = cli._freeze_path(self.profile, self.study)
+        freeze = cli._read_freeze(freeze_path)
+        cli._validate_frozen_training_inputs(self.study, self.profile, freeze)
+        self.training_identity = StudyTrainingIdentity.from_freeze(freeze).to_dict()
+        self.evaluator_identity = {
+            "commit": evaluator["commit"],
+            "dirty": False,
+            "repository_root": str(evaluator_root),
+        }
+        self.configuration_inputs = _analysis_configuration_inputs(
+            self.study, self.profile, freeze_path
+        )
+        config = self.study.to_study_config()
+        bootstrap = self.study.protocol["bootstrap"]
+        self.scientific_settings = {
+            "study_config": config.to_dict(),
+            "study_config_sha256": config.sha256,
+            "resolved_study_config": json.loads(self.study.canonical_scientific_json),
+            "aggregation": {
+                "folds_pooled_per_seed": len(config.outer_folds),
+                "across_seed_summary": "mean_and_population_standard_deviation",
+                "population_standard_deviation_ddof": 0,
+                "paired_bootstrap": bootstrap["kind"],
+                "bootstrap_seed": config.bootstrap_seed,
+                "bootstrap_replicates": config.bootstrap_replicates,
+            },
+        }
+        self.command = list(sys.argv) or ["python", "-m", "expert_method"]
+        self.started_at = datetime.now(timezone.utc).isoformat()
+        self.started_monotonic = time.monotonic()
+        start_record = self._base_record()
+        if self.stage == "report":
+            sidecars_before = self.store.sidecar_hashes("evaluate")
+            previous = self.store.read_complete("evaluate")
+            sidecars_after = self.store.sidecar_hashes("evaluate")
+            if sidecars_before != sidecars_after:
+                raise WorkflowError("evaluation provenance changed while the report was starting")
+            self._require_matching_evaluation(previous.get("provenance", {}))
+            self.previous_evaluation_sidecar_hashes = sidecars_after
+            self.previous_evaluation = previous
+        start_path = self.store.begin(self.stage, start_record)
+        self.start_record_sha256 = hashlib.sha256(start_path.read_bytes()).hexdigest()
+        self.owns_run = True
+        self.staged_directory = self.store.stage_directory(self.stage)
+        return self.staged_directory
+
+    def _base_record(self) -> dict[str, Any]:
+        assert self.started_at is not None
+        return {
+            "evaluation_id": self.store.evaluation_id,
+            "study_id": self.study.study_id,
+            "training_identity": self.training_identity,
+            "evaluator_identity": self.evaluator_identity,
+            "scientific_settings": self.scientific_settings,
+            "configuration_inputs": self.configuration_inputs,
+            "runtime_resolution": self._runtime_resolution(),
+            "command": self.command,
+            "python_executable": sys.executable,
+            "working_directory": str(Path.cwd()),
+            "started_at": self.started_at,
+            "runtime_versions": _evaluation_runtime_versions(),
+        }
+
+    def _runtime_resolution(self) -> dict[str, Any]:
+        return {
+            "data_root": self._resolved_path(self.profile.data_root),
+            "run_root": self._resolved_path(self.profile.run_root),
+            "reuse_roots": {
+                name: self._resolved_path(path)
+                for name, path in sorted(self.profile.reuse_roots.items())
+            },
+            "profile_id": self.profile.profile_id,
+            "device": self.profile.device,
+        }
+
+    @staticmethod
+    def _resolved_path(path: str) -> dict[str, str]:
+        locator = Path(path).expanduser().absolute()
+        return {"configured_path": str(locator), "resolved_path": str(locator.resolve())}
+
+    def _require_matching_evaluation(self, provenance: Mapping[str, Any]) -> None:
+        expected = {
+            "training_identity": self.training_identity,
+            "evaluator_identity": self.evaluator_identity,
+            "scientific_settings": self.scientific_settings,
+            "configuration_inputs": self.configuration_inputs,
+            "runtime_resolution": self._runtime_resolution(),
+        }
+        for name, value in expected.items():
+            if provenance.get(name) != value:
+                raise WorkflowError(f"evaluation record has a different {name.replace('_', ' ')}")
+
+    def verify_integrity(self, session: Any) -> None:
+        from expert_method import cli
+        from expert_method.provenance import StudyTrainingIdentity
+
+        assert self.evaluator_identity is not None
+        assert self.training_identity is not None
+        assert self.configuration_inputs is not None
+        assert self.start_record_sha256 is not None
+        self.store.assert_start_unchanged(self.stage, self.start_record_sha256)
+        session.verify_sources_unchanged()
+        evaluator_root = Path(__file__).resolve().parents[1]
+        actual = cli._source_identity(evaluator_root)
+        if (
+            actual.get("dirty")
+            or actual.get("commit") != self.evaluator_identity["commit"]
+            or self.study.source_path.parents[2].resolve() != evaluator_root
+        ):
+            raise WorkflowError("evaluator source identity changed during the command")
+        freeze_path = cli._freeze_path(self.profile, self.study)
+        freeze = cli._read_freeze(freeze_path)
+        cli._validate_frozen_training_inputs(self.study, self.profile, freeze)
+        if StudyTrainingIdentity.from_freeze(freeze).to_dict() != self.training_identity:
+            raise WorkflowError("frozen training identity changed during the command")
+        current_inputs = _analysis_configuration_inputs(self.study, self.profile, freeze_path)
+        if current_inputs != self.configuration_inputs:
+            raise WorkflowError("study, runtime, data, or manifest inputs changed during the command")
+        if self.stage == "report":
+            current_evaluation = self.store.read_complete("evaluate")
+            self._require_matching_evaluation(current_evaluation.get("provenance", {}))
+            if self.store.sidecar_hashes("evaluate") != self.previous_evaluation_sidecar_hashes:
+                raise WorkflowError("evaluation provenance records changed during report generation")
+            if current_evaluation.get("provenance") != self.previous_evaluation.get("provenance"):
+                raise WorkflowError("evaluation provenance changed during report generation")
+            if current_evaluation.get("output_files") != self.previous_evaluation.get("output_files"):
+                raise WorkflowError("evaluated fold outputs changed during report generation")
+
+    def completion_record(
+        self,
+        *,
+        manager: Any,
+        config: Any,
+        locks: Sequence[Any],
+        references: Mapping[str, Any],
+        session: Any,
+    ) -> dict[str, Any]:
+        assert self.started_at is not None
+        assert self.started_monotonic is not None
+        if len(references) != 300:
+            raise WorkflowError("provenance requires exactly 300 validated expert artifact references")
+        locks_by_pair = {
+            (int(lock.training_seed), int(lock.outer_fold_id)): lock for lock in locks
+        }
+        if len(locks_by_pair) != 15:
+            raise WorkflowError("provenance requires all 15 validated fold locks")
+        artifact_inputs: dict[str, Any] = {}
+        for job_id, reference in sorted(references.items()):
+            if reference.job.job_id != job_id:
+                raise WorkflowError("validated artifact reference identity changed before recording")
+            if session is None:
+                raise WorkflowError("validated source session is missing for provenance recording")
+            metadata_bytes = session.artifact_session.read_source_bytes(reference.metadata_path)
+            artifact_inputs[job_id] = {
+                "stage": reference.job.stage,
+                "expert_key": reference.job.expert_key,
+                "training_seed": reference.job.training_seed,
+                "outer_fold_id": reference.job.outer_fold_id,
+                "inner_fold_id": reference.job.inner_fold_id,
+                "training_membership_sha256": reference.job.training_membership_sha256,
+                "prediction_membership_sha256": reference.job.prediction_membership_sha256,
+                "source_experiment_id": reference.source_experiment_id,
+                "source_root_name": reference.source_root_name,
+                "source_run_relative_path": reference.source_run_relative_path,
+                "run_directory": str(reference.run_dir),
+                "checkpoint_path": str(reference.checkpoint_path),
+                "checkpoint_sha256": reference.checkpoint_sha256,
+                "prediction_path": str(reference.prediction_path),
+                "prediction_sha256": reference.prediction_sha256,
+                "resolved_config_path": str(reference.resolved_config_path),
+                "resolved_config_sha256": reference.resolved_config_sha256,
+                "run_metadata_path": str(reference.metadata_path),
+                "run_metadata_sha256": hashlib.sha256(metadata_bytes).hexdigest(),
+                "source_fold_manifest_sha256": reference.manifest_sha256,
+            }
+        manifest = manager.manifest()
+        outer_by_id = {int(item.outer_fold_id): item for item in manifest.outer_folds}
+        fold_memberships: dict[str, Any] = {}
+        for seed in config.seeds:
+            for outer_id in config.outer_folds:
+                outer = outer_by_id[int(outer_id)]
+                lock = locks_by_pair[(int(seed), int(outer_id))]
+                fold_memberships[f"seed_{seed}_outer_{outer_id}"] = {
+                    "outer_training_sample_ids": list(outer.expert_training_indices),
+                    "outer_evaluation_sample_ids": list(outer.evaluation_indices),
+                    "inner_folds": {
+                        str(fold.inner_fold_id): {
+                            "training_sample_ids": list(fold.expert_training_indices),
+                            "prediction_sample_ids": list(fold.prediction_indices),
+                        }
+                        for fold in outer.inner_folds
+                    },
+                    "lock_sha256": lock.lock_sha256,
+                }
+        if len(fold_memberships) != 15:
+            raise WorkflowError("provenance memberships do not cover the full 15-fold matrix")
+        input_evaluation_outputs = (
+            dict(self.previous_evaluation["output_files"])
+            if self.previous_evaluation is not None
+            else {}
+        )
+        training_population = {
+            "size": len(manager.canonical_indices),
+            "indices_sha256": hashlib.sha256(
+                np.asarray(manager.canonical_indices, dtype="<i8").tobytes()
+            ).hexdigest(),
+            "labels_sha256": hashlib.sha256(
+                np.asarray(manager.training_labels, dtype="<i8").tobytes()
+            ).hexdigest(),
+            "fold_manifest_sha256": self.training_identity["fold_manifest_sha256"],
+        }
+        if self.previous_evaluation is not None:
+            prior = self.previous_evaluation.get("provenance", {})
+            current = {
+                "input_artifacts": artifact_inputs,
+                "fold_memberships": fold_memberships,
+                "training_population": training_population,
+            }
+            if any(prior.get(name) != value for name, value in current.items()):
+                raise WorkflowError("report inputs differ from the successfully completed evaluation")
+            if len(input_evaluation_outputs) != 30:
+                raise WorkflowError("report requires all 30 hash-bound fold output files")
+        return {
+            **self._base_record(),
+            "finished_at": None,
+            "duration_seconds": None,
+            "input_artifacts": artifact_inputs,
+            "input_manifests": dict(self.configuration_inputs["files"]),
+            "input_evaluation_outputs": input_evaluation_outputs,
+            "input_evaluation_records": (
+                dict(self.previous_evaluation_sidecar_hashes)
+                if self.previous_evaluation is not None else {}
+            ),
+            "fold_memberships": fold_memberships,
+            "training_population": training_population,
+        }
+
+    def publish_and_complete(
+        self,
+        *,
+        manager: Any,
+        config: Any,
+        locks: Sequence[Any],
+        references: Mapping[str, Any],
+        session: Any,
+    ) -> Path:
+        if self.staged_directory is None:
+            raise WorkflowError("evaluation run was not staged")
+        if self.start_record_sha256 is None:
+            raise WorkflowError("evaluation start provenance was not pinned")
+        record = self.completion_record(
+            manager=manager, config=config, locks=locks, references=references, session=session,
+        )
+        self.store.hash_tree(self.staged_directory)
+        self.store.validate_completion_record(
+            self.stage, record, expected_start_sha256=self.start_record_sha256
+        )
+        self.verify_integrity(session)
+        output = self.store.publish(
+            self.stage,
+            self.staged_directory,
+            expected_start_sha256=self.start_record_sha256,
+        )
+        return self.store.complete(
+            self.stage,
+            record,
+            output,
+            started_monotonic=self.started_monotonic,
+            expected_start_sha256=self.start_record_sha256,
+        )
+
+    def fail(self, exc: BaseException) -> None:
+        try:
+            self.store.require_safe_run()
+        except (OSError, ValueError):
+            return
+        if self.staged_directory is not None and self.staged_directory.exists():
+            if (
+                self.staged_directory.parent != self.store.run_dir
+                or self.staged_directory.is_symlink()
+                or self.staged_directory.resolve().parent != self.store.run_dir
+            ):
+                return
+            shutil.rmtree(self.staged_directory, ignore_errors=True)
+        if not self.owns_run:
+            return
+        self.store.fail(
+            self.stage,
+            error_type=type(exc).__name__,
+            message=str(exc),
+            finished_at=datetime.now(timezone.utc).isoformat(),
+        )
+
+
+def _analysis_configuration_inputs(
+    study: StudyDefinition,
+    profile: RuntimeProfile,
+    freeze_path: Path,
+) -> dict[str, Any]:
+    from data.protocol_splits import LT_TRAIN_FILENAME
+    from expert_method.config import load_runtime_profile
+
+    current_profile = load_runtime_profile(profile.source_path)
+    if _runtime_profile_settings(current_profile) != _runtime_profile_settings(profile):
+        raise WorkflowError("loaded runtime profile differs from its current YAML source")
+    repository_root = Path(__file__).resolve().parents[1]
+    study_root = Path(profile.run_root).expanduser().resolve() / study.study_id
+    file_paths: dict[str, Path] = {
+        "study_freeze": freeze_path,
+        "plan": repository_root / "docs" / "PLAN.md",
+        "study_yaml": study.source_path,
+        "runtime_profile_yaml": profile.source_path,
+        "fold_manifest": study_root / "fold_manifest.json",
+        "job_manifest": study_root / "job_manifest.json",
+        "reuse_compatibility_inner": study_root / "reuse_compatibility_inner.json",
+        "reuse_compatibility_outer": study_root / "reuse_compatibility_outer.json",
+        "study_config": study_root / "study_analysis" / "study_config.json",
+        "study_lock": study_root / "study_analysis" / "study_lock.json",
+        "canonical_training_indices": (
+            Path(profile.data_root).expanduser().absolute() / "processed" / LT_TRAIN_FILENAME
+        ),
+        "cifar100_training_pickle": (
+            Path(profile.data_root).expanduser().absolute() / "cifar-100-python" / "train"
+        ),
+    }
+    for expert, relative_path in sorted(study.expert_config_paths.items()):
+        file_paths[f"expert_yaml_{expert}"] = repository_root / relative_path
+    config = study.to_study_config()
+    for seed in config.seeds:
+        for outer in config.outer_folds:
+            file_paths[f"fold_lock_seed_{seed}_outer_{outer}"] = (
+                study_root / "study_analysis" / "locks" / f"seed_{seed}_outer_{outer}.json"
+            )
+    files: dict[str, Any] = {}
+    for name, path in sorted(file_paths.items()):
+        locator = path.expanduser().absolute()
+        if locator.is_symlink() or not locator.is_file():
+            raise WorkflowError(f"evaluation input must be a regular non-symlink file: {locator}")
+        digest = hashlib.sha256()
+        with locator.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        resolved = locator.resolve()
+        if resolved != locator:
+            raise WorkflowError(f"evaluation input path resolves through a symlink: {locator}")
+        files[name] = {
+            "path": str(locator),
+            "resolved_path": str(resolved),
+            "sha256": digest.hexdigest(),
+            "size_bytes": locator.stat().st_size,
+        }
+    runtime_roots = {
+        name: {
+            "configured_path": str(Path(path).expanduser().absolute()),
+            "resolved_path": str(Path(path).expanduser().absolute().resolve()),
+        }
+        for name, path in sorted(profile.reuse_roots.items())
+    }
+    return {
+        "files": files,
+        "effective_profile": _runtime_profile_settings(profile),
+        "runtime_roots": runtime_roots,
+        "profile_id": profile.profile_id,
+        "data_root": {
+            "configured_path": str(Path(profile.data_root).expanduser().absolute()),
+            "resolved_path": str(Path(profile.data_root).expanduser().absolute().resolve()),
+        },
+        "run_root": {
+            "configured_path": str(Path(profile.run_root).expanduser().absolute()),
+            "resolved_path": str(Path(profile.run_root).expanduser().absolute().resolve()),
+        },
+    }
+
+
+def _runtime_profile_settings(profile: RuntimeProfile) -> dict[str, Any]:
+    return {
+        "profile_id": profile.profile_id,
+        "data_root": profile.data_root,
+        "run_root": profile.run_root,
+        "reuse_roots": dict(profile.reuse_roots),
+        "device": profile.device,
+        "shard_index": profile.shard_index,
+        "shard_count": profile.shard_count,
+        "max_jobs": profile.max_jobs,
+        "bundle_inputs": list(profile.bundle_inputs),
+        "bundle_output_dir": profile.bundle_output_dir,
+        "source_path": str(profile.source_path),
+    }
+
+
+def _evaluation_runtime_versions() -> dict[str, str | None]:
+    versions: dict[str, str | None] = {"python": platform.python_version()}
+    for distribution in ("numpy", "scipy", "scikit-learn", "torch", "torchvision", "PyYAML"):
+        try:
+            versions[distribution] = version(distribution)
+        except PackageNotFoundError:
+            versions[distribution] = None
+    return versions
 
 
 def _validate_matrix_manifests(
@@ -681,78 +1153,120 @@ def run_analysis_stage(
     profile: RuntimeProfile,
     *,
     stage: str,
+    evaluation_id: str | None = None,
 ) -> dict[str, Any]:
-    """Run lock/evaluate/report through the stable package service boundary."""
+    """Run lock/evaluate/report, optionally under separate evaluator provenance."""
     if stage not in {"lock", "evaluate", "report"}:
         raise WorkflowError("analysis stage must be lock, evaluate, or report")
-    retention = {"lock": ("inner",), "evaluate": ("outer",), "report": ()}[stage]
-    freeze, manager, planner = _frozen_context(
-        study,
-        profile,
-        read_only=False,
-        retain_prediction_stages=retention,
-        use_validation_session=True,
+    if evaluation_id is not None and stage not in {"evaluate", "report"}:
+        raise WorkflowError("--evaluation-id is supported only for study evaluate and study report")
+    run_context = (
+        _EvaluationRunContext(study, profile, evaluation_id, stage=stage)
+        if evaluation_id is not None
+        else None
     )
-    from expert_method.ridge_sinkhorn.matrix import StudyArtifactView
-    from expert_method.ridge_sinkhorn.three_seed_study import StudyArtifactRepository
-    from expert_method import analysis as analysis_service
+    try:
+        staged_output = run_context.begin() if run_context is not None else None
+        retention = {"lock": ("inner",), "evaluate": ("outer",), "report": ()}[stage]
+        freeze, manager, planner = _frozen_context(
+            study,
+            profile,
+            read_only=run_context is not None,
+            retain_prediction_stages=retention,
+            use_validation_session=True,
+            separate_evaluator=run_context is not None,
+        )
+        from expert_method.ridge_sinkhorn.matrix import StudyArtifactView
+        from expert_method.ridge_sinkhorn.three_seed_study import StudyArtifactRepository
+        from expert_method import analysis as analysis_service
 
-    if stage == "lock":
-        inner = planner.plan(stage="inner", shard_count=1, shard_index=0, output_path=profile.run_root)
-        if inner.invalid_count or inner.missing_count:
-            raise WorkflowError("all inner jobs must validate before study lock")
-    else:
-        planner.validate_complete_lock_matrix(frozen=planner.frozen_manifest())
-        _validate_matrix_manifests(study, profile, freeze, planner, stages=("outer",))
+        if stage == "lock":
+            inner = planner.plan(stage="inner", shard_count=1, shard_index=0, output_path=profile.run_root)
+            if inner.invalid_count or inner.missing_count:
+                raise WorkflowError("all inner jobs must validate before study lock")
+        else:
+            planner.validate_complete_lock_matrix(frozen=planner.frozen_manifest())
+            _validate_matrix_manifests(study, profile, freeze, planner, stages=("outer",))
 
-    view = StudyArtifactView(
-        manager=manager,
-        planner=planner,
-        validation_session=planner.validation_session,
-    )
-    manifest = planner.frozen_manifest()
-    repository = StudyArtifactRepository(
-        profile.run_root,
-        config=study.to_study_config(),
-        validation_session=planner.validation_session.artifact_session,
-        artifact_root_locator=planner.artifact_root_locator,
-    )
-    if stage == "lock":
-        analysis_service.lock_study(
-            view=view,
+        view = StudyArtifactView(
             manager=manager,
-            repository=repository,
-            manifest=manifest,
-            manifest_sha256=hashlib.sha256(
-                planner.validation_session.artifact_session.read_source_bytes(
-                    (Path(profile.run_root) / study.study_id / "job_manifest.json")
+            planner=planner,
+            validation_session=planner.validation_session,
+        )
+        manifest = planner.frozen_manifest()
+        repository_options: dict[str, Any] = {}
+        if staged_output is not None:
+            repository_options["output_dir"] = staged_output
+            if stage == "report":
+                repository_options["evaluation_input_dir"] = (
+                    run_context.store.run_dir / "outputs"
                 )
-            ).hexdigest(),
+        repository = StudyArtifactRepository(
+            profile.run_root,
+            config=study.to_study_config(),
+            validation_session=planner.validation_session.artifact_session,
+            artifact_root_locator=planner.artifact_root_locator,
+            **repository_options,
         )
-        planner.freeze(stage="outer", freeze_sha256=freeze["freeze_sha256"])
-    elif stage == "evaluate":
-        analysis_service.evaluate_study(
-            view=view,
-            manager=manager,
-            repository=repository,
-            manifest=manifest,
-            session=planner.validation_session,
-        )
-    else:
-        analysis_service.report_study(
-            view=view,
-            manager=manager,
-            repository=repository,
-            manifest=manifest,
-            session=planner.validation_session,
-        )
-    return {
-        "stage": stage,
-        "study_id": study.study_id,
-        "test_accessed": False,
-        "analysis_root": str(repository.study_root),
-        "freeze_sha256": freeze["freeze_sha256"],
-    }
+        if stage == "lock":
+            analysis_service.lock_study(
+                view=view,
+                manager=manager,
+                repository=repository,
+                manifest=manifest,
+                manifest_sha256=hashlib.sha256(
+                    planner.validation_session.artifact_session.read_source_bytes(
+                        (Path(profile.run_root) / study.study_id / "job_manifest.json")
+                    )
+                ).hexdigest(),
+            )
+            planner.freeze(stage="outer", freeze_sha256=freeze["freeze_sha256"])
+        elif stage == "report":
+            analysis_service.report_study(
+                view=view,
+                manager=manager,
+                repository=repository,
+                manifest=manifest,
+                session=planner.validation_session,
+            )
+        else:
+            analysis_service.evaluate_study(
+                view=view,
+                manager=manager,
+                repository=repository,
+                manifest=manifest,
+                session=planner.validation_session,
+            )
+
+        completion_path: Path | None = None
+        if run_context is not None:
+            locks = planner.validate_complete_lock_matrix(frozen=manifest)
+            references = analysis_service.validate_complete_job_references(view, locks)
+            completion_path = run_context.publish_and_complete(
+                manager=manager,
+                config=study.to_study_config(),
+                locks=locks,
+                references=references,
+                session=planner.validation_session,
+            )
+        response = {
+            "stage": stage,
+            "study_id": study.study_id,
+            "test_accessed": False,
+            "analysis_root": str(repository.study_root),
+            "freeze_sha256": freeze["freeze_sha256"],
+        }
+        if run_context is not None:
+            response.update({
+                "evaluation_id": evaluation_id,
+                "evaluation_run_dir": str(run_context.store.run_dir),
+                "completion_path": str(completion_path),
+            })
+        return response
+    except BaseException as exc:
+        if run_context is not None:
+            run_context.fail(exc)
+        raise
 
 
 def _read_bundle_envelope(path: str | Path) -> dict[str, Any]:

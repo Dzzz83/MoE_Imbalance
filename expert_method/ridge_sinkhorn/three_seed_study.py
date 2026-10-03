@@ -1926,6 +1926,8 @@ class StudyArtifactRepository:
         *,
         validation_session: OOFValidationSession | None = None,
         artifact_root_locator: str | Path | None = None,
+        output_dir: str | Path | None = None,
+        evaluation_input_dir: str | Path | None = None,
     ) -> None:
         self.config = config or StudyConfig()
         self.validation_session = validation_session
@@ -1934,7 +1936,17 @@ class StudyArtifactRepository:
         ).expanduser().absolute()
         self.artifact_root = Path(artifact_root).expanduser().resolve()
         self.study_root = self.artifact_root / STUDY_ID
-        self.base_dir = self.study_root / "study_analysis"
+        self.study_analysis_dir = self.study_root / "study_analysis"
+        self.base_dir = (
+            self.study_analysis_dir
+            if output_dir is None
+            else Path(output_dir).expanduser().absolute()
+        )
+        self.evaluation_input_dir = (
+            self.base_dir
+            if evaluation_input_dir is None
+            else Path(evaluation_input_dir).expanduser().absolute()
+        )
         self.writer = ImmutableArtifactWriter(error_type=StudyError)
         self.reader = ArtifactReader(error_type=StudyError)
         if validation_session is not None:
@@ -1955,20 +1967,20 @@ class StudyArtifactRepository:
 
     @property
     def config_path(self) -> Path:
-        return self.base_dir / "study_config.json"
+        return self.study_analysis_dir / "study_config.json"
 
     @property
     def study_lock_path(self) -> Path:
-        return self.base_dir / "study_lock.json"
+        return self.study_analysis_dir / "study_lock.json"
 
     def lock_path(self, training_seed: int, outer_fold_id: int) -> Path:
-        return self.base_dir / "locks" / f"seed_{training_seed}_outer_{outer_fold_id}.json"
+        return self.study_analysis_dir / "locks" / f"seed_{training_seed}_outer_{outer_fold_id}.json"
 
     def evaluation_path(self, training_seed: int, outer_fold_id: int) -> Path:
-        return self.base_dir / "evaluations" / f"seed_{training_seed}_outer_{outer_fold_id}.json"
+        return self.evaluation_input_dir / "evaluations" / f"seed_{training_seed}_outer_{outer_fold_id}.json"
 
     def evaluation_arrays_path(self, training_seed: int, outer_fold_id: int) -> Path:
-        return self.base_dir / "evaluations" / f"seed_{training_seed}_outer_{outer_fold_id}.npz"
+        return self.evaluation_input_dir / "evaluations" / f"seed_{training_seed}_outer_{outer_fold_id}.npz"
 
     @property
     def result_path(self) -> Path:
