@@ -11,6 +11,7 @@ import hashlib
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
@@ -337,6 +338,34 @@ def test_oof_record_rejects_inconsistent_sample_fold_and_membership_metadata():
             raise AssertionError(f"inconsistent OOF metadata was accepted: {message}")
 
 
+def test_oof_record_uses_cached_membership_and_rejects_stale_fold_or_label():
+    indices, labels = _synthetic_population()
+    manager = NestedOOFFoldManager(
+        indices, labels, seed=17, num_classes=3, expert_order=("A", "B")
+    )
+    valid = _valid_oof_record(manager, indices, labels)
+
+    with patch("data.nested_oof._hash_indices", side_effect=AssertionError("rehash")):
+        manager.validate_oof_record(valid)
+
+    wrong_label = replace(valid, training_label=(valid.training_label + 1) % 3)
+    try:
+        manager.validate_oof_record(wrong_label)
+    except OOFArtifactValidationError as exc:
+        assert "label" in str(exc)
+    else:
+        raise AssertionError("a prediction with the wrong canonical label was accepted")
+
+    original_outer = manager.outer_fold(0)
+    manager._outer_folds = (replace(original_outer),) + manager.outer_folds[1:]
+    try:
+        manager.validate_oof_record(valid)
+    except OOFArtifactValidationError as exc:
+        assert "membership changed" in str(exc)
+    else:
+        raise AssertionError("a replaced fold definition reused stale membership data")
+
+
 def test_prediction_artifact_enforces_fixed_expert_order_and_provenance_consistency():
     indices, labels = _synthetic_population()
     manager = NestedOOFFoldManager(
@@ -590,6 +619,10 @@ TESTS = [
     (
         "OOF sample/fold/provenance validation",
         test_oof_record_rejects_inconsistent_sample_fold_and_membership_metadata,
+    ),
+    (
+        "cached OOF membership and stale-fold rejection",
+        test_oof_record_uses_cached_membership_and_rejects_stale_fold_or_label,
     ),
     (
         "fixed expert order and provenance",

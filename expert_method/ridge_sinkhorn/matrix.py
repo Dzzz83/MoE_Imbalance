@@ -9,7 +9,8 @@ rewriting them.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
+import copy
 import hashlib
 import io
 import json
@@ -19,6 +20,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -30,6 +32,7 @@ from expert_method.oof.pipeline import (
     OOFArtifactMissingError,
     OOFArtifactStore,
     OOFCompletedRun,
+    OOFValidationSession,
     OOFRunContext,
     OOFRunSpec,
     OOF_RUN_SCHEMA_VERSION,
@@ -37,6 +40,7 @@ from expert_method.oof.pipeline import (
     _sha256_file,
     _sha256_text,
 )
+from data.nested_oof import OOFPredictionArtifact
 from expert_method.ridge_sinkhorn.three_seed_study import StudyConfig
 
 
@@ -183,6 +187,9 @@ class ValidatedJobReference:
     prediction_sha256: str
     resolved_config_sha256: str
     manifest_sha256: str
+    _prediction_artifact: OOFPredictionArtifact | None = field(
+        default=None, repr=False, compare=False
+    )
 
     @property
     def is_historical_reuse(self) -> bool:
@@ -410,7 +417,8 @@ def parse_reuse_roots(values: Sequence[str]) -> dict[str, Path]:
 
 
 def _readonly_store(
-    *, root: Path, manager: NestedOOFFoldManager, experiment_id: str
+    *, root: Path, manager: NestedOOFFoldManager, experiment_id: str,
+    validation_session: OOFValidationSession | None = None,
 ) -> OOFArtifactStore:
     """Create a validated OOF store that cannot create or mutate artifacts."""
     return OOFArtifactStore(
@@ -418,11 +426,18 @@ def _readonly_store(
         manager=manager,
         experiment_id=experiment_id,
         read_only=True,
+        validation_session=validation_session,
     )
 
 
 def _find_experiment_base(root: Path, experiment_id: str) -> Path | None:
     """Resolve the historical experiment beneath a logical mounted root."""
+    locator = _find_experiment_base_locator(root, experiment_id)
+    return None if locator is None else locator.resolve()
+
+
+def _find_experiment_base_locator(root: Path, experiment_id: str) -> Path | None:
+    """Return the lexical experiment path so symlink targets can be rechecked."""
     candidates = (
         root if root.name == experiment_id else None,
         root / experiment_id,
@@ -431,7 +446,7 @@ def _find_experiment_base(root: Path, experiment_id: str) -> Path | None:
     )
     for candidate in candidates:
         if candidate is not None and candidate.is_dir():
-            return candidate.resolve()
+            return candidate.absolute()
     return None
 
 
@@ -448,6 +463,25 @@ def _normalized_training_recipe(config: Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(checkpoint, dict):
         checkpoint["dir"] = "<run-checkpoint-dir>"
     return normalized
+
+
+def _training_recipe_fingerprint(
+    configs: Mapping[str, TrainingConfig],
+) -> str:
+    recipes = {
+        key: _normalized_training_recipe(config.to_dict())
+        for key, config in sorted(configs.items())
+    }
+    return hashlib.sha256(canonical_json_bytes(recipes)).hexdigest()
+
+
+def _freeze_json(value: Any) -> Any:
+    """Copy JSON-shaped provenance into containers callers cannot mutate."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_json(item) for item in value)
+    return value
 
 
 def _source_experiment_for(job: ExpertJob) -> str | None:
@@ -497,13 +531,20 @@ class OOFMatrixPlanner:
         self.study_id = study_id
         self.study_config = study_config or StudyConfig()
         self.freeze_sha256 = freeze_sha256
+        self.config_root = Path(config_root).expanduser().resolve()
+        self.artifact_root_locator = Path(artifact_root).expanduser().absolute()
         self.artifact_root = Path(artifact_root).expanduser().resolve()
+        self.reuse_root_locators = {
+            name: Path(path).expanduser().absolute()
+            for name, path in (reuse_roots or {}).items()
+        }
         self.reuse_roots = {
             name: Path(path).expanduser().resolve()
             for name, path in (reuse_roots or {}).items()
         }
+        self.validation_session: StudyValidationSession | None = None
         if training_configs is None:
-            training_configs = self._load_configs(config_root)
+            training_configs = self._load_configs(self.config_root)
         self.training_configs = dict(training_configs)
         if set(self.training_configs) != set(DEFAULT_EXPERT_KEYS):
             raise MatrixError("training_configs must contain the four frozen expert configs")
@@ -606,14 +647,22 @@ class OOFMatrixPlanner:
         payload["resolved_device"] = config.resolved_device
         return payload
 
-    def _validate_native(self, job: ExpertJob) -> ValidatedJobReference:
+    def _validate_native(
+        self, job: ExpertJob, *, retain_prediction_data: bool = False
+    ) -> ValidatedJobReference:
         context = job.run_spec(
             experiment_id=self.study_id, epochs=self.training_epochs
         ).resolve(self.manager)
         completed = self.native_store.validate_completed_run(context)
         self._validate_job_identity(job, completed, expected_experiment=self.study_id)
         self._validate_recipe(completed.resolved_config, job)
-        return self._reference(job, self.native_store, completed, source_root_name=None)
+        return self._reference(
+            job,
+            self.native_store,
+            completed,
+            source_root_name=None,
+            retain_prediction_data=retain_prediction_data,
+        )
 
     def _validate_recipe(self, config: Mapping[str, Any], job: ExpertJob) -> None:
         expected = self.training_configs[job.expert_key].to_dict()
@@ -659,9 +708,19 @@ class OOFMatrixPlanner:
         completed: OOFCompletedRun,
         *,
         source_root_name: str | None,
+        retain_prediction_data: bool = False,
     ) -> ValidatedJobReference:
-        checkpoint_sha = sha256_file(completed.checkpoint_path)
-        prediction_sha = sha256_file(completed.prediction_path)
+        if self.validation_session is None:
+            checkpoint_sha = sha256_file(completed.checkpoint_path)
+            prediction_sha = sha256_file(completed.prediction_path)
+        else:
+            artifact_session = self.validation_session.artifact_session
+            checkpoint_sha = artifact_session.validated_sha256(
+                completed.checkpoint_path
+            )
+            prediction_sha = artifact_session.validated_sha256(
+                completed.prediction_path
+            )
         config_path = store.config_path(completed.context)
         metadata_path = store.metadata_path(completed.context)
         return ValidatedJobReference(
@@ -674,17 +733,24 @@ class OOFMatrixPlanner:
             prediction_path=completed.prediction_path,
             resolved_config_path=config_path,
             metadata_path=metadata_path,
-            resolved_config=completed.resolved_config,
-            metadata=completed.metadata,
+            resolved_config=_freeze_json(completed.resolved_config),
+            metadata=_freeze_json(completed.metadata),
             context=completed.context,
             checkpoint_sha256=checkpoint_sha,
             prediction_sha256=prediction_sha,
             resolved_config_sha256=str(completed.metadata["resolved_config_sha256"]),
             manifest_sha256=str(completed.metadata["manifest_sha256"]),
+            _prediction_artifact=(
+                completed.artifact if retain_prediction_data else None
+            ),
         )
 
     def _validate_historical(
-        self, job: ExpertJob, source_experiment_id: str
+        self,
+        job: ExpertJob,
+        source_experiment_id: str,
+        *,
+        retain_prediction_data: bool = False,
     ) -> tuple[ValidatedJobReference | None, dict[str, Any]]:
         if job.stage == "outer" and not self._locks_validated:
             self.validate_complete_lock_matrix()
@@ -721,17 +787,37 @@ class OOFMatrixPlanner:
         context = spec.resolve(self.manager)
         last_reason = "historical run did not validate"
         for root_name, source_base in candidates:
+            if self.validation_session is not None:
+                locator_root = self.reuse_root_locators[root_name]
+                base_locator = _find_experiment_base_locator(
+                    locator_root, source_experiment_id
+                )
+                if base_locator is not None:
+                    self.validation_session.artifact_session.bind_locator(
+                        base_locator, source_base
+                    )
             source_root = source_base.parent
             store = _readonly_store(
                 root=source_root,
                 manager=self.manager,
                 experiment_id=source_experiment_id,
+                validation_session=(
+                    None
+                    if self.validation_session is None
+                    else self.validation_session.artifact_session
+                ),
             )
             try:
                 completed = store.validate_completed_run(context)
                 self._validate_job_identity(job, completed, expected_experiment=source_experiment_id)
                 self._validate_recipe(completed.resolved_config, job)
-                ref = self._reference(job, store, completed, source_root_name=root_name)
+                ref = self._reference(
+                    job,
+                    store,
+                    completed,
+                    source_root_name=root_name,
+                    retain_prediction_data=retain_prediction_data,
+                )
                 validated.append((root_name, ref))
             except (OOFArtifactError, OOFProtocolError, OSError, RuntimeError, ValueError) as exc:
                 # Keep mounted machine paths out of frozen compatibility
@@ -766,27 +852,69 @@ class OOFMatrixPlanner:
         return reference, table
 
     def resolve_reference(
-        self, job: ExpertJob, *, include_historical: bool = True
+        self,
+        job: ExpertJob,
+        *,
+        include_historical: bool = True,
+        retain_prediction_data: bool | None = None,
     ) -> tuple[ValidatedJobReference | None, str, str]:
         """Resolve a job to a validated native or explicitly eligible historical run."""
+        if self.validation_session is not None:
+            return self.validation_session.resolve_reference(
+                self,
+                job,
+                include_historical=include_historical,
+                retain_prediction_data=retain_prediction_data,
+            )
+        return self._resolve_reference_uncached(
+            job,
+            include_historical=include_historical,
+            retain_prediction_data=bool(retain_prediction_data),
+        )
+
+    def _resolve_reference_uncached(
+        self,
+        job: ExpertJob,
+        *,
+        include_historical: bool,
+        retain_prediction_data: bool,
+    ) -> tuple[ValidatedJobReference | None, str, str]:
         if job.stage == "outer" and not self._locks_validated:
             self.validate_complete_lock_matrix()
         run_dir = self.native_store.run_dir(
             job.run_spec(experiment_id=self.study_id, epochs=self.training_epochs).resolve(self.manager)
         )
         if run_dir.exists() or run_dir.is_symlink():
-            return self._validate_native(job), "validated", "native artifact validated"
+            return (
+                self._validate_native(job, retain_prediction_data=retain_prediction_data),
+                "validated",
+                "native artifact validated",
+            )
         source_experiment = _source_experiment_for(job) if include_historical else None
         if source_experiment is None:
             return None, "missing", "no native artifact or eligible historical source"
         cache_key = job.job_id
-        if cache_key not in self._compatibility_cache:
-            self._compatibility_cache[cache_key] = self._validate_historical(job, source_experiment)
+        cached = self._compatibility_cache.get(cache_key)
+        if cached is None or (
+            retain_prediction_data
+            and cached[0] is not None
+            and cached[0]._prediction_artifact is None
+        ):
+            self._compatibility_cache[cache_key] = self._validate_historical(
+                job,
+                source_experiment,
+                retain_prediction_data=retain_prediction_data,
+            )
         reference, row = self._compatibility_cache[cache_key]
         frozen_path = self.native_store.base_dir / f"reuse_compatibility_{job.stage}.json"
         if frozen_path.is_file():
             try:
-                frozen_audit = json.loads(frozen_path.read_text())
+                audit_bytes = (
+                    frozen_path.read_bytes()
+                    if self.validation_session is None
+                    else self.validation_session.artifact_session.read_source_bytes(frozen_path)
+                )
+                frozen_audit = json.loads(audit_bytes)
                 frozen_rows = frozen_audit.get("rows", [])
                 frozen_row = next(
                     item for item in frozen_rows
@@ -843,9 +971,17 @@ class OOFMatrixPlanner:
             if source_experiment is None:
                 continue
             if job.job_id not in self._compatibility_cache:
-                self._compatibility_cache[job.job_id] = self._validate_historical(job, source_experiment)
+                retain = (
+                    self.validation_session is not None
+                    and job.stage in self.validation_session.retain_prediction_stages
+                )
+                self._compatibility_cache[job.job_id] = self._validate_historical(
+                    job,
+                    source_experiment,
+                    retain_prediction_data=retain,
+                )
             _reference, row = self._compatibility_cache[job.job_id]
-            output.append(row)
+            output.append(MappingProxyType(dict(row)))
         return tuple(output)
 
     def plan(
@@ -1049,12 +1185,24 @@ class OOFMatrixPlanner:
         """Validate locks against canonical folds and all inner source artifacts."""
         if frozen is None:
             frozen = self.frozen_manifest()
+        if self.validation_session is not None:
+            return self.validation_session.validate_complete_lock_matrix(self, frozen)
+        return self._validate_complete_lock_matrix_uncached(frozen)
+
+    def _validate_complete_lock_matrix_uncached(
+        self, frozen: Mapping[str, Any]
+    ) -> tuple[Any, ...]:
         try:
             from expert_method.ridge_sinkhorn.three_seed_study import StudyArtifactRepository
 
             repository = StudyArtifactRepository(
                 artifact_root=self.artifact_root,
                 config=self.study_config,
+                validation_session=(
+                    None
+                    if self.validation_session is None
+                    else self.validation_session.artifact_session
+                ),
             )
             locks = repository.validate_complete_lock_matrix(
                 plan_sha256=str(frozen["plan_sha256"]),
@@ -1183,6 +1331,299 @@ class OOFMatrixPlanner:
         return base / "job_manifest.json"
 
 
+class StudyValidationSession:
+    """Share validated study inputs for one evaluate, report, or lock command."""
+
+    def __init__(
+        self,
+        planner: OOFMatrixPlanner,
+        *,
+        retain_prediction_stages: Sequence[str] = (),
+    ) -> None:
+        if planner.validation_session is not None:
+            raise MatrixError("matrix planner already belongs to a validation session")
+        self.planner = planner
+        self.manager = planner.manager
+        self.artifact_session = OOFValidationSession(planner.manager)
+        self.retain_prediction_stages = frozenset(retain_prediction_stages)
+        if not self.retain_prediction_stages <= {"inner", "outer"}:
+            raise MatrixError("prediction retention stage must be inner or outer")
+        self._identity = self._planner_identity(planner)
+        self._references: dict[
+            tuple[ExpertJob, bool, bool],
+            tuple[ValidatedJobReference | None, str, str],
+        ] = {}
+        self._registered_references: dict[
+            int, tuple[ValidatedJobReference, tuple[Any, ...]]
+        ] = {}
+        self._prediction_arrays: dict[
+            int, tuple[np.ndarray, np.ndarray, np.ndarray]
+        ] = {}
+        self._complete_locks: dict[str, tuple[Any, ...]] = {}
+        self._source_selections: dict[
+            tuple[ExpertJob, bool], tuple[tuple[Any, ...], tuple[Any, ...] | None]
+        ] = {}
+
+        planner.validation_session = self
+        planner.native_store.validation_session = self.artifact_session
+        self.artifact_session.bind_locator(
+            planner.artifact_root_locator, planner.artifact_root
+        )
+        for name, locator in planner.reuse_root_locators.items():
+            self.artifact_session.bind_locator(locator, planner.reuse_roots[name])
+
+    @staticmethod
+    def _planner_identity(planner: OOFMatrixPlanner) -> tuple[Any, ...]:
+        return (
+            planner.manager,
+            planner.study_id,
+            planner.artifact_root,
+            planner.artifact_root_locator,
+            tuple(sorted(planner.reuse_roots.items())),
+            tuple(sorted(planner.reuse_root_locators.items())),
+            planner.study_config.sha256,
+            _training_recipe_fingerprint(planner.training_configs),
+            planner.training_epochs,
+            planner.freeze_sha256,
+            planner.config_root,
+        )
+
+    def require_planner(self, planner: OOFMatrixPlanner) -> None:
+        if planner is not self.planner or self._planner_identity(planner) != self._identity:
+            raise MatrixError("study validation session belongs to a different matrix plan")
+
+    def resolve_reference(
+        self,
+        planner: OOFMatrixPlanner,
+        job: ExpertJob,
+        *,
+        include_historical: bool,
+        retain_prediction_data: bool,
+    ) -> tuple[ValidatedJobReference | None, str, str]:
+        self.require_planner(planner)
+        retain_prediction_data = (
+            retain_prediction_data or job.stage in self.retain_prediction_stages
+        )
+        key = (job, include_historical, retain_prediction_data)
+        cached = self._references.get(key)
+        if cached is None:
+            reference, state, detail = planner._resolve_reference_uncached(
+                job,
+                include_historical=include_historical,
+                retain_prediction_data=retain_prediction_data,
+            )
+            self._remember_source_selection(job, include_historical, reference)
+            if reference is not None and reference._prediction_artifact is not None:
+                validated_reference = reference
+                artifact = validated_reference._prediction_artifact
+                reference = replace(validated_reference, _prediction_artifact=None)
+                self._cache_prediction_arrays(
+                    job, reference, artifact
+                )
+                compatibility_entry = planner._compatibility_cache.get(job.job_id)
+                if (
+                    compatibility_entry is not None
+                    and compatibility_entry[0] is validated_reference
+                ):
+                    planner._compatibility_cache[job.job_id] = (
+                        reference,
+                        compatibility_entry[1],
+                    )
+            if reference is not None:
+                self._register_reference(reference)
+            self._references[key] = (reference, state, detail)
+            return reference, state, detail
+        reference, state, detail = cached
+        return reference, state, detail
+
+    def validate_complete_lock_matrix(
+        self,
+        planner: OOFMatrixPlanner,
+        frozen: Mapping[str, Any],
+    ) -> tuple[Any, ...]:
+        self.require_planner(planner)
+        identity = hashlib.sha256(canonical_json_bytes(dict(frozen))).hexdigest()
+        locks = self._complete_locks.get(identity)
+        if locks is None:
+            locks = copy.deepcopy(
+                planner._validate_complete_lock_matrix_uncached(frozen)
+            )
+            self._complete_locks[identity] = locks
+        else:
+            planner._locks_validated = True
+        return copy.deepcopy(locks)
+
+    def prediction_arrays(
+        self, reference: ValidatedJobReference
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+        registered = self._registered_references.get(id(reference))
+        if registered is None or registered[0] is not reference:
+            raise MatrixError("prediction reference was not validated by this study session")
+        if self._reference_identity(reference) != registered[1]:
+            raise MatrixError("validated prediction reference identity changed")
+        return self._prediction_arrays.get(id(reference))
+
+    def verify_sources_unchanged(self) -> None:
+        self.require_planner(self.planner)
+        self.artifact_session.verify_sources_unchanged(self.manager)
+        for (job, include_historical), (environment, selected) in self._source_selections.items():
+            if self._source_environment(job, include_historical) != environment:
+                raise MatrixError(
+                    f"artifact source selection changed during the invocation: {job.job_id}"
+                )
+            if selected is not None:
+                native_selected = selected[0] == self.planner.study_id
+                native_present = bool(environment[2])
+                if native_selected != native_present:
+                    raise MatrixError(
+                        f"preferred native source appeared or disappeared during validation: {job.job_id}"
+                    )
+
+    def _remember_source_selection(
+        self,
+        job: ExpertJob,
+        include_historical: bool,
+        reference: ValidatedJobReference | None,
+    ) -> None:
+        environment = self._source_environment(job, include_historical)
+        selected = None
+        if reference is not None:
+            selected = (
+                reference.source_experiment_id,
+                reference.source_root_name,
+                reference.source_run_relative_path,
+                str(reference.run_dir.resolve()),
+                reference.checkpoint_sha256,
+                reference.prediction_sha256,
+                reference.resolved_config_sha256,
+            )
+            if (reference.source_experiment_id == self.planner.study_id) != bool(environment[2]):
+                raise MatrixError(
+                    f"preferred source changed while validating {job.job_id}"
+                )
+        key = (job, include_historical)
+        previous = self._source_selections.get(key)
+        current = (environment, selected)
+        if previous is not None and previous != current:
+            raise MatrixError(
+                f"artifact source selection changed while validating {job.job_id}"
+            )
+        self._source_selections[key] = current
+
+    def _source_environment(
+        self, job: ExpertJob, include_historical: bool
+    ) -> tuple[Any, ...]:
+        native_path = self.planner.native_store.base_dir / job.run_relative_path
+        try:
+            native_present = native_path.exists() or native_path.is_symlink()
+            native_target = str(native_path.resolve())
+        except (OSError, RuntimeError) as exc:
+            raise MatrixError(f"cannot resolve native source for {job.job_id}") from exc
+
+        source_experiment = _source_experiment_for(job) if include_historical else None
+        candidate_roster: tuple[Any, ...] = ()
+        if source_experiment is not None:
+            roots: list[tuple[Any, ...]] = []
+            for root_name, root in sorted(self.planner.reuse_roots.items()):
+                locator_root = self.planner.reuse_root_locators[root_name]
+                base_locator = _find_experiment_base_locator(
+                    locator_root, source_experiment
+                )
+                if base_locator is None:
+                    roots.append((root_name, None))
+                    continue
+                try:
+                    base_target = base_locator.resolve()
+                    run_locator = base_locator / job.run_relative_path
+                    run_present = run_locator.exists() or run_locator.is_symlink()
+                    run_target = run_locator.resolve()
+                    relative_files = (
+                        Path("run_metadata.json"),
+                        Path("resolved_config.json"),
+                        Path("predictions.json"),
+                        Path("checkpoints")
+                        / f"{job.expert_name}_seed{job.training_seed}_final.pt",
+                    )
+                    files = tuple(
+                        (
+                            relative.as_posix(),
+                            (run_locator / relative).exists()
+                            or (run_locator / relative).is_symlink(),
+                            str((run_locator / relative).resolve()),
+                        )
+                        for relative in relative_files
+                    )
+                except (OSError, RuntimeError) as exc:
+                    raise MatrixError(
+                        f"cannot resolve historical source candidates for {job.job_id}"
+                    ) from exc
+                roots.append(
+                    (
+                        root_name,
+                        str(base_locator),
+                        str(base_target),
+                        str(run_locator),
+                        run_present,
+                        str(run_target),
+                        files,
+                    )
+                )
+            candidate_roster = tuple(roots)
+        return (str(native_path), native_target, native_present, candidate_roster)
+
+    def _cache_prediction_arrays(
+        self,
+        job: ExpertJob,
+        reference: ValidatedJobReference,
+        artifact: OOFPredictionArtifact,
+    ) -> None:
+        sample_ids = np.asarray(
+            [record.sample_index for record in artifact.records], dtype=np.int64
+        )
+        labels = np.asarray(
+            [record.training_label for record in artifact.records], dtype=np.int64
+        )
+        logits = np.asarray([record.logits for record in artifact.records], dtype=np.float64)
+        if (
+            logits.ndim != 2
+            or logits.shape[0] != len(sample_ids)
+            or labels.shape != sample_ids.shape
+            or not np.isfinite(logits).all()
+        ):
+            raise MatrixError(f"validated prediction arrays are invalid for {job.job_id}")
+        immutable_arrays = tuple(
+            np.frombuffer(array.tobytes(order="C"), dtype=array.dtype).reshape(array.shape)
+            for array in (sample_ids, labels, logits)
+        )
+        self._register_reference(reference)
+        self._prediction_arrays[id(reference)] = immutable_arrays
+
+    def _register_reference(self, reference: ValidatedJobReference) -> None:
+        self._registered_references[id(reference)] = (
+            reference,
+            self._reference_identity(reference),
+        )
+
+    @staticmethod
+    def _reference_identity(reference: ValidatedJobReference) -> tuple[Any, ...]:
+        return (
+            reference.job,
+            reference.source_experiment_id,
+            reference.source_run_relative_path,
+            reference.source_root_name,
+            reference.run_dir,
+            reference.checkpoint_path,
+            reference.prediction_path,
+            reference.resolved_config_path,
+            reference.metadata_path,
+            reference.context,
+            reference.checkpoint_sha256,
+            reference.prediction_sha256,
+            reference.resolved_config_sha256,
+            reference.manifest_sha256,
+        )
+
+
 def _write_json_immutable(path: Path, payload: Mapping[str, Any]) -> Path:
     """Write canonical JSON once, refusing any attempt to change an existing file."""
     serialized = canonical_json_bytes(dict(payload))
@@ -1209,28 +1650,96 @@ class StudyArtifactView:
         self,
         *,
         manager: NestedOOFFoldManager,
-        study_id: str = STUDY_ID,
-        artifact_root: str | Path = "artifacts/oof",
+        planner: OOFMatrixPlanner | None = None,
+        study_id: str | None = None,
+        artifact_root: str | Path | None = None,
         reuse_roots: Mapping[str, str | Path] | None = None,
         training_configs: Mapping[str, TrainingConfig] | None = None,
         study_config: StudyConfig | None = None,
         training_epochs: int | None = None,
         freeze_sha256: str | None = None,
-        config_root: str | Path = Path(__file__).resolve().parents[2] / "configs" / "experts",
+        config_root: str | Path | None = None,
+        validation_session: StudyValidationSession | None = None,
     ) -> None:
-        self.planner = OOFMatrixPlanner(
-            manager=manager,
-            study_id=study_id,
-            artifact_root=artifact_root,
-            reuse_roots=reuse_roots,
-            training_configs=training_configs,
-            study_config=study_config,
-            training_epochs=training_epochs,
-            freeze_sha256=freeze_sha256,
-            config_root=config_root,
-        )
+        if planner is None:
+            self.planner = OOFMatrixPlanner(
+                manager=manager,
+                study_id=STUDY_ID if study_id is None else study_id,
+                artifact_root="artifacts/oof" if artifact_root is None else artifact_root,
+                reuse_roots=reuse_roots,
+                training_configs=training_configs,
+                study_config=study_config,
+                training_epochs=training_epochs,
+                freeze_sha256=freeze_sha256,
+                config_root=(
+                    Path(__file__).resolve().parents[2] / "configs" / "experts"
+                    if config_root is None else config_root
+                ),
+            )
+        else:
+            self.planner = planner
+            self._require_matching_planner_settings(
+                manager=manager,
+                planner=planner,
+                study_id=study_id,
+                artifact_root=artifact_root,
+                reuse_roots=reuse_roots,
+                training_configs=training_configs,
+                study_config=study_config,
+                training_epochs=training_epochs,
+                freeze_sha256=freeze_sha256,
+                config_root=config_root,
+            )
+        if self.planner.manager is not manager:
+            raise MatrixError("study artifact view and matrix planner use different fold managers")
+        self.validation_session = validation_session or self.planner.validation_session
+        if self.validation_session is not None:
+            self.validation_session.require_planner(self.planner)
         self._by_id = {job.job_id: job for job in self.planner.inventory}
         self._frozen_inventory_checked = False
+        self._validated_stage_audits: set[str] = set()
+
+    @staticmethod
+    def _require_matching_planner_settings(
+        *,
+        manager: NestedOOFFoldManager,
+        planner: OOFMatrixPlanner,
+        study_id: str | None,
+        artifact_root: str | Path | None,
+        reuse_roots: Mapping[str, str | Path] | None,
+        training_configs: Mapping[str, TrainingConfig] | None,
+        study_config: StudyConfig | None,
+        training_epochs: int | None,
+        freeze_sha256: str | None,
+        config_root: str | Path | None,
+    ) -> None:
+        if manager is not planner.manager:
+            raise MatrixError("study artifact view and matrix planner use different fold managers")
+        if study_id is not None and study_id != planner.study_id:
+            raise MatrixError("study artifact view study ID differs from its matrix planner")
+        if artifact_root is not None and Path(artifact_root).expanduser().resolve() != planner.artifact_root:
+            raise MatrixError("study artifact view artifact root differs from its matrix planner")
+        if reuse_roots is not None:
+            expected_roots = {
+                name: Path(path).expanduser().resolve()
+                for name, path in reuse_roots.items()
+            }
+            if expected_roots != planner.reuse_roots:
+                raise MatrixError("study artifact view reuse roots differ from its matrix planner")
+        if (
+            training_configs is not None
+            and _training_recipe_fingerprint(training_configs)
+            != _training_recipe_fingerprint(planner.training_configs)
+        ):
+            raise MatrixError("study artifact view training recipes differ from its matrix planner")
+        if study_config is not None and study_config.sha256 != planner.study_config.sha256:
+            raise MatrixError("study artifact view study config differs from its matrix planner")
+        if training_epochs is not None and training_epochs != planner.training_epochs:
+            raise MatrixError("study artifact view training epochs differ from its matrix planner")
+        if freeze_sha256 is not None and freeze_sha256 != planner.freeze_sha256:
+            raise MatrixError("study artifact view freeze differs from its matrix planner")
+        if config_root is not None and Path(config_root).expanduser().resolve() != planner.config_root:
+            raise MatrixError("study artifact view config root differs from its matrix planner")
 
     def _validate_frozen_inventory(self) -> None:
         """Require this view to match the immutable matrix lock on disk."""
@@ -1241,10 +1750,11 @@ class StudyArtifactView:
         if not path.is_file():
             raise MatrixError("study job manifest is missing; freeze the matrix before analysis")
         try:
-            recorded = json.loads(path.read_text())
+            manifest_bytes = self._read_snapshot_bytes(path)
+            recorded = json.loads(manifest_bytes)
         except (OSError, json.JSONDecodeError) as exc:
             raise MatrixError("study job manifest is invalid") from exc
-        if canonical_json_bytes(recorded) != path.read_bytes():
+        if canonical_json_bytes(recorded) != manifest_bytes:
             raise MatrixError("study job manifest is not canonical JSON")
         if recorded != self.planner.frozen_manifest():
             raise MatrixError("study job manifest does not match the current frozen plan/config/source")
@@ -1252,14 +1762,20 @@ class StudyArtifactView:
 
     def _validate_stage_audit(self, stage: str) -> None:
         """Require the immutable named-source audit for the requested stage."""
+        if (
+            self.validation_session is not None
+            and stage in self._validated_stage_audits
+        ):
+            return
         path = self.planner.native_store.base_dir / f"reuse_compatibility_{stage}.json"
         if not path.is_file():
             raise MatrixError(f"frozen {stage} reuse compatibility table is missing")
         try:
-            payload = json.loads(path.read_text())
+            payload_bytes = self._read_snapshot_bytes(path)
+            payload = json.loads(payload_bytes)
         except (OSError, json.JSONDecodeError) as exc:
             raise MatrixError(f"frozen {stage} reuse compatibility table is invalid") from exc
-        if canonical_json_bytes(payload) != path.read_bytes():
+        if canonical_json_bytes(payload) != payload_bytes:
             raise MatrixError(f"frozen {stage} reuse compatibility table is not canonical JSON")
         if (
             payload.get("schema_version") != COMPATIBILITY_SCHEMA_VERSION
@@ -1268,8 +1784,12 @@ class StudyArtifactView:
             or payload.get("stage") != stage
         ):
             raise MatrixError(f"frozen {stage} reuse compatibility identity is invalid")
+        if self.validation_session is not None:
+            self._validated_stage_audits.add(stage)
 
-    def resolve(self, job_id: str) -> ValidatedJobReference:
+    def resolve(
+        self, job_id: str, *, retain_prediction_data: bool | None = None
+    ) -> ValidatedJobReference:
         """Resolve one job ID to validated immutable run contents."""
         self._validate_frozen_inventory()
         try:
@@ -1277,19 +1797,39 @@ class StudyArtifactView:
         except KeyError as exc:
             raise MatrixError(f"unknown frozen expert job ID: {job_id!r}") from exc
         self._validate_stage_audit(job.stage)
-        reference, state, detail = self.planner.resolve_reference(job)
+        if retain_prediction_data is None:
+            retain_prediction_data = (
+                self.validation_session is not None
+                and job.stage in self.validation_session.retain_prediction_stages
+            )
+        reference, state, detail = self.planner.resolve_reference(
+            job,
+            retain_prediction_data=retain_prediction_data,
+        )
         if reference is None:
             raise MatrixError(f"job {job_id} is {state}: {detail}")
         return reference
 
-    @staticmethod
-    def _arrays(reference: ValidatedJobReference) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        # The already validated object was discarded by OOFArtifactStore's
-        # public read-only result; deserialize the same canonical artifact file.
-        from data.nested_oof import OOFPredictionArtifact
+    def _read_snapshot_bytes(self, path: Path) -> bytes:
+        if self.validation_session is not None:
+            return self.validation_session.artifact_session.read_source_bytes(path)
+        return path.read_bytes()
 
+    @staticmethod
+    def _arrays(
+        reference: ValidatedJobReference,
+        raw_bytes: bytes | None = None,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Reload validated arrays for compatibility callers without a view."""
+        if raw_bytes is None:
+            try:
+                raw_bytes = reference.prediction_path.read_bytes()
+            except OSError as exc:
+                raise MatrixError(f"cannot reload validated predictions: {exc}") from exc
+        if hashlib.sha256(raw_bytes).hexdigest() != reference.prediction_sha256:
+            raise MatrixError("validated prediction bytes changed before array loading")
         try:
-            parsed = OOFPredictionArtifact.from_json(reference.prediction_path.read_text())
+            parsed = OOFPredictionArtifact.from_json(raw_bytes)
         except (OSError, ValueError) as exc:
             raise MatrixError(f"cannot reload validated predictions: {exc}") from exc
         sample_ids = np.asarray([record.sample_index for record in parsed.records], dtype=np.int64)
@@ -1301,12 +1841,27 @@ class StudyArtifactView:
             raise MatrixError("validated OOF labels are not aligned to sample IDs")
         return sample_ids, labels, logits
 
+    def _load_arrays(
+        self, reference: ValidatedJobReference
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if self.validation_session is not None:
+            cached = self.validation_session.prediction_arrays(reference)
+            if cached is not None:
+                return tuple(np.array(array, copy=True) for array in cached)
+        # The already validated object was discarded by OOFArtifactStore's
+        # public read-only result; deserialize the same canonical artifact file.
+        try:
+            raw_bytes = self._read_snapshot_bytes(reference.prediction_path)
+        except (OSError, ValueError) as exc:
+            raise MatrixError(f"cannot reload validated predictions: {exc}") from exc
+        return StudyArtifactView._arrays(reference, raw_bytes)
+
     def load_logits(self, job_id: str) -> AlignedExpertPrediction:
         """Load validated aligned sample IDs, labels, and logits for an inner job."""
-        reference = self.resolve(job_id)
+        reference = self.resolve(job_id, retain_prediction_data=True)
         if reference.job.stage != "inner":
             raise MatrixError("load_logits is for inner OOF jobs; use outer loader methods")
-        sample_ids, labels, logits = self._arrays(reference)
+        sample_ids, labels, logits = self._load_arrays(reference)
         job = reference.job
         return AlignedExpertPrediction(
             job_id=job.job_id,
@@ -1329,10 +1884,10 @@ class StudyArtifactView:
 
     def load_outer_logits(self, job_id: str) -> InferenceExpertPrediction:
         """Load outer inference inputs without exposing their labels."""
-        reference = self.resolve(job_id)
+        reference = self.resolve(job_id, retain_prediction_data=True)
         if reference.job.stage != "outer":
             raise MatrixError("load_outer_logits requires an outer job")
-        sample_ids, _labels, logits = self._arrays(reference)
+        sample_ids, _labels, logits = self._load_arrays(reference)
         job = reference.job
         return InferenceExpertPrediction(
             job_id=job.job_id,
@@ -1353,10 +1908,10 @@ class StudyArtifactView:
 
     def load_outer_labels(self, job_id: str) -> tuple[np.ndarray, np.ndarray]:
         """Load labels for an evaluator after it has completed router locking."""
-        reference = self.resolve(job_id)
+        reference = self.resolve(job_id, retain_prediction_data=True)
         if reference.job.stage != "outer":
             raise MatrixError("load_outer_labels requires an outer job")
-        sample_ids, labels, _logits = self._arrays(reference)
+        sample_ids, labels, _logits = self._load_arrays(reference)
         return sample_ids, labels
 
 

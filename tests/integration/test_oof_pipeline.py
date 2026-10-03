@@ -49,6 +49,7 @@ from expert_method.oof.pipeline import (  # noqa: E402
     OOFPipeline,
     OOFPredictionCollector,
     OOFRunSpec,
+    OOFValidationSession,
 )
 from scripts.config import TrainingConfig  # noqa: E402
 
@@ -106,6 +107,52 @@ def _data_module(manager: NestedOOFFoldManager) -> FoldAwareDataModule:
         dataset_factory=_dataset_factory(label_map),
         seed=78,
     )
+
+
+def test_validation_session_rechecks_raw_source_bytes_and_is_invocation_local(
+    tmp_path: Path,
+) -> None:
+    manager = _manager()
+    source = tmp_path / "source.json"
+    source.write_bytes(b"first")
+    first_session = OOFValidationSession(manager)
+    assert first_session.read_source_bytes(source) == b"first"
+    initial_stat = source.stat()
+
+    source.write_bytes(b"other")
+    os.utime(source, ns=(initial_stat.st_atime_ns, initial_stat.st_mtime_ns))
+    changed_stat = source.stat()
+    assert changed_stat.st_size == initial_stat.st_size
+    assert changed_stat.st_mtime_ns == initial_stat.st_mtime_ns
+    with pytest.raises(OOFArtifactError, match="changed during the invocation"):
+        first_session.verify_sources_unchanged(manager)
+
+    next_session = OOFValidationSession(manager)
+    assert next_session.read_source_bytes(source) == b"other"
+    next_session.verify_sources_unchanged(manager)
+
+    deleted_session = OOFValidationSession(manager)
+    deleted_session.read_source_bytes(source)
+    source.unlink()
+    with pytest.raises(OOFArtifactError, match="cannot recheck validation source"):
+        deleted_session.verify_sources_unchanged(manager)
+
+
+def test_validation_session_rejects_manifest_locator_retarget(tmp_path: Path) -> None:
+    manager = _manager()
+    first_manifest = tmp_path / "first-fold-manifest.json"
+    second_manifest = tmp_path / "second-fold-manifest.json"
+    locator = tmp_path / "fold_manifest.json"
+    first_manifest.write_text(manager.manifest().to_json(), encoding="utf-8")
+    second_manifest.write_text(manager.manifest().to_json(), encoding="utf-8")
+    locator.symlink_to(first_manifest)
+
+    session = OOFValidationSession(manager)
+    session.validate_fold_manifest(locator, manager)
+    locator.unlink()
+    locator.symlink_to(second_manifest)
+    with pytest.raises(OOFArtifactError, match="location changed"):
+        session.verify_sources_unchanged(manager)
 
 
 def _config_payload(expert: str = "ce") -> dict:
@@ -257,8 +304,9 @@ def test_artifact_store_rejects_incompatible_run_reuse():
         inner_fold_id=0,
     ).resolve(manager)
     with tempfile.TemporaryDirectory() as tmp:
+        artifact_root = Path(tmp) / "artifacts" / "oof"
         store = OOFArtifactStore(
-            root=Path(tmp) / "artifacts" / "oof",
+            root=artifact_root,
             manager=manager,
             experiment_id="synthetic",
             canonical_checkpoint_dir=Path(tmp) / "canonical-checkpoints",
@@ -577,8 +625,9 @@ def test_pipeline_smoke_trains_only_the_declared_population():
         return _Trainer(config)
 
     with tempfile.TemporaryDirectory() as tmp:
+        artifact_root = Path(tmp) / "artifacts" / "oof"
         store = OOFArtifactStore(
-            root=Path(tmp) / "artifacts" / "oof",
+            root=artifact_root,
             manager=manager,
             experiment_id="synthetic_smoke",
             canonical_checkpoint_dir=Path(tmp) / "canonical-checkpoints",
@@ -607,6 +656,43 @@ def test_pipeline_smoke_trains_only_the_declared_population():
         assert result.checkpoint_path.is_relative_to(Path(tmp).resolve())
         assert result.context.prediction_indices == expected.prediction_indices
         assert recovered.prediction_artifact.to_json() == result.prediction_artifact.to_json()
+
+        session = OOFValidationSession(manager)
+        readonly_store = OOFArtifactStore(
+            root=artifact_root,
+            manager=manager,
+            experiment_id="synthetic_smoke",
+            canonical_checkpoint_dir=Path(tmp) / "canonical-checkpoints",
+            read_only=True,
+            validation_session=session,
+        )
+        completed = readonly_store.validate_completed_run(context_spec.resolve(manager))
+        expected_predictions = completed.artifact.to_json()
+        source_paths = (
+            result.prediction_path,
+            readonly_store.config_path(context_spec.resolve(manager)),
+            result.checkpoint_path,
+        )
+        for source_path in source_paths:
+            original = source_path.read_bytes()
+            original_stat = source_path.stat()
+            source_path.write_bytes(bytes((original[0] ^ 1,)) + original[1:])
+            os.utime(
+                source_path,
+                ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+            )
+            changed_stat = source_path.stat()
+            assert changed_stat.st_size == original_stat.st_size
+            assert changed_stat.st_mtime_ns == original_stat.st_mtime_ns
+            with pytest.raises(OOFArtifactError, match="changed during the invocation"):
+                session.verify_sources_unchanged(manager)
+            assert completed.artifact.to_json() == expected_predictions
+            source_path.write_bytes(original)
+            os.utime(
+                source_path,
+                ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+            )
+            session.verify_sources_unchanged(manager)
 
 
 TESTS = [

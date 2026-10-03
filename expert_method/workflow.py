@@ -95,6 +95,8 @@ def _frozen_context(
     profile: RuntimeProfile,
     *,
     read_only: bool = True,
+    retain_prediction_stages: Sequence[str] = (),
+    use_validation_session: bool = False,
 ) -> tuple[dict[str, Any], Any, Any]:
     """Load and validate the immutable freeze plus native matrix manifests."""
     from expert_method import cli
@@ -113,6 +115,20 @@ def _frozen_context(
         read_only=read_only,
         freeze_sha256=freeze["freeze_sha256"],
     )
+    if use_validation_session:
+        from expert_method.ridge_sinkhorn.matrix import StudyValidationSession
+
+        session = StudyValidationSession(
+            planner, retain_prediction_stages=retain_prediction_stages
+        )
+        try:
+            recorded_freeze = json.loads(
+                session.artifact_session.read_source_bytes(freeze_path)
+            )
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WorkflowError("frozen study identity is invalid") from exc
+        if recorded_freeze != freeze:
+            raise WorkflowError("study freeze changed while analysis was starting")
     _validate_matrix_manifests(study, profile, freeze, planner)
     return freeze, manager, planner
 
@@ -133,13 +149,31 @@ def _validate_matrix_manifests(
     )
 
     base = planner.native_store.base_dir
+    source_session = (
+        None
+        if planner.validation_session is None
+        else planner.validation_session.artifact_session
+    )
+
+    def read_source(path: Path) -> bytes:
+        if source_session is not None:
+            return source_session.read_source_bytes(path)
+        return path.read_bytes()
+
     fold_path = planner.native_store.manifest_path
     if not fold_path.is_file() or fold_path.is_symlink():
         raise WorkflowError("frozen fold_manifest.json is missing; run study freeze first")
-    expected_fold = planner.manager.manifest().to_json()
-    if fold_path.read_text(encoding="utf-8") != expected_fold:
+    expected_fold = (
+        planner.manager.manifest().to_json()
+        if source_session is None
+        else source_session.manager_manifest_json(planner.manager)
+    )
+    fold_bytes = read_source(fold_path)
+    if source_session is not None:
+        source_session.validate_fold_manifest(fold_path, planner.manager)
+    if fold_bytes.decode("utf-8") != expected_fold:
         raise WorkflowError("fold_manifest.json differs from canonical fold membership")
-    if hashlib.sha256(expected_fold.encode("utf-8")).hexdigest() != freeze["fold_manifest_sha256"]:
+    if hashlib.sha256(fold_bytes).hexdigest() != freeze["fold_manifest_sha256"]:
         raise WorkflowError("frozen fold manifest differs from the study freeze record")
 
     expected_job = planner.frozen_manifest()
@@ -149,10 +183,11 @@ def _validate_matrix_manifests(
     if not job_path.is_file() or job_path.is_symlink():
         raise WorkflowError("frozen job_manifest.json is missing; run study freeze first")
     try:
-        recorded_job = json.loads(job_path.read_text(encoding="utf-8"))
+        job_bytes = read_source(job_path)
+        recorded_job = json.loads(job_bytes)
     except (OSError, json.JSONDecodeError) as exc:
         raise WorkflowError("frozen job_manifest.json is invalid") from exc
-    if job_path.read_bytes() != canonical_json_bytes(recorded_job) or recorded_job != expected_job:
+    if job_bytes != canonical_json_bytes(recorded_job) or recorded_job != expected_job:
         raise WorkflowError("job_manifest.json differs from the immutable study identity")
     current_inventory = cli._inventory_payload(planner.inventory)
     if current_inventory != freeze.get("inventory") or current_inventory != expected_job.get("inventory"):
@@ -169,7 +204,8 @@ def _validate_matrix_manifests(
         if not audit_path.is_file() or audit_path.is_symlink():
             raise WorkflowError(f"frozen {stage} reuse compatibility audit is missing")
         try:
-            audit = json.loads(audit_path.read_text(encoding="utf-8"))
+            audit_bytes = read_source(audit_path)
+            audit = json.loads(audit_bytes)
         except (OSError, json.JSONDecodeError) as exc:
             raise WorkflowError(f"frozen {stage} reuse compatibility audit is invalid") from exc
         expected_audit = {
@@ -184,7 +220,7 @@ def _validate_matrix_manifests(
                 )
             ],
         }
-        if audit_path.read_bytes() != canonical_json_bytes(audit) or audit != expected_audit:
+        if audit_bytes != canonical_json_bytes(audit) or audit != expected_audit:
             raise WorkflowError(f"frozen {stage} reuse decisions differ from the current audit")
         if stage == "inner":
             from expert_method.cli import _verify_reuse_audit
@@ -649,7 +685,14 @@ def run_analysis_stage(
     """Run lock/evaluate/report through the stable package service boundary."""
     if stage not in {"lock", "evaluate", "report"}:
         raise WorkflowError("analysis stage must be lock, evaluate, or report")
-    freeze, manager, planner = _frozen_context(study, profile, read_only=False)
+    retention = {"lock": ("inner",), "evaluate": ("outer",), "report": ()}[stage]
+    freeze, manager, planner = _frozen_context(
+        study,
+        profile,
+        read_only=False,
+        retain_prediction_stages=retention,
+        use_validation_session=True,
+    )
     from expert_method.ridge_sinkhorn.matrix import StudyArtifactView
     from expert_method.ridge_sinkhorn.three_seed_study import StudyArtifactRepository
     from expert_method import analysis as analysis_service
@@ -664,16 +707,16 @@ def run_analysis_stage(
 
     view = StudyArtifactView(
         manager=manager,
-        study_id=study.study_id,
-        artifact_root=profile.run_root,
-        reuse_roots=profile.reuse_roots,
-        training_configs=planner.training_configs,
-        study_config=study.to_study_config(),
-        training_epochs=study.protocol["epochs"],
-        freeze_sha256=freeze["freeze_sha256"],
+        planner=planner,
+        validation_session=planner.validation_session,
     )
     manifest = planner.frozen_manifest()
-    repository = StudyArtifactRepository(profile.run_root, config=study.to_study_config())
+    repository = StudyArtifactRepository(
+        profile.run_root,
+        config=study.to_study_config(),
+        validation_session=planner.validation_session.artifact_session,
+        artifact_root_locator=planner.artifact_root_locator,
+    )
     if stage == "lock":
         analysis_service.lock_study(
             view=view,
@@ -681,17 +724,27 @@ def run_analysis_stage(
             repository=repository,
             manifest=manifest,
             manifest_sha256=hashlib.sha256(
-                (Path(profile.run_root) / study.study_id / "job_manifest.json").read_bytes()
+                planner.validation_session.artifact_session.read_source_bytes(
+                    (Path(profile.run_root) / study.study_id / "job_manifest.json")
+                )
             ).hexdigest(),
         )
         planner.freeze(stage="outer", freeze_sha256=freeze["freeze_sha256"])
     elif stage == "evaluate":
         analysis_service.evaluate_study(
-            view=view, manager=manager, repository=repository, manifest=manifest
+            view=view,
+            manager=manager,
+            repository=repository,
+            manifest=manifest,
+            session=planner.validation_session,
         )
     else:
         analysis_service.report_study(
-            view=view, manager=manager, repository=repository, manifest=manifest
+            view=view,
+            manager=manager,
+            repository=repository,
+            manifest=manifest,
+            session=planner.validation_session,
         )
     return {
         "stage": stage,

@@ -489,6 +489,87 @@ def test_evaluation_npz_is_hash_bound_and_resume_is_idempotent(tmp_path: Path) -
         repository.read_fold_evaluation(78, 0, expected_outer_sample_ids=ids)
 
 
+def test_evaluate_checks_all_sources_before_publishing_any_fold(monkeypatch) -> None:
+    from expert_method import analysis as analysis_service
+
+    manager = _synthetic_manager()
+    labels_by_id = dict(zip(manager.canonical_indices, manager.training_labels))
+    fold_inputs = {}
+    locks = []
+    for outer in (0, 1):
+        sample_ids = np.asarray([manager.outer_fold(outer).evaluation_indices[0]], dtype=np.int64)
+        fold_inputs[outer] = (
+            SimpleNamespace(sample_ids=sample_ids),
+            np.asarray([labels_by_id[int(sample_ids[0])]], dtype=np.int64),
+        )
+        locks.append(SimpleNamespace(training_seed=78, outer_fold_id=outer))
+    source_hashes = (("synthetic/checkpoint", "a" * 64),)
+    written: list[object] = []
+    evaluated: list[int] = []
+
+    class Config:
+        seeds = (78,)
+        outer_folds = (0, 1)
+
+    class Evaluator:
+        def __init__(self, _config):
+            pass
+
+        def predict_locked_methods(self, _lock, _batch):
+            return None
+
+        def evaluate_fold(self, *_args, **_kwargs):
+            evaluated.append(_args[0].outer_fold_id)
+            return SimpleNamespace()
+
+    class Session:
+        def verify_sources_unchanged(self):
+            assert evaluated == [0, 1]
+            raise StudyError("source changed before publication")
+
+    view = SimpleNamespace()
+    view.load_outer_labels = lambda job_id: (
+        fold_inputs[int(job_id.rsplit("-", 1)[1])][0].sample_ids,
+        fold_inputs[int(job_id.rsplit("-", 1)[1])][1],
+    )
+    repository = SimpleNamespace(
+        config=Config(),
+        write_fold_evaluation=lambda *args, **kwargs: written.append((args, kwargs)),
+    )
+    monkeypatch.setattr(
+        analysis_service,
+        "validate_outer_stage_prerequisites",
+        lambda **_kwargs: (tuple(locks), {}),
+    )
+    monkeypatch.setattr(analysis_service, "job_id_lookup", lambda _view: {})
+    monkeypatch.setattr(
+        analysis_service,
+        "assemble_outer_batch",
+        lambda *_args: (
+            fold_inputs[_args[-1]][0],
+            source_hashes,
+            f"outer-job-{_args[-1]}",
+        ),
+    )
+    monkeypatch.setattr(
+        analysis_service,
+        "expected_outer_source_hashes",
+        lambda *_args: source_hashes,
+    )
+    monkeypatch.setattr(analysis_service, "StudyEvaluator", Evaluator)
+
+    with pytest.raises(StudyError, match="before publication"):
+        analysis_service.evaluate_study(
+            view=view,
+            manager=manager,
+            repository=repository,
+            manifest={},
+            session=Session(),
+        )
+    assert written == []
+    assert evaluated == [0, 1]
+
+
 def test_aggregate_recomputes_metrics_and_report_includes_mass_and_selections(monkeypatch: pytest.MonkeyPatch) -> None:
     manager = _synthetic_manager()
     evaluations = list(_complete_synthetic_evaluations(manager))

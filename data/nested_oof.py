@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
 import numpy as np
@@ -775,6 +776,21 @@ class FoldManifest:
                 )
 
 
+@dataclass(frozen=True)
+class _OOFFoldMembership:
+    definition: OuterFoldDefinition | InnerFoldDefinition
+    population: frozenset[int]
+    training: frozenset[int]
+    training_sha256: str
+
+
+@dataclass(frozen=True)
+class _OOFMembershipIndex:
+    labels_by_index: Mapping[int, int]
+    outer: tuple[_OOFFoldMembership, ...]
+    inner: tuple[tuple[_OOFFoldMembership, ...], ...]
+
+
 class NestedOOFFoldManager:
     """Construct and validate deterministic five-by-four nested folds.
 
@@ -862,7 +878,37 @@ class NestedOOFFoldManager:
         )
         self._validate_class_coverage_configuration()
         self._outer_folds = self._build_folds()
+        self._membership_index = self._build_membership_index()
         self.validate_membership()
+
+    def _build_membership_index(self) -> "_OOFMembershipIndex":
+        """Precompute immutable per-fold membership sets and canonical hashes."""
+        outer_memberships = tuple(
+            _OOFFoldMembership(
+                definition=outer,
+                population=frozenset(outer.evaluation_indices),
+                training=frozenset(outer.expert_training_indices),
+                training_sha256=_hash_indices(outer.expert_training_indices),
+            )
+            for outer in self._outer_folds
+        )
+        inner_memberships = tuple(
+            tuple(
+                _OOFFoldMembership(
+                    definition=inner,
+                    population=frozenset(inner.prediction_indices),
+                    training=frozenset(inner.expert_training_indices),
+                    training_sha256=_hash_indices(inner.expert_training_indices),
+                )
+                for inner in outer.inner_folds
+            )
+            for outer in self._outer_folds
+        )
+        return _OOFMembershipIndex(
+            labels_by_index=MappingProxyType(dict(self._labels_by_index)),
+            outer=outer_memberships,
+            inner=inner_memberships,
+        )
 
     @classmethod
     def from_canonical_training_data(
@@ -1181,11 +1227,17 @@ class NestedOOFFoldManager:
         except FoldMembershipError as exc:
             raise OOFArtifactValidationError(str(exc)) from exc
 
-        if record.sample_index not in self._labels_by_index:
+        index = self._membership_index
+        indexed_outer = index.outer[record.outer_fold_id]
+        if indexed_outer.definition is not outer:
+            raise OOFArtifactValidationError(
+                "outer fold membership changed after the validation index was built"
+            )
+        if record.sample_index not in index.labels_by_index:
             raise OOFArtifactValidationError(
                 f"sample ID {record.sample_index} is outside the canonical population"
             )
-        expected_label = self._labels_by_index[record.sample_index]
+        expected_label = index.labels_by_index[record.sample_index]
         if record.training_label != expected_label:
             raise OOFArtifactValidationError(
                 f"sample ID {record.sample_index} has training label "
@@ -1193,31 +1245,32 @@ class NestedOOFFoldManager:
             )
 
         if record.inner_fold_id is None:
-            expected_population = set(outer.evaluation_indices)
-            expected_training = outer.expert_training_indices
+            expected = indexed_outer
             population_name = "outer evaluation population"
         else:
             try:
                 inner = self.inner_fold(record.outer_fold_id, record.inner_fold_id)
             except FoldMembershipError as exc:
                 raise OOFArtifactValidationError(str(exc)) from exc
-            expected_population = set(inner.prediction_indices)
-            expected_training = inner.expert_training_indices
+            expected = index.inner[record.outer_fold_id][record.inner_fold_id]
+            if expected.definition is not inner:
+                raise OOFArtifactValidationError(
+                    "inner fold membership changed after the validation index was built"
+                )
             population_name = "inner prediction population"
 
-        if record.sample_index in set(expected_training):
+        if record.sample_index in expected.training:
             raise OOFArtifactValidationError(
                 f"sample ID {record.sample_index} belongs to the expert training population; "
                 "an OOF prediction may not evaluate an in-training sample"
             )
-        if record.sample_index not in expected_population:
+        if record.sample_index not in expected.population:
             raise OOFArtifactValidationError(
                 f"sample ID {record.sample_index} is not in the declared "
                 f"{population_name} for outer fold {record.outer_fold_id}"
             )
 
-        expected_hash = _hash_indices(expected_training)
-        if record.expert_training_membership_hash != expected_hash:
+        if record.expert_training_membership_hash != expected.training_sha256:
             raise OOFArtifactValidationError(
                 "expert-training membership hash does not match the declared fold"
             )

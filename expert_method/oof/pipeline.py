@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from contextlib import contextmanager
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -74,6 +75,120 @@ def _sha256_file(path: Path) -> str:
     except OSError as exc:
         raise OOFArtifactError(f"cannot hash artifact: {path}") from exc
     return digest.hexdigest()
+
+
+class OOFValidationSession:
+    """Invocation-scoped validation snapshots for one exact fold manager.
+
+    Parsed manifests and source digests live only for the lifetime of the
+    caller's validation session.  Every file used by a cached result is
+    rehashed before publication, so same-size/same-mtime edits are detected.
+    """
+
+    def __init__(self, manager: NestedOOFFoldManager) -> None:
+        manager.validate_membership()
+        self._manager = manager
+        manifest = manager.manifest()
+        self._manifest_json = manifest.to_json()
+        self._manifest_dict = manifest.to_dict()
+        self._manifest_paths: set[Path] = set()
+        self._source_sha256: dict[Path, str] = {}
+        self._source_locators: dict[Path, Path] = {}
+
+    def require_manager(self, manager: NestedOOFFoldManager) -> None:
+        if manager is not self._manager:
+            raise OOFArtifactError(
+                "OOF validation session belongs to a different fold manager"
+            )
+
+    def manager_manifest_json(self, manager: NestedOOFFoldManager) -> str:
+        self.require_manager(manager)
+        return self._manifest_json
+
+    def validated_sha256(self, path: str | Path) -> str:
+        source = Path(path).resolve()
+        try:
+            return self._source_sha256[source]
+        except KeyError as exc:
+            raise OOFArtifactError(
+                f"source was not read by this validation session: {source}"
+            ) from exc
+
+    def read_source_bytes(self, path: str | Path) -> bytes:
+        locator = Path(path).expanduser().absolute()
+        try:
+            source = locator.resolve()
+            raw_bytes = locator.read_bytes()
+            if locator.resolve() != source:
+                raise OOFArtifactError(
+                    f"validation source location changed while being read: {locator}"
+                )
+        except (OSError, RuntimeError) as exc:
+            raise OOFArtifactError(f"cannot read validation source: {locator}") from exc
+        self._bind_locator(locator, source)
+        self._record_source(source, raw_bytes)
+        return raw_bytes
+
+    def bind_locator(self, locator: str | Path, resolved_path: str | Path) -> None:
+        self._bind_locator(Path(locator).expanduser().absolute(), Path(resolved_path).resolve())
+
+    def validate_fold_manifest(self, path: str | Path, manager: NestedOOFFoldManager) -> None:
+        self.require_manager(manager)
+        locator = Path(path).expanduser().absolute()
+        source = locator.resolve()
+        self._bind_locator(locator, source)
+        if source not in self._manifest_paths:
+            raw_bytes = self.read_source_bytes(locator)
+            try:
+                manifest = FoldManifest.from_json(raw_bytes)
+            except OOFProtocolError as exc:
+                raise OOFArtifactError(f"OOF fold manifest is invalid: {source}") from exc
+            if manifest.to_dict() != self._manifest_dict:
+                raise OOFArtifactError(
+                    "OOF fold manifest disagrees with the current frozen fold manager"
+                )
+            self._manifest_paths.add(source)
+
+    def verify_sources_unchanged(self, manager: NestedOOFFoldManager) -> None:
+        self.require_manager(manager)
+        if manager.manifest().to_json() != self._manifest_json:
+            raise OOFArtifactError("fold manager changed during validation")
+        for locator, expected_path in self._source_locators.items():
+            try:
+                if locator.resolve() != expected_path:
+                    raise OOFArtifactError(
+                        f"validation source location changed during the invocation: {locator}"
+                    )
+            except (OSError, RuntimeError) as exc:
+                raise OOFArtifactError(
+                    f"cannot resolve validation source location: {locator}"
+                ) from exc
+        for path, expected_sha256 in self._source_sha256.items():
+            try:
+                actual_sha256 = _sha256_file(path)
+            except OOFArtifactError as exc:
+                raise OOFArtifactError(
+                    f"cannot recheck validation source: {path}"
+                ) from exc
+            if actual_sha256 != expected_sha256:
+                raise OOFArtifactError(
+                    f"validation source changed during the invocation: {path}"
+                )
+
+    def _bind_locator(self, locator: Path, resolved_path: Path) -> None:
+        previous = self._source_locators.get(locator)
+        if previous is not None and previous != resolved_path:
+            raise OOFArtifactError(
+                f"validation source location changed during the invocation: {locator}"
+            )
+        self._source_locators[locator] = resolved_path
+
+    def _record_source(self, path: Path, raw_bytes: bytes) -> None:
+        digest = hashlib.sha256(raw_bytes).hexdigest()
+        previous = self._source_sha256.get(path)
+        if previous is not None and previous != digest:
+            raise OOFArtifactError(f"validation source changed while being read: {path}")
+        self._source_sha256[path] = digest
 
 
 def _safe_component(value: str, *, name: str) -> str:
@@ -271,10 +386,13 @@ class OOFArtifactStore:
         canonical_checkpoint_dir: str | Path = "checkpoints",
         read_only: bool = False,
         base_dir: str | Path | None = None,
+        validation_session: OOFValidationSession | None = None,
     ) -> None:
         _safe_component(experiment_id, name="experiment_id")
-        self.root = Path(root).resolve()
+        self.root_locator = Path(root).expanduser().absolute()
+        self.root = self.root_locator.resolve()
         self.manager = manager
+        self.validation_session = validation_session
         self.experiment_id = experiment_id
         self.read_only = bool(read_only)
         self.canonical_checkpoint_dir = Path(canonical_checkpoint_dir).resolve()
@@ -292,7 +410,11 @@ class OOFArtifactStore:
             self.base_dir.mkdir(parents=True, exist_ok=True)
         self._metadata_writer = AtomicMetadataWriter(error_type=OOFArtifactError)
         self._immutable_writer = ImmutableArtifactWriter(error_type=OOFArtifactError)
-        self.manager.validate_membership()
+        if validation_session is None:
+            self.manager.validate_membership()
+        else:
+            validation_session.require_manager(manager)
+            validation_session.bind_locator(self.root_locator, self.root)
 
     def _require_writable(self) -> None:
         if self.read_only:
@@ -339,7 +461,10 @@ class OOFArtifactStore:
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Read and validate immutable run provenance without writing files."""
         self._validate_context(context)
-        run_dir = self.run_dir(context).resolve()
+        run_dir_locator = self.run_dir(context).absolute()
+        run_dir = run_dir_locator.resolve()
+        if self.validation_session is not None:
+            self.validation_session.bind_locator(run_dir_locator, run_dir)
         if not run_dir.is_dir():
             raise OOFArtifactMissingError(f"OOF run directory is missing: {run_dir}")
 
@@ -355,14 +480,16 @@ class OOFArtifactStore:
         if not manifest_path.exists():
             raise OOFArtifactMissingError(f"OOF fold manifest is missing: {manifest_path}")
         try:
-            manifest = FoldManifest.from_json(manifest_path.read_text())
-            manifest.validate()
+            if self.validation_session is None:
+                manifest = FoldManifest.from_json(self._read_source_bytes(manifest_path))
+                if manifest.to_dict() != self.manager.manifest().to_dict():
+                    raise OOFArtifactError(
+                        "OOF fold manifest disagrees with the current frozen fold manager"
+                    )
+            else:
+                self.validation_session.validate_fold_manifest(manifest_path, self.manager)
         except (OSError, OOFProtocolError) as exc:
             raise OOFArtifactError(f"OOF fold manifest is invalid: {manifest_path}") from exc
-        if manifest.to_dict() != self.manager.manifest().to_dict():
-            raise OOFArtifactError(
-                "OOF fold manifest disagrees with the current frozen fold manager"
-            )
 
         resolved_config = self._read_resolved_config(context)
         if expected_config is not None and _canonical_json(resolved_config) != _canonical_json(
@@ -572,8 +699,9 @@ class OOFArtifactStore:
         if not path.exists():
             raise OOFArtifactMissingError(f"OOF prediction artifact is missing: {path}")
         try:
-            artifact = OOFPredictionArtifact.from_json(path.read_text())
-        except OOFArtifactValidationError as exc:
+            prediction_bytes = self._read_source_bytes(path)
+            artifact = OOFPredictionArtifact.from_json(prediction_bytes)
+        except (OOFArtifactValidationError, OOFArtifactError) as exc:
             raise OOFArtifactError(f"invalid OOF prediction artifact: {exc}") from exc
         metadata = self._read_metadata(context)
         resolved_config = self._read_resolved_config(context)
@@ -598,7 +726,7 @@ class OOFArtifactStore:
                 raise OOFArtifactError(
                     "prediction metadata points to a different artifact path"
                 )
-            if prediction_record.get("sha256") != _sha256_file(path):
+            if prediction_record.get("sha256") != hashlib.sha256(prediction_bytes).hexdigest():
                 raise OOFArtifactError("prediction metadata hash does not match its bytes")
         artifact.validate(self.manager, require_complete=False)
         self._validate_run_artifact(context, artifact, checkpoint)
@@ -653,12 +781,13 @@ class OOFArtifactStore:
         prediction_path = self._recorded_path(
             run_dir, prediction_record.get("path"), name="prediction"
         )
-        actual_prediction_sha = _sha256_file(prediction_path)
+        prediction_bytes = self._read_source_bytes(prediction_path)
+        actual_prediction_sha = hashlib.sha256(prediction_bytes).hexdigest()
         if prediction_record.get("sha256") != actual_prediction_sha:
             raise OOFArtifactError("completed OOF prediction hash does not match its bytes")
         try:
-            artifact = OOFPredictionArtifact.from_json(prediction_path.read_text())
-        except (OSError, OOFArtifactValidationError) as exc:
+            artifact = OOFPredictionArtifact.from_json(prediction_bytes)
+        except (OOFArtifactValidationError, OOFArtifactError) as exc:
             raise OOFArtifactError(
                 f"completed OOF prediction artifact is invalid: {prediction_path}"
             ) from exc
@@ -677,8 +806,7 @@ class OOFArtifactStore:
             artifact=artifact,
         )
 
-    @staticmethod
-    def _recorded_path(run_dir: Path, value: Any, *, name: str) -> Path:
+    def _recorded_path(self, run_dir: Path, value: Any, *, name: str) -> Path:
         if not isinstance(value, str) or not value:
             raise OOFArtifactError(f"completed OOF {name} path is missing")
         path = Path(value)
@@ -691,6 +819,8 @@ class OOFArtifactStore:
             raise OOFArtifactMissingError(
                 f"completed OOF {name} file is missing: {resolved}"
             )
+        if self.validation_session is not None:
+            self.validation_session.bind_locator(run_dir / path, resolved)
         return resolved
 
     def _read_resolved_config(self, context: OOFRunContext) -> dict[str, Any]:
@@ -698,12 +828,20 @@ class OOFArtifactStore:
         if not config_path.exists():
             raise OOFArtifactMissingError(f"OOF resolved config is missing: {config_path}")
         try:
-            resolved_config = json.loads(config_path.read_text())
+            resolved_config = json.loads(self._read_source_bytes(config_path))
         except (OSError, json.JSONDecodeError) as exc:
             raise OOFArtifactError(f"OOF resolved config is invalid: {config_path}") from exc
         if not isinstance(resolved_config, Mapping):
             raise OOFArtifactError("OOF resolved config must contain a mapping")
         return dict(resolved_config)
+
+    def _read_source_bytes(self, path: str | Path) -> bytes:
+        if self.validation_session is not None:
+            return self.validation_session.read_source_bytes(path)
+        try:
+            return Path(path).read_bytes()
+        except OSError as exc:
+            raise OOFArtifactError(f"cannot read validation source: {path}") from exc
 
     def _validate_checkpoint_file(
         self,
@@ -719,7 +857,8 @@ class OOFArtifactStore:
             )
         if not path.is_file():
             raise OOFArtifactMissingError(f"OOF checkpoint is missing: {path}")
-        actual_sha = _sha256_file(path)
+        checkpoint_bytes = self._read_source_bytes(path)
+        actual_sha = hashlib.sha256(checkpoint_bytes).hexdigest()
         expected_epoch = None
         schedule = resolved_config.get("schedule")
         if isinstance(schedule, Mapping) and "epochs" in schedule:
@@ -730,7 +869,9 @@ class OOFArtifactStore:
                     "OOF resolved config contains an invalid schedule epoch"
                 ) from exc
         try:
-            state = torch.load(path, map_location="cpu", weights_only=False)
+            state = torch.load(
+                io.BytesIO(checkpoint_bytes), map_location="cpu", weights_only=False
+            )
             validate_checkpoint_metadata(
                 state,
                 path=path,
@@ -778,7 +919,11 @@ class OOFArtifactStore:
     def _static_metadata(
         self, context: OOFRunContext, resolved_config: Mapping[str, Any]
     ) -> dict[str, Any]:
-        manifest_json = self.manager.manifest().to_json()
+        manifest_json = (
+            self.manager.manifest().to_json()
+            if self.validation_session is None
+            else self.validation_session.manager_manifest_json(self.manager)
+        )
         return {
             "schema_version": OOF_RUN_SCHEMA_VERSION,
             "experiment_id": self.experiment_id,
@@ -875,7 +1020,7 @@ class OOFArtifactStore:
         if not path.exists():
             raise OOFArtifactError(f"OOF run metadata is missing: {path}")
         try:
-            payload = json.loads(path.read_text())
+            payload = json.loads(self._read_source_bytes(path))
         except (OSError, json.JSONDecodeError) as exc:
             raise OOFArtifactError(f"OOF run metadata is invalid: {path}") from exc
         if not isinstance(payload, Mapping):

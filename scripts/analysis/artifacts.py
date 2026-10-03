@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -57,8 +58,18 @@ class ArtifactReader:
     def read_json(self, path: str | Path, *, name: str = "JSON artifact") -> dict[str, Any]:
         artifact_path = Path(path)
         try:
-            payload = json.loads(artifact_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
+            raw_bytes = artifact_path.read_bytes()
+        except OSError as exc:
+            _raise(self.error_type, f"cannot load {name}: {artifact_path}", exc)
+        return self.read_json_bytes(raw_bytes, path=artifact_path, name=name)
+
+    def read_json_bytes(
+        self, raw_bytes: bytes, *, path: str | Path, name: str = "JSON artifact"
+    ) -> dict[str, Any]:
+        artifact_path = Path(path)
+        try:
+            payload = json.loads(raw_bytes)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
             _raise(self.error_type, f"cannot load {name}: {artifact_path}", exc)
         if not isinstance(payload, dict):
             _raise(self.error_type, f"{name} must be a JSON object")
@@ -67,7 +78,17 @@ class ArtifactReader:
     def read_npz(self, path: str | Path, *, name: str = "NumPy artifact") -> dict[str, np.ndarray]:
         artifact_path = Path(path)
         try:
-            with np.load(artifact_path, allow_pickle=False) as archive:
+            raw_bytes = artifact_path.read_bytes()
+        except OSError as exc:
+            _raise(self.error_type, f"cannot load {name}: {artifact_path}", exc)
+        return self.read_npz_bytes(raw_bytes, path=artifact_path, name=name)
+
+    def read_npz_bytes(
+        self, raw_bytes: bytes, *, path: str | Path, name: str = "NumPy artifact"
+    ) -> dict[str, np.ndarray]:
+        artifact_path = Path(path)
+        try:
+            with np.load(io.BytesIO(raw_bytes), allow_pickle=False) as archive:
                 return {key: np.array(archive[key]) for key in archive.files}
         except (OSError, ValueError) as exc:
             _raise(self.error_type, f"cannot load {name}: {artifact_path}", exc)

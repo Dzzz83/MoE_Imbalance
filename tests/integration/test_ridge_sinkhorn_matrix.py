@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
 import hashlib
 import io
 import json
@@ -27,7 +28,11 @@ _PROJECT_ROOT = str(REPO_ROOT)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from data.nested_oof import NestedOOFFoldManager
+from data.nested_oof import (
+    NestedOOFFoldManager,
+    OOFPredictionArtifact,
+    OOFPredictionRecord,
+)
 from expert_method.ridge_sinkhorn.three_seed_study import StudyConfig
 from expert_method.ridge_sinkhorn.matrix import (
     BUNDLE_SCHEMA_VERSION,
@@ -40,6 +45,8 @@ from expert_method.ridge_sinkhorn.matrix import (
     MatrixError,
     OOFMatrixPlanner,
     StudyArtifactView,
+    StudyValidationSession,
+    ValidatedJobReference,
     _read_bundle,
     _tar_info,
     build_job_inventory,
@@ -256,6 +263,182 @@ def test_planner_reports_stage_scoped_inventory_and_freezes_inner_only(tmp_path:
     assert plan.selected_count == min(3, plan.inventory_count)
     assert plan.estimated_gpu_hours >= 0
     assert plan.available_output_bytes >= 0
+
+
+def _outer_prediction_reference(planner, job):
+    context = job.run_spec(
+        experiment_id=planner.study_id, epochs=planner.training_epochs
+    ).resolve(planner.manager)
+    run_dir = planner.native_store.run_dir(context)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    outer = planner.manager.outer_fold(job.outer_fold_id)
+    label_map = dict(zip(planner.manager.canonical_indices, planner.manager.training_labels))
+    sample_id = outer.evaluation_indices[0]
+    record = OOFPredictionRecord.create(
+        sample_index=sample_id,
+        training_label=label_map[sample_id],
+        outer_fold_id=job.outer_fold_id,
+        inner_fold_id=None,
+        expert_id=job.expert_name,
+        training_seed=job.training_seed,
+        expert_training_membership_hash=outer.expert_training_membership_hash,
+        checkpoint_path="synthetic/checkpoint.pt",
+        checkpoint_sha256="a" * 64,
+        resolved_config={"expert": job.expert_name, "seed": job.training_seed},
+        logits=np.arange(planner.manager.num_classes, dtype=np.float64),
+    )
+    artifact = OOFPredictionArtifact(
+        expert_order=planner.manager.expert_order,
+        num_classes=planner.manager.num_classes,
+        records=(record,),
+    )
+    return ValidatedJobReference(
+        job=job,
+        source_experiment_id=planner.study_id,
+        source_run_relative_path=job.run_relative_path,
+        source_root_name=None,
+        run_dir=run_dir,
+        checkpoint_path=run_dir / "checkpoints" / "model.pt",
+        prediction_path=run_dir / "predictions.json",
+        resolved_config_path=run_dir / "resolved_config.json",
+        metadata_path=run_dir / "run_metadata.json",
+        resolved_config={"expert": job.expert_name},
+        metadata={},
+        context=context,
+        checkpoint_sha256="a" * 64,
+        prediction_sha256="b" * 64,
+        resolved_config_sha256="c" * 64,
+        manifest_sha256="d" * 64,
+        _prediction_artifact=artifact,
+    )
+
+
+def test_validation_session_retains_one_immutable_outer_snapshot(tmp_path: Path, monkeypatch) -> None:
+    manager = synthetic_manager()
+    planner = OOFMatrixPlanner(
+        manager=manager, artifact_root=tmp_path / "oof", read_only=True
+    )
+    job = next(job for job in planner.inventory if job.stage == "outer")
+    reference = _outer_prediction_reference(planner, job)
+    calls = 0
+
+    def resolve_once(
+        requested_job, *, include_historical, retain_prediction_data
+    ):
+        nonlocal calls
+        calls += 1
+        assert requested_job == job
+        assert retain_prediction_data is True
+        return reference, "validated", "synthetic validated artifact"
+
+    monkeypatch.setattr(planner, "_resolve_reference_uncached", resolve_once)
+    session = StudyValidationSession(planner, retain_prediction_stages=("outer",))
+    view = StudyArtifactView(
+        manager=manager, planner=planner, validation_session=session
+    )
+    base = planner.native_store.base_dir
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "job_manifest.json").write_bytes(
+        canonical_json_bytes(planner.frozen_manifest())
+    )
+    (base / "reuse_compatibility_outer.json").write_bytes(
+        canonical_json_bytes(
+            {
+                "schema_version": COMPATIBILITY_SCHEMA_VERSION,
+                "study_id": planner.study_id,
+                "study_freeze_sha256": planner.freeze_sha256,
+                "stage": "outer",
+                "rows": [],
+            }
+        )
+    )
+
+    first_reference = view.resolve(job.job_id)
+    view.load_outer_logits(job.job_id)
+    sample_ids, labels = view.load_outer_labels(job.job_id)
+
+    assert calls == 1
+    record = reference._prediction_artifact.records[0]
+    assert sample_ids.tolist() == [record.sample_index]
+    assert labels.tolist() == [record.training_label]
+
+    cached = session.prediction_arrays(first_reference)
+    assert cached is not None
+    for array in cached:
+        current = array
+        while isinstance(current, np.ndarray):
+            assert not current.flags.writeable
+            with pytest.raises(ValueError):
+                current.setflags(write=True)
+            current = current.base
+    forged = dataclasses.replace(first_reference, prediction_sha256="f" * 64)
+    with pytest.raises(MatrixError, match="not validated"):
+        session.prediction_arrays(forged)
+
+
+def test_validation_session_rejects_changed_source_choice(tmp_path: Path) -> None:
+    manager = synthetic_manager()
+    job = next(
+        job for job in build_job_inventory(manager)
+        if job.stage == "outer" and job.training_seed == 78 and job.outer_fold_id == 0
+    )
+    native_planner = OOFMatrixPlanner(
+        manager=manager, artifact_root=tmp_path / "native", read_only=True
+    )
+    native_session = StudyValidationSession(native_planner)
+    native_session._remember_source_selection(job, True, None)
+    native_run = native_planner.native_store.run_dir(
+        job.run_spec(
+            experiment_id=native_planner.study_id,
+            epochs=native_planner.training_epochs,
+        ).resolve(manager)
+    )
+    native_run.mkdir(parents=True)
+    with pytest.raises(MatrixError, match="source selection changed"):
+        native_session.verify_sources_unchanged()
+
+    reuse_root = tmp_path / "reuse"
+    reuse_planner = OOFMatrixPlanner(
+        manager=manager,
+        artifact_root=tmp_path / "native-two",
+        reuse_roots={"historical": reuse_root},
+        read_only=True,
+    )
+    reuse_session = StudyValidationSession(reuse_planner)
+    reuse_session._remember_source_selection(job, True, None)
+    (reuse_root / "ridge_sinkhorn_outer_s78_o0").mkdir(parents=True)
+    with pytest.raises(MatrixError, match="source selection changed"):
+        reuse_session.verify_sources_unchanged()
+
+
+def test_validation_session_returns_defensive_lock_copies(tmp_path: Path, monkeypatch) -> None:
+    planner = OOFMatrixPlanner(
+        manager=synthetic_manager(), artifact_root=tmp_path / "oof", read_only=True
+    )
+    session = StudyValidationSession(planner)
+    calls = 0
+
+    def validate_once(_frozen):
+        nonlocal calls
+        calls += 1
+        return (SimpleNamespace(fitted_states=[{"state": [1, 2]}]),)
+
+    monkeypatch.setattr(planner, "_validate_complete_lock_matrix_uncached", validate_once)
+    first = session.validate_complete_lock_matrix(planner, {"identity": "fixed"})
+    first[0].fitted_states[0]["state"][0] = 999
+    second = session.validate_complete_lock_matrix(planner, {"identity": "fixed"})
+    assert second[0].fitted_states[0]["state"] == [1, 2]
+    assert calls == 1
+
+
+def test_validation_session_identity_binds_training_recipe(tmp_path: Path) -> None:
+    planner = OOFMatrixPlanner(
+        manager=synthetic_manager(), artifact_root=tmp_path / "oof", read_only=True
+    )
+    session = StudyValidationSession(planner)
+    planner.training_configs["ce"] = planner.training_configs["mixup"]
+    with pytest.raises(MatrixError, match="different matrix plan"):
+        session.require_planner(planner)
 
 
 def test_valid_bundle_import_is_idempotent_and_preserves_bytes(tmp_path: Path) -> None:

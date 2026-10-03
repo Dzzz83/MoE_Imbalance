@@ -10,7 +10,11 @@ import numpy as np
 
 from data.nested_oof import NestedOOFFoldManager
 from scripts.analysis import ArtifactReader
-from expert_method.ridge_sinkhorn.matrix import MATRIX_SCHEMA_VERSION, canonical_json_bytes
+from expert_method.ridge_sinkhorn.matrix import (
+    MATRIX_SCHEMA_VERSION,
+    StudyValidationSession,
+    canonical_json_bytes,
+)
 from expert_method.ridge_sinkhorn.three_seed_study import (
     FoldStudyRunner,
     InferenceBatch,
@@ -168,14 +172,30 @@ def expected_outer_source_hashes(references: Mapping[str, Any], seed: int, outer
 def validate_outer_stage_prerequisites(
     *, view: Any, manager: NestedOOFFoldManager, repository: StudyArtifactRepository,
     manifest: Mapping[str, Any],
+    session: StudyValidationSession | None = None,
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    locks = repository.validate_complete_lock_matrix(
-        plan_sha256=str(manifest["plan_sha256"]),
-        source_commit=str(manifest["source_commit"]),
-    )
+    session = session or getattr(view, "validation_session", None)
+    if session is not None:
+        session.require_planner(view.planner)
+        session.artifact_session.require_manager(manager)
+        if (
+            repository.validation_session is not session.artifact_session
+            or repository.artifact_root != view.planner.artifact_root
+            or repository.config.sha256 != view.planner.study_config.sha256
+        ):
+            raise StudyError(
+                "study repository does not share the planner's frozen validation identity"
+            )
+        locks = view.planner.validate_complete_lock_matrix(frozen=manifest)
+    else:
+        locks = repository.validate_complete_lock_matrix(
+            plan_sha256=str(manifest["plan_sha256"]),
+            source_commit=str(manifest["source_commit"]),
+        )
     for lock in locks:
         validate_fold_lock_membership(lock, manager)
-    view.planner.validate_complete_lock_matrix(frozen=manifest)
+    if session is None:
+        view.planner.validate_complete_lock_matrix(frozen=manifest)
     return locks, validate_complete_job_references(view, locks)
 
 
@@ -291,17 +311,26 @@ def lock_study(
 def evaluate_study(
     *, view: Any, manager: NestedOOFFoldManager, repository: StudyArtifactRepository,
     manifest: Mapping[str, Any],
+    session: StudyValidationSession | None = None,
 ) -> None:
     """Predict all locked outer methods first; then score canonical train-fold labels."""
+    session = session or getattr(view, "validation_session", None)
     locks, references = validate_outer_stage_prerequisites(
-        view=view, manager=manager, repository=repository, manifest=manifest
+        view=view,
+        manager=manager,
+        repository=repository,
+        manifest=manifest,
+        session=session,
     )
+    locks_by_pair = {
+        (lock.training_seed, lock.outer_fold_id): lock for lock in locks
+    }
     jobs = job_id_lookup(view)
     evaluator = StudyEvaluator(repository.config)
     batches: dict[tuple[int, int], tuple[InferenceBatch, tuple[tuple[str, str], ...], str]] = {}
     for seed in repository.config.seeds:
         for outer in repository.config.outer_folds:
-            lock = repository.read_fold_lock(seed, outer)
+            lock = locks_by_pair[(seed, outer)]
             batch, hashes, label_job_id = assemble_outer_batch(view, jobs, manager, seed, outer)
             if hashes != expected_outer_source_hashes(references, seed, outer):
                 raise StudyError(f"outer source hashes differ for seed={seed}, outer={outer}")
@@ -309,9 +338,10 @@ def evaluate_study(
             batches[(seed, outer)] = (batch, hashes, label_job_id)
     canonical_labels = dict(zip(manager.canonical_indices, manager.training_labels))
     counts = np.asarray(manager.canonical_class_counts, dtype=np.int64)
+    pending_evaluations: list[tuple[Any, Any, np.ndarray]] = []
     for seed in repository.config.seeds:
         for outer in repository.config.outer_folds:
-            lock = repository.read_fold_lock(seed, outer)
+            lock = locks_by_pair[(seed, outer)]
             batch, hashes, label_job_id = batches[(seed, outer)]
             ids, labels = view.load_outer_labels(label_job_id)
             if not np.array_equal(ids, batch.sample_ids):
@@ -322,18 +352,33 @@ def evaluate_study(
                 lock, batch, labels, counts, source_hashes=hashes,
                 expected_outer_sample_ids=manager.outer_fold(outer).evaluation_indices,
             )
-            repository.write_fold_evaluation(
-                evaluation, expected_outer_sample_ids=manager.outer_fold(outer).evaluation_indices
+            pending_evaluations.append(
+                (evaluation, lock, manager.outer_fold(outer).evaluation_indices)
             )
+
+    if session is not None:
+        session.verify_sources_unchanged()
+    for evaluation, lock, expected_ids in pending_evaluations:
+        repository.write_fold_evaluation(
+            evaluation,
+            expected_outer_sample_ids=expected_ids,
+            _validated_lock=lock,
+        )
 
 
 def report_study(
     *, view: Any, manager: NestedOOFFoldManager, repository: StudyArtifactRepository,
     manifest: Mapping[str, Any],
+    session: StudyValidationSession | None = None,
 ) -> None:
     """Revalidate saved nested-OOF evaluations and publish the paper report."""
+    session = session or getattr(view, "validation_session", None)
     _locks, references = validate_outer_stage_prerequisites(
-        view=view, manager=manager, repository=repository, manifest=manifest
+        view=view,
+        manager=manager,
+        repository=repository,
+        manifest=manifest,
+        session=session,
     )
     expected_outer = {
         fold: np.asarray(manager.outer_fold(fold).evaluation_indices, dtype=np.int64)
@@ -356,6 +401,8 @@ def report_study(
         np.asarray(manager.canonical_class_counts, dtype=np.int64), expected_outer,
     )
     markdown = MarkdownReportBuilder(repository.config).build(result)
+    if session is not None:
+        session.verify_sources_unchanged()
     repository.write_result(result, markdown)
 
 

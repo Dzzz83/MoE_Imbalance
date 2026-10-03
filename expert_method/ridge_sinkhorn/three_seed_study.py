@@ -14,7 +14,7 @@ from importlib.metadata import PackageNotFoundError, version
 import json
 import platform
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 import numpy as np
 
@@ -39,6 +39,9 @@ from scripts.task3f_ridge import (
     fit_ridge_router,
     scores_to_weights,
 )
+
+if TYPE_CHECKING:
+    from expert_method.oof.pipeline import OOFValidationSession
 
 
 STUDY_ID = "ridge_sinkhorn_3seed_v1"
@@ -1916,12 +1919,39 @@ def fold_lock_from_dict(payload: Mapping[str, Any]) -> FoldLock:
 class StudyArtifactRepository:
     """Immutable study-level artifact adapter beside native OOF run artifacts."""
 
-    def __init__(self, artifact_root: str | Path, config: StudyConfig | None = None) -> None:
+    def __init__(
+        self,
+        artifact_root: str | Path,
+        config: StudyConfig | None = None,
+        *,
+        validation_session: OOFValidationSession | None = None,
+        artifact_root_locator: str | Path | None = None,
+    ) -> None:
         self.config = config or StudyConfig()
-        self.study_root = Path(artifact_root).resolve() / STUDY_ID
+        self.validation_session = validation_session
+        self.artifact_root_locator = Path(
+            artifact_root if artifact_root_locator is None else artifact_root_locator
+        ).expanduser().absolute()
+        self.artifact_root = Path(artifact_root).expanduser().resolve()
+        self.study_root = self.artifact_root / STUDY_ID
         self.base_dir = self.study_root / "study_analysis"
         self.writer = ImmutableArtifactWriter(error_type=StudyError)
         self.reader = ArtifactReader(error_type=StudyError)
+        if validation_session is not None:
+            validation_session.bind_locator(self.artifact_root_locator, self.artifact_root)
+
+    def _read_source_bytes(self, path: str | Path) -> bytes:
+        if self.validation_session is not None:
+            return self.validation_session.read_source_bytes(path)
+        try:
+            return Path(path).read_bytes()
+        except OSError as exc:
+            raise StudyError(f"cannot read study artifact: {path}") from exc
+
+    def _read_json(self, path: str | Path, *, name: str) -> dict[str, Any]:
+        return self.reader.read_json_bytes(
+            self._read_source_bytes(path), path=path, name=name
+        )
 
     @property
     def config_path(self) -> Path:
@@ -2019,7 +2049,9 @@ class StudyArtifactRepository:
 
     def read_fold_lock(self, training_seed: int, outer_fold_id: int) -> FoldLock:
         """Load and fully validate one immutable fold lock."""
-        payload = self.reader.read_json(self.lock_path(training_seed, outer_fold_id), name="fold lock")
+        payload = self._read_json(
+            self.lock_path(training_seed, outer_fold_id), name="fold lock"
+        )
         lock = fold_lock_from_dict(payload)
         lock.validate(self.config)
         if (lock.training_seed, lock.outer_fold_id) != (training_seed, outer_fold_id):
@@ -2032,10 +2064,10 @@ class StudyArtifactRepository:
         """Validate all 15 locks without opening any outer run or label artifact."""
         if len(plan_sha256) != 64 or len(source_commit) not in {40, 64}:
             raise StudyError("expected a plan SHA-256 and exact Git source commit")
-        config_payload = self.reader.read_json(self.config_path, name="study configuration")
+        config_payload = self._read_json(self.config_path, name="study configuration")
         if _canonical_json(config_payload) != _canonical_json(self.config.to_dict()):
             raise StudyError("saved study configuration differs from the frozen StudyConfig")
-        study_lock = self.reader.read_json(self.study_lock_path, name="study lock")
+        study_lock = self._read_json(self.study_lock_path, name="study lock")
         recorded_digest = study_lock.pop("study_lock_sha256", None)
         if recorded_digest != _sha256_text(_canonical_json(study_lock)):
             raise StudyError("study-lock content hash does not match")
@@ -2064,10 +2096,14 @@ class StudyArtifactRepository:
         if not isinstance(study_lock.get("environment"), Mapping):
             raise StudyError("study lock is missing environment and package versions")
         matrix_manifest_path = self.study_root / "job_manifest.json"
-        matrix_manifest = self.reader.read_json(matrix_manifest_path, name="matrix job manifest")
-        if study_lock.get("job_manifest_sha256") != self.reader.sha256_file(
-            matrix_manifest_path, description="matrix job manifest",
-        ):
+        matrix_manifest_bytes = self._read_source_bytes(matrix_manifest_path)
+        try:
+            matrix_manifest = json.loads(matrix_manifest_bytes)
+        except json.JSONDecodeError as exc:
+            raise StudyError(f"cannot load matrix job manifest: {matrix_manifest_path}") from exc
+        if not isinstance(matrix_manifest, dict):
+            raise StudyError("matrix job manifest must be a JSON object")
+        if study_lock.get("job_manifest_sha256") != hashlib.sha256(matrix_manifest_bytes).hexdigest():
             raise StudyError("study lock points to a different matrix job manifest")
         manifest_inventory = matrix_manifest.get("inventory")
         if not isinstance(manifest_inventory, list) or len(manifest_inventory) != 300:
@@ -2117,10 +2153,19 @@ class StudyArtifactRepository:
         return tuple(locks)
 
     def write_fold_evaluation(
-        self, evaluation: FoldEvaluation, *, expected_outer_sample_ids: np.ndarray,
+        self,
+        evaluation: FoldEvaluation,
+        *,
+        expected_outer_sample_ids: np.ndarray,
+        _validated_lock: FoldLock | None = None,
     ) -> tuple[Path, Path]:
         """Persist one fold's metrics and predictions as immutable JSON/NPZ."""
-        lock = self.read_fold_lock(evaluation.training_seed, evaluation.outer_fold_id)
+        lock = (
+            self.read_fold_lock(evaluation.training_seed, evaluation.outer_fold_id)
+            if _validated_lock is None
+            else _validated_lock
+        )
+        lock.validate(self.config)
         if evaluation.lock_sha256 != lock.lock_sha256:
             raise StudyError("fold evaluation does not reference its immutable fold lock")
         expected_configurations = {item.method_id: item.config() for item in lock.selected}
@@ -2177,21 +2222,24 @@ class StudyArtifactRepository:
         self, training_seed: int, outer_fold_id: int, *, expected_outer_sample_ids: np.ndarray,
     ) -> FoldEvaluation:
         """Read saved predictions only after checking their lock and array contract."""
-        metadata = self.reader.read_json(
-            self.evaluation_path(training_seed, outer_fold_id), name="fold evaluation",
+        metadata = self._read_json(
+            self.evaluation_path(training_seed, outer_fold_id), name="fold evaluation"
         )
         lock = self.read_fold_lock(training_seed, outer_fold_id)
         array_path = self.evaluation_arrays_path(training_seed, outer_fold_id)
         array_record = metadata.get("prediction_arrays")
         if not isinstance(array_record, Mapping) or array_record.get("path") != array_path.name:
             raise StudyError("fold evaluation has a malformed prediction-array reference")
-        if not array_path.is_file() or array_record.get("size_bytes") != array_path.stat().st_size:
+        array_bytes = self._read_source_bytes(array_path)
+        if array_record.get("size_bytes") != len(array_bytes):
             raise StudyError("fold prediction-array byte size differs from its JSON manifest")
-        if array_record.get("sha256") != self.reader.sha256_file(array_path, description="fold prediction arrays"):
+        if array_record.get("sha256") != hashlib.sha256(array_bytes).hexdigest():
             raise StudyError("fold prediction-array SHA-256 differs from its JSON manifest")
         if metadata.get("training_seed") != training_seed or metadata.get("outer_fold_id") != outer_fold_id:
             raise StudyError("fold evaluation path identity disagrees with its JSON metadata")
-        arrays = self.reader.read_npz(array_path)
+        arrays = self.reader.read_npz_bytes(
+            array_bytes, path=array_path, name="fold prediction arrays"
+        )
         expected_arrays = {"sample_ids", "labels"}
         expected_arrays.update(f"prediction__{name}" for name in STUDY_PREDICTION_IDS)
         expected_arrays.update(f"weights__{name}" for name in STUDY_PREDICTION_IDS)
