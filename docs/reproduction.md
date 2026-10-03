@@ -112,6 +112,15 @@ it does not establish independent confirmation. The canonical operator guide
 is [experiment-workflow.md](experiment-workflow.md), including Kaggle bundle
 recovery, lock gates, artifact layout, and failure debugging.
 
+For read-only descriptive reporting from the saved inner rows, follow the
+[inner diagnostics guide](diagnostics.md). It uses the separate result snapshot
+pinned to `5993d26eead9575160886d6130dce744ee9e02e6` and also requires the
+audited historical 16-job reuse source under its frozen `rs3` name. The native
+result snapshot alone does not include those historical prediction payloads.
+The guide covers environment setup, input validation, the diagnostics command,
+immutable outputs, and interpretation limits; it does not start training,
+selection, outer evaluation, or test-set evaluation.
+
 Use the package CLI with the scientific study and runtime profile rather than
 repeating protocol parameters on each command:
 

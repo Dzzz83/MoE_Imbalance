@@ -1,0 +1,4 @@
+# Core project/runtime dependencies plus optional report figures.
+-r requirements.txt
+
+matplotlib>=3.9.0
