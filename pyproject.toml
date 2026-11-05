@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cifar-shared-pipeline"
+version = "0.1.0"
+description = "Shared CIFAR-100-LT training and evaluation"
+requires-python = ">=3.11"
+dependencies = ["torch>=2.2", "torchvision>=0.17", "numpy>=1.26"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["pipeline*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
