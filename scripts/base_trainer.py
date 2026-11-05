@@ -10,9 +10,9 @@ Recipe (Cao et al., LDAM-DRW `cifar_train.py` — the reference CIFAR-LT setup):
     schedule     base_lr for epochs <=160, x0.01 for 161..180, x0.0001 for 181..200
 
 There is **no validation split and no early stopping**. Experts train on the full
-long-tailed training set and are evaluated on the balanced 10K test set. The
-final-epoch model is the reported model; checkpoints at every 20th epoch from
-epoch 160 exist for inspection only and must never be selected on test accuracy.
+long-tailed training set and are evaluated on the balanced 10K test set. Only
+the final-epoch model is written for a full run and reported. Smoke checkpoints
+are explicitly marked as ineligible for canonical evaluation.
 
 Subclasses set `self.model` / `self.loss_fn` and implement `_compute_loss`, which
 returns `(loss, logits, aux)`.
@@ -21,6 +21,7 @@ returns `(loss, logits, aux)`.
 import json
 import random
 import time
+import warnings
 from pathlib import Path
 from typing import Callable, Mapping, Any
 
@@ -90,6 +91,8 @@ def validate_checkpoint_metadata(
         raise CheckpointValidationError(
             f'{label}: checkpoint epoch must be an integer, got {epoch!r}'
         )
+    if epoch < 0:
+        raise CheckpointValidationError(f'{label}: checkpoint epoch must be non-negative')
     if expected_epoch is not None and int(epoch) != int(expected_epoch):
         raise CheckpointValidationError(
             f'{label}: checkpoint epoch={epoch} does not match required epoch '
@@ -105,6 +108,10 @@ def validate_checkpoint_metadata(
         raise CheckpointValidationError(
             f'{label}: canonical evaluation requires is_final=True, got '
             f'{state["is_final"]!r}'
+        )
+    if require_final and (state.get('is_dry_run', False) or state.get('max_batches') is not None):
+        raise CheckpointValidationError(
+            f'{label}: smoke-run checkpoints are not eligible for canonical evaluation'
         )
 
     if not isinstance(state['model_state_dict'], dict):
@@ -290,6 +297,11 @@ class BaseTrainer:
         self.epoch = 0
         self.history: list[dict] = []
         self.metrics_sink = metrics_sink
+        # The CLI sets this only for limited-data verification runs.
+        self.max_batches: int | None = None
+        self._loader_generator: torch.Generator | None = None
+        self._resume_rng_state: dict | None = None
+        self._loaded_checkpoint = False
 
     # ── to be overridden by subclasses ─────────────────────────────────
 
@@ -387,6 +399,32 @@ class BaseTrainer:
 
     # ── checkpointing ─────────────────────────────────────────────────
 
+    def _capture_rng_state(self) -> dict:
+        numpy_state = np.random.get_state()
+        return {
+            'python': random.getstate(),
+            # Plain values keep the checkpoint compatible with weights_only=True.
+            'numpy': (numpy_state[0], numpy_state[1].tolist(), *numpy_state[2:]),
+            'torch': torch.get_rng_state(),
+            'cuda': torch.cuda.get_rng_state_all() if torch.cuda.is_initialized() else None,
+            'loader': (
+                self._loader_generator.get_state()
+                if self._loader_generator is not None else None
+            ),
+        }
+
+    def _restore_rng_state(self, state: dict) -> None:
+        loader_state = state.get('loader')
+        if (loader_state is None) != (self._loader_generator is None):
+            raise ValueError('training loader generator differs from the saved checkpoint')
+        random.setstate(state['python'])
+        np.random.set_state(state['numpy'])
+        torch.set_rng_state(state['torch'].cpu())
+        if state.get('cuda') is not None and torch.cuda.is_available():
+            torch.cuda.set_rng_state_all([value.cpu() for value in state['cuda']])
+        if self._loader_generator is not None:
+            self._loader_generator.set_state(loader_state.cpu())
+
     def _save_checkpoint(self, log: dict, is_final: bool = True) -> Path:
         """Write the checkpoint. Only the final-epoch model is ever saved."""
         tag = 'final' if is_final else f'epoch{self.epoch}'
@@ -397,9 +435,13 @@ class BaseTrainer:
             'expert_name': self.expert_name,
             'model_state_dict': self.model.state_dict(),
             'optimiser_state_dict': self.optimiser.state_dict(),
-            'is_final': is_final,
+            'is_final': is_final and self.max_batches is None,
             'log': log,
+            'history': self.history,
+            'rng_state': self._capture_rng_state(),
         }
+        if self.max_batches is not None:
+            state.update(is_dry_run=True, max_batches=self.max_batches)
         torch.save(state, path)
         return path
 
@@ -424,6 +466,11 @@ class BaseTrainer:
         self.optimiser.load_state_dict(state['optimiser_state_dict'])
         self.epoch = state['epoch']
         self.seed = state.get('seed', self.seed)
+        self.history = state.get('history', [])
+        self.max_batches = state.get('max_batches')
+        # Inference also loads checkpoints; restore RNG only when training resumes.
+        self._resume_rng_state = state.get('rng_state')
+        self._loaded_checkpoint = True
         print(f"Loaded checkpoint from {path} (epoch {self.epoch}, seed {self.seed})")
 
     def save_history(self, path: str | None = None) -> None:
@@ -444,10 +491,30 @@ class BaseTrainer:
         Returns:
             history: list of per-epoch log dicts.
         """
-        set_seed(self.seed)
+        if self.epoch < 0 or self.epoch > self.epochs:
+            raise ValueError(
+                f'checkpoint epoch {self.epoch} is outside the training budget [0, {self.epochs}]'
+            )
+        if self.epoch == self.epochs:
+            return self.history
+        self._loader_generator = getattr(train_loader, 'generator', None)
+        if self._resume_rng_state is not None:
+            self._restore_rng_state(self._resume_rng_state)
+            self._resume_rng_state = None
+        elif self._loaded_checkpoint:
+            warnings.warn(
+                'Checkpoint has no saved RNG state; exact training replay is unavailable. '
+                'Legacy checkpoints also lack embedded history; only new epochs will be recorded.',
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        elif self.epoch == 0:
+            set_seed(self.seed)
+        self._loaded_checkpoint = False
         total_start = time.time()
+        start_epoch = self.epoch + 1
 
-        for epoch in range(1, self.epochs + 1):
+        for epoch in range(start_epoch, self.epochs + 1):
             self.epoch = epoch
             epoch_start = time.time()
 
@@ -498,5 +565,6 @@ class BaseTrainer:
 
         total_time = time.time() - total_start
         print(f"[{self.expert_name} seed={self.seed}] done in {total_time:.0f}s "
-              f"({self.epochs} epochs, final-epoch model is the reported model)")
+              f"(epochs {start_epoch}–{self.epochs}; "
+              f"{'smoke run, not reportable' if self.max_batches is not None else 'final-epoch model is the reported model'})")
         return self.history

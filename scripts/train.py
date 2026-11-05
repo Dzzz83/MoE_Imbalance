@@ -10,9 +10,11 @@ Usage:
     python scripts/train.py --config configs/experts/lal.yaml --seed 42
     python scripts/train.py --config configs/experts/mixup.yaml --device cpu --max-batches 2  # dry run
 
-The final-epoch checkpoint is the reported model; checkpoints at every 20th epoch
-from epoch 160 exist for inspection only and must never be selected on test
-accuracy. There is no validation split (see docs/protocol.md).
+Full runs save only the final-epoch checkpoint, which is the reported model.
+There is no validation split or test-based checkpoint selection (see
+docs/protocol.md).
+Dry runs write to a unique smoke-runs directory and never produce a reportable
+checkpoint.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ if _proj_root not in sys.path:
 
 import argparse
 from pathlib import Path
+import tempfile
 
 import yaml
 
@@ -106,6 +109,21 @@ def run_training(
     config: TrainingConfig, max_batches: int | None = None
 ) -> list[dict]:
     """Train one expert from a resolved config. Returns the per-epoch history."""
+    if max_batches is not None:
+        if (
+            isinstance(max_batches, bool)
+            or not isinstance(max_batches, int)
+            or max_batches <= 0
+        ):
+            raise ValueError("max_batches must be a positive integer")
+        # Isolate every smoke attempt, including its config and history, so a
+        # verification run cannot replace a completed full-data run.
+        smoke_root = Path(config.checkpoint.dir) / 'smoke-runs'
+        smoke_root.mkdir(parents=True, exist_ok=True)
+        smoke_dir = tempfile.mkdtemp(
+            prefix=f'{config.expert}_seed{config.seed}_', dir=smoke_root
+        )
+        config = config.replace(checkpoint_dir=smoke_dir)
     print(describe(config))
 
     datamodule = build_datamodule(config, max_batches=max_batches)
@@ -116,6 +134,7 @@ def run_training(
     print(f"  recorded config -> {config_path}")
 
     trainer = build_trainer(config, class_counts, device=config.resolved_device)
+    trainer.max_batches = max_batches
     history = trainer.train(datamodule.train_loader())
     trainer.save_history()
     return history
@@ -135,8 +154,11 @@ def main(argv: list[str] | None = None) -> int:
                         help='override the epoch budget')
     parser.add_argument('--checkpoint-dir', default=None)
     parser.add_argument('--max-batches', type=int, default=None,
-                        help='DRY RUN only: expose the first N batches (AGENTs.md gate)')
+                        help='DRY RUN only: expose the first N batches; '
+                             'save in a unique smoke-runs directory')
     args = parser.parse_args(argv)
+    if args.max_batches is not None and args.max_batches <= 0:
+        parser.error('--max-batches must be a positive integer')
 
     try:
         config = TrainingConfig.from_file(args.config).replace(

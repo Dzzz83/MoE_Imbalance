@@ -11,6 +11,8 @@ import dataclasses
 import os
 import sys
 import tempfile
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from pathlib import Path as _TestPath
 import sys as _test_sys
@@ -321,22 +323,37 @@ def test_overrides_do_not_mutate_original_config():
 # End-to-end CLI
 # ---------------------------------------------------------------------------
 
-def test_cli_runs_end_to_end_and_writes_final_checkpoint():
-    """`train.py --config ...` must train and write a final checkpoint."""
-    out = tempfile.mkdtemp(prefix='dsh_cli_')
-    rc = train_mod.main([
-        '--config', os.path.join(CONFIG_DIR, 'ce.yaml'),
-        '--device', 'cpu',
-        '--epochs', '1',
-        '--seed', '3',
-        '--max-batches', '2',
-        '--checkpoint-dir', out,
-    ])
-    assert rc == 0, f"CLI returned {rc}"
-    files = sorted(os.listdir(out))
-    assert any(f.endswith('_final.pt') for f in files), f"no final checkpoint: {files}"
-    assert any('CE' in f and '3' in f for f in files), f"label/seed missing: {files}"
-    print(f"  ✅ CLI wrote {files}")
+def test_cli_runs_end_to_end_and_isolates_smoke_checkpoint():
+    """The dry-run CLI trains on synthetic rows and preserves full-run paths."""
+    from torch.utils.data import DataLoader, TensorDataset
+
+    generator = torch.Generator().manual_seed(12)
+    dataset = TensorDataset(
+        torch.randn(4, 3, 32, 32, generator=generator), torch.tensor([0, 1, 2, 3])
+    )
+    datamodule = SimpleNamespace(
+        class_counts=_counts,
+        describe=lambda: 'synthetic training rows',
+        train_loader=lambda: DataLoader(dataset, batch_size=2),
+    )
+    with tempfile.TemporaryDirectory(prefix='dsh_cli_') as out:
+        with patch.object(train_mod, 'build_datamodule', return_value=datamodule):
+            rc = train_mod.main([
+                '--config', os.path.join(CONFIG_DIR, 'ce.yaml'),
+                '--device', 'cpu',
+                '--epochs', '1',
+                '--seed', '3',
+                '--max-batches', '2',
+                '--checkpoint-dir', out,
+            ])
+        assert rc == 0, f"CLI returned {rc}"
+        [checkpoint] = _TestPath(out).glob('smoke-runs/ce_seed3_*/CE_seed3_final.pt')
+        state = torch.load(checkpoint, map_location='cpu', weights_only=False)
+        assert state['is_final'] is False
+        assert state['is_dry_run'] is True
+        assert state['max_batches'] == 2
+        assert not (_TestPath(out) / 'CE_seed3_final.pt').exists()
+        print(f"  ✅ CLI wrote isolated smoke checkpoint: {checkpoint.name}")
 
 
 TESTS = [
@@ -360,7 +377,7 @@ TESTS = [
     ("Mixup alpha from config", test_mixup_trainer_gets_alpha_from_config),
     ("LA tau from config", test_lal_trainer_gets_tau_from_config),
     ("Overrides are immutable", test_overrides_do_not_mutate_original_config),
-    ("CLI end-to-end + final checkpoint", test_cli_runs_end_to_end_and_writes_final_checkpoint),
+    ("CLI end-to-end + isolated smoke checkpoint", test_cli_runs_end_to_end_and_isolates_smoke_checkpoint),
 ]
 
 
