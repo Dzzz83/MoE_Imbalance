@@ -1,0 +1,36 @@
+{
+  "real_total": 10847,
+  "synthetic_total": 495,
+  "combined_total": 11342,
+  "all_classes_processed": false,
+  "classes": [
+    {
+      "class_id": 99,
+      "real_count": 5,
+      "synthetic_count": 495,
+      "objective": 2.3694291530697,
+      "objective_history": [
+        2.369429191125375,
+        2.3694291530697
+      ],
+      "iterations": 1,
+      "stopping_reason": "objective_tolerance",
+      "backtracks": 0,
+      "last_step_size": 0.1,
+      "last_projection_iterations": 1,
+      "row_l1_error": 6.401743158457145e-07,
+      "column_l1_error": 3.885780586188048e-16,
+      "status": "generated",
+      "guide": {
+        "loss": 0.03898789707889345,
+        "steps": 500,
+        "status": "fixed_steps_completed"
+      },
+      "target_mass_min": 0.1997293945953906,
+      "target_mass_max": 0.20100721120948883,
+      "working_mean_norm": 0.8902899442477078,
+      "working_spread": 1.373126156068848e-10,
+      "working_mean_distance_to_class_mean": 0.0003655073320068165
+    }
+  ]
+}
