@@ -6,6 +6,5 @@ __pycache__/
 build/
 dist/
 /data/
-/outputs/
 /AGENTS.md
 /pet/
