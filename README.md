@@ -59,6 +59,26 @@ python -m pipeline.evaluate \
 Evaluation reports overall accuracy, balanced accuracy, and per-class and
 Head/Medium/Tail recall.
 
+### Extract features for OT synthesis
+
+After baseline pretraining, freeze the backbone and cache the retained training
+features using deterministic preprocessing:
+
+```bash
+python -m pipeline.extract_features \
+  --checkpoint outputs/baseline_seed0/final.pt \
+  --train-data data/prepared/train.npz \
+  --output outputs/baseline_seed0/train_features.pt \
+  --device cuda
+```
+
+The cache contains raw features `(10847, 64)`, aligned labels, real class counts,
+data settings, the synthesis coordinate scale, and input file SHA-256 hashes.
+Load it with `torch.load(path, map_location="cpu", weights_only=True)`.
+Extraction does not modify the pretrained checkpoint or use test images.
+Existing caches are not overwritten. Loading the checkpoint in a new process
+requires freezing the backbone again before any further classifier training.
+
 ## Project structure
 
 | Location | Purpose |
