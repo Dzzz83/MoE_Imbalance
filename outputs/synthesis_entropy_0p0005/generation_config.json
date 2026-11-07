@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "feature_cache_sha256": "630a6f349db371d2240b0f493d35bdd912a87223fc6c3d09c56524564d881b99",
+  "seed": 0,
+  "classes": [
+    1,
+    99
+  ],
+  "method_options": {
+    "target_count": 500,
+    "guide_steps": 500,
+    "guide_learning_rate": 0.01,
+    "guide_regularization": 0.001,
+    "temperature": 1.0,
+    "transport_weight": 1.0,
+    "guidance_weight": 1.0,
+    "entropy_coefficient": 0.0005,
+    "max_iterations": 1000,
+    "step_size": 200.0,
+    "max_backtracks": 10,
+    "projection_iterations": 2000,
+    "marginal_tolerance": 1e-08,
+    "objective_tolerance": 1e-12,
+    "acceptance_tolerance": 1e-12,
+    "uniform_targets": false
+  }
+}

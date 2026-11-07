@@ -1,0 +1,11 @@
+{
+  "classifier_config": "configs/classifier_synthesis.json",
+  "generation_config": "configs/synthesis_final.json",
+  "output_dir": "outputs/comparison_seed0",
+  "evaluation": {
+    "data_root": "data/raw",
+    "download": true,
+    "batch_size": 256,
+    "num_workers": 4
+  }
+}
