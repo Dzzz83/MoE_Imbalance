@@ -5,7 +5,7 @@ Run commands from the repository root.
 Create `pipeline/methods/your_method.py` with two small functions:
 
 ```python
-def resolve_options(options) -> dict:
+def prepare_method_options(options) -> dict:
     # Apply your defaults and reject invalid or unknown method options.
     ...
 
@@ -19,8 +19,8 @@ Import the module in `pipeline/train.py` and add one mapping entry:
 
 ```python
 METHODS = {
-    "baseline": (baseline.train, baseline.resolve_options),
-    "your_method": (your_method.train, your_method.resolve_options),
+    "baseline": (baseline.train, baseline.prepare_method_options),
+    "your_method": (your_method.train, your_method.prepare_method_options),
 }
 ```
 
@@ -50,6 +50,11 @@ the evaluator does not import method implementations.
 Checkpoints contain `model_state_dict`, `config`, real `class_counts` as a CPU
 tensor, and `data_settings`. `pipeline.runtime.load_checkpoint(path, device)`
 restores them onto CPU or CUDA. The evaluator needs no training images.
+
+The implemented [OT reweighting method](reweighting.md) is a multistage example:
+it reuses baseline pretraining, freezes the backbone, caches features, then
+alternates full-pool OT weight updates with classifier epochs. Its configuration
+keeps `pretraining` and `classifier` settings separate.
 
 ## Verification
 

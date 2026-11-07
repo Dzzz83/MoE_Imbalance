@@ -8,7 +8,7 @@ Compare training methods for imbalanced image classification using the same
 | Method | What it does | Status |
 |---|---|---|
 | Baseline | Ordinary cross-entropy training | Implemented |
-| OT reweighting | Learns how much each real example contributes | Planned |
+| OT reweighting | Learns how much each real example contributes | Implemented |
 | OT synthesis | Creates extra features for underrepresented classes | Planned |
 
 All methods use **10,847 retained training images** from CIFAR-100 at imbalance
@@ -53,6 +53,7 @@ python -m pipeline.evaluate \
 
 - **No GPU?** Replace `--device cuda` with `--device cpu`.
 - **Change training settings:** edit [configs/baseline.json](configs/baseline.json).
+- **Train OT reweighting:** use `configs/reweighting.json`; see the [method guide](docs/reweighting.md) for its resource check, defaults, and diagnostics.
 - **Outputs:** configuration, training history, final checkpoint, and metrics.
 - **Another training run:** choose a new output folder to avoid overwriting results.
 

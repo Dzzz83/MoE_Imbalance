@@ -42,8 +42,8 @@ This note does not certify the entire implementation's evaluation hygiene.
 
 ## Our intended adaptation
 
-Our decisions are maintained in [reweighting.md](reweighting.md), not in this
-paper summary. The main change is to build equal-mass class representatives
+The implemented adaptation is documented in [reweighting.md](reweighting.md).
+The main change is to build equal-mass class representatives
 from retained training features instead of using additional balanced reference
 images from the original pool.
 
@@ -63,12 +63,13 @@ Shared retained training images + fresh ResNet-32
        Complete model checkpoint -> shared evaluator
 ```
 
-Before coding the branch, resolve cost definition, reference normalization and
-refresh policy, weight initialization/update/normalization, and precisely what
-is frozen during Stage 2. Test weight-to-image alignment and loss scaling.
+The method guide records the implemented cost, fixed reference construction,
+global weight normalization, and fully frozen backbone. Focused tests cover
+weight-to-image alignment and loss scaling.
 
 Ridge's inputs, supervision target, and position in this process remain open.
 Its inclusion is not evidence of novelty or improvement. Start with OT alone.
 
-Status: research reference with official code available; no local reproduction
-or training performed. Integration plan: [shared_pipeline_plan.md](shared_pipeline_plan.md).
+Status: adaptation implemented and verified with artificial-data CPU tests;
+research performance remains unverified. Integration plan:
+[shared_pipeline_plan.md](../shared_pipeline_plan.md).

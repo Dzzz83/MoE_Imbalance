@@ -24,3 +24,13 @@ def training_data():
         class_counts=np.bincount(labels, minlength=100),
         data_settings={"imbalance_factor": 0.01, "data_seed": 42},
     )
+
+
+@pytest.fixture
+def all_class_training_data():
+    labels = np.concatenate([np.array([0, 0, 5], dtype=np.int64), np.arange(100, dtype=np.int64)])
+    images = np.random.default_rng(2).integers(0, 256, (len(labels), 32, 32, 3), dtype=np.uint8)
+    return TrainingData(
+        images=images, labels=labels, class_counts=np.bincount(labels, minlength=100),
+        data_settings={"imbalance_factor": 0.01, "data_seed": 42},
+    )

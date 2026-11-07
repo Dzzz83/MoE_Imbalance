@@ -5,12 +5,15 @@ import json
 from pathlib import Path
 
 from pipeline.data import load_training_data
-from pipeline.methods import baseline
+from pipeline.methods import baseline, reweighting
 from pipeline.model import create_model
 from pipeline.runtime import resolve_device, save_checkpoint, seed_everything, write_json
 
-# A method supplies its training function and its own option resolver.
-METHODS = {"baseline": (baseline.train, baseline.resolve_options)}
+# A method supplies its training function and its own option preparation function.
+METHODS = {
+    "baseline": (baseline.train, baseline.prepare_method_options),
+    "reweighting": (reweighting.train, reweighting.prepare_method_options),
+}
 
 
 def resolve_config(config):
@@ -20,21 +23,29 @@ def resolve_config(config):
     unknown = config.keys() - allowed
     if unknown:
         raise ValueError(f"Unknown configuration settings: {', '.join(sorted(unknown))}")
-    resolved = {"seed": 0, "batch_size": 128, "num_workers": 4, "method_options": {}} | config
-    if not isinstance(resolved.get("method"), str) or resolved["method"] not in METHODS:
+    default_config = {
+        "seed": 0,
+        "batch_size": 128,
+        "num_workers": 4,
+        "method_options": {},
+    }
+    training_config = default_config | config
+    if not isinstance(training_config.get("method"), str) or training_config["method"] not in METHODS:
         raise ValueError(f"Unknown method; available methods: {', '.join(METHODS)}")
-    if not isinstance(resolved.get("train_data"), str) or not resolved["train_data"]:
+    if not isinstance(training_config.get("train_data"), str) or not training_config["train_data"]:
         raise ValueError("train_data must be a prepared-data file path")
     for name, minimum in (("seed", 0), ("batch_size", 1), ("num_workers", 0)):
-        if type(resolved[name]) is not int or resolved[name] < minimum:
+        if type(training_config[name]) is not int or training_config[name] < minimum:
             raise ValueError(f"{name} must be an integer >= {minimum}")
-    if resolved["seed"] >= 2**32:
+    if training_config["seed"] >= 2**32:
         raise ValueError("seed must be less than 2**32")
-    if not isinstance(resolved["method_options"], dict):
+    if not isinstance(training_config["method_options"], dict):
         raise ValueError("method_options must be a JSON object")
-    _, resolve_options = METHODS[resolved["method"]]
-    resolved["method_options"] = resolve_options(resolved["method_options"])
-    return resolved
+    _, prepare_method_options = METHODS[training_config["method"]]
+    training_config["method_options"] = prepare_method_options(
+        training_config["method_options"]
+    )
+    return training_config
 
 
 def run_training(config, output_dir, device="cpu"):

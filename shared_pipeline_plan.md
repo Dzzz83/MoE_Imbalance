@@ -1,8 +1,8 @@
 # Shared pipeline implementation plan
 
-Status: shared components and the baseline are implemented in this repository.
+Status: shared components, the baseline, and OT reweighting are implemented.
 The interfaces and commands below describe the implementation; full CIFAR-100
-training and the research methods remain separate work.
+training and the synthetic-sample method remain separate work.
 This plan replaces the archived version where it conflicts with the decisions
 recorded here.
 
@@ -11,7 +11,8 @@ recorded here.
 Build shared data preparation, ResNet-32 creation, training entry point, and
 evaluation so contributors can implement different training methods against the
 same interface. Start with an ordinary cross-entropy baseline as the working
-example. Add reweighting and synthetic-sample methods afterward.
+example. OT reweighting is now implemented; see [its guide](docs/reweighting.md).
+The synthetic-sample method remains future work.
 
 Share the inputs and evaluation procedure. Each method owns its training
 algorithm, including stages, losses, optimizers, sampling, augmentation changes,
@@ -179,12 +180,12 @@ computes test metrics separately.
 | Method | Construct loaders and own all training stages and auxiliary state |
 | Evaluator | Restore the plain model and compute common test metrics |
 
-Each method also exposes `resolve_options(options) -> dict` to apply its defaults
+Each method also exposes `prepare_method_options(options) -> dict` to apply its defaults
 and reject unsupported settings before training. The runner passes that resolved
 configuration to `train` and saves it with the checkpoint.
 
 Select methods with a small explicit mapping of names to pairs of training and
-option-resolving functions. Begin with `baseline`; add entries when other methods
+option-preparation functions. Begin with `baseline`; add entries when other methods
 exist. No plugin discovery, inherited trainer framework, or placeholder research
 implementations are needed.
 
@@ -203,15 +204,27 @@ Use one JSON configuration file per training recipe. For example:
     "epochs": 200,
     "learning_rate": 0.1,
     "momentum": 0.9,
-    "weight_decay": 0.0005,
-    "scheduler": "cosine"
+    "weight_decay": 0.0002,
+    "scheduler": "multistep",
+    "warmup_epochs": 5,
+    "decay_epochs": [160, 180],
+    "decay_factor": 0.01
   }
 }
 ```
 
-These are starting baseline settings, not fixed settings for every method.
-The baseline uses cross-entropy, SGD, and cosine learning-rate decay to zero
-over its configured epochs. Method-specific settings stay in `method_options`;
+The baseline uses cross-entropy and the SGD training recipe from the
+[LDAM authors' released CIFAR code](https://github.com/kaidic/LDAM-DRW/blob/master/cifar_train.py).
+It uses momentum 0.9 without Nesterov and weight decay 0.0002. With one-based
+epochs, learning rates are 0.02, 0.04, 0.06, 0.08, and 0.1 for epochs 1–5;
+0.1 for epochs 6–160; 0.001 for epochs 161–180; and 0.00001 for epochs 181–200.
+`decay_epochs` marks completed epochs: a drop applies to the following epoch.
+These schedule settings are configurable. Set `warmup_epochs` to zero to disable
+warm-up, or `decay_epochs` to an empty list to disable drops. Shortening `epochs`
+truncates the schedule without rescaling warm-up or milestones. The previous
+`scheduler: "cosine"` setting is no longer supported. These are reference
+defaults, not settings tuned for this project or fixed for every method.
+Method-specific settings stay in `method_options`;
 multistage methods can define their stages there. Reject unsupported settings
 with a clear error rather than silently ignoring them.
 

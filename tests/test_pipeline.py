@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from pipeline import evaluate, train
+from pipeline.methods import reweighting
 from pipeline.data import evaluation_transform, make_dataset, save_training_data
 from pipeline.model import create_model
 from pipeline.runtime import load_checkpoint, resolve_device, seed_everything
@@ -44,11 +45,12 @@ def test_baseline_cli_checkpoint_and_evaluation(tmp_path, training_data, monkeyp
     checkpoint_path = output / "final.pt"
     checkpoint_bytes = checkpoint_path.read_bytes()
     restored, checkpoint = load_checkpoint(checkpoint_path, "cpu")
-    assert checkpoint["config"]["method_options"]["scheduler"] == "cosine"
+    assert checkpoint["config"]["method_options"]["scheduler"] == "multistep"
     assert checkpoint["config"]["seed"] == 0
     assert json.loads((output / "config.json").read_text()) == checkpoint["config"]
     history = json.loads((output / "history.json").read_text())
     assert len(history) == 1 and np.isfinite(history[0]["loss"])
+    assert history[0]["learning_rate"] == pytest.approx(0.002)
     assert not torch.equal(initial_weights, restored.fc.weight)
     assert checkpoint["data_settings"] == training_data.data_settings
     for name, value in restored.state_dict().items():
@@ -120,3 +122,86 @@ def test_commands_are_runnable(module):
         [sys.executable, "-m", module, "--help"], capture_output=True, text=True, check=True,
     )
     assert "usage:" in result.stdout
+
+
+def test_reweighting_cli_checkpoint_evaluation_and_reproducibility(tmp_path, all_class_training_data, monkeypatch):
+    data_path = tmp_path / "train.npz"
+    save_training_data(data_path, all_class_training_data)
+    config = {
+        "method": "reweighting", "train_data": str(data_path), "seed": 13,
+        "batch_size": 32, "num_workers": 0,
+        "method_options": {"pretraining": {"epochs": 1}, "classifier": {"epochs": 2}},
+    }
+    config_path = tmp_path / "reweighting.json"
+    config_path.write_text(json.dumps(config))
+    original_images = all_class_training_data.images.copy()
+    original_labels = all_class_training_data.labels.copy()
+    pretrained_states = []
+    pretrain = reweighting._pretrain
+
+    def capture_pretrained_state(model, *args):
+        history = pretrain(model, *args)
+        pretrained_states.append({name: value.detach().clone() for name, value in model.state_dict().items()})
+        return history
+
+    def forbid_raw_data(**kwargs):
+        pytest.fail("Training must consume prepared data without constructing CIFAR")
+
+    monkeypatch.setattr(reweighting, "_pretrain", capture_pretrained_state)
+    monkeypatch.setattr(evaluate.datasets, "CIFAR100", forbid_raw_data)
+    output = tmp_path / "reweighting"
+    monkeypatch.setattr(sys, "argv", [
+        "train", "--config", str(config_path), "--output-dir", str(output), "--device", "cpu",
+    ])
+    train.main()
+    checkpoint_path = output / "final.pt"
+    checkpoint_bytes = checkpoint_path.read_bytes()
+    restored, checkpoint = load_checkpoint(checkpoint_path, "cpu")
+    history = json.loads((output / "history.json").read_text())
+    assert [record["epoch"] for record in history] == [1, 2, 3]
+    assert [record["stage"] for record in history] == ["pretraining", "reweighting", "reweighting"]
+    assert checkpoint["config"]["method_options"]["score_learning_rate"] == 0.001
+    assert json.loads((output / "config.json").read_text()) == checkpoint["config"]
+    np.testing.assert_array_equal(checkpoint["class_counts"].numpy(), all_class_training_data.class_counts)
+    for name, value in restored.backbone.state_dict().items():
+        torch.testing.assert_close(value, pretrained_states[0]["backbone." + name], rtol=0, atol=0)
+    assert not torch.equal(restored.fc.weight, pretrained_states[0]["fc.weight"])
+    diagnostics = json.loads((output / "reweighting_diagnostics.json").read_text())
+    for record, arrays in zip(history[1:], diagnostics, strict=True):
+        assert record["loss"] >= 0 and np.isfinite(record["loss"])
+        assert record["row_relative_error"] <= 0.001
+        assert record["column_relative_error"] <= 0.001
+        assert 1 <= record["effective_sample_size"] <= len(all_class_training_data.labels) + 1e-4
+        assert len(arrays["class_weight_masses"]) == 100
+        assert sum(arrays["class_weight_masses"]) == pytest.approx(1.0)
+        assert min(arrays["class_weight_masses"]) > 0
+        assert arrays["epoch"] == record["epoch"]
+
+    def artificial_test_split(**kwargs):
+        assert kwargs["train"] is False and kwargs["download"] is False
+        return make_dataset(all_class_training_data, kwargs["transform"])
+
+    monkeypatch.setattr(evaluate.datasets, "CIFAR100", artificial_test_split)
+    # Evaluation must work after the prepared training file has been removed.
+    data_path.unlink()
+    metrics_path = output / "metrics.json"
+    monkeypatch.setattr(sys, "argv", [
+        "evaluate", "--checkpoint", str(checkpoint_path), "--data-root", str(tmp_path),
+        "--output", str(metrics_path), "--device", "cpu", "--num-workers", "0", "--batch-size", "32",
+    ])
+    evaluate.main()
+    loader = DataLoader(make_dataset(all_class_training_data, evaluation_transform()), batch_size=32)
+    predictions, labels = evaluate.predict(restored, loader, "cpu")
+    assert json.loads(metrics_path.read_text()) == evaluate.compute_metrics(
+        predictions, labels, all_class_training_data.class_counts
+    )
+    assert checkpoint_path.read_bytes() == checkpoint_bytes
+
+    save_training_data(data_path, all_class_training_data)
+    repeated_path = train.run_training(config, tmp_path / "repeat", "cpu")
+    repeated, _ = load_checkpoint(repeated_path, "cpu")
+    for name, value in restored.state_dict().items():
+        torch.testing.assert_close(value, repeated.state_dict()[name], rtol=0, atol=0)
+    assert json.loads((tmp_path / "repeat" / "history.json").read_text()) == history
+    np.testing.assert_array_equal(all_class_training_data.images, original_images)
+    np.testing.assert_array_equal(all_class_training_data.labels, original_labels)
