@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from pipeline.data import load_training_data
-from pipeline.methods import baseline, reweighting
+from pipeline.methods import baseline, finetuning, reweighting
 from pipeline.model import create_model
 from pipeline.runtime import resolve_device, save_checkpoint, seed_everything, write_json
 
@@ -13,6 +13,8 @@ from pipeline.runtime import resolve_device, save_checkpoint, seed_everything, w
 METHODS = {
     "baseline": (baseline.train, baseline.prepare_method_options),
     "reweighting": (reweighting.train, reweighting.prepare_method_options),
+    "uniform_finetuning": (finetuning.train_uniform, finetuning.prepare_uniform_options),
+    "ot_finetuning": (finetuning.train_ot, finetuning.prepare_ot_options),
 }
 
 

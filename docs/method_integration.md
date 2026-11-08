@@ -56,6 +56,12 @@ it reuses baseline pretraining, freezes the backbone, caches features, then
 alternates full-pool OT weight updates with classifier epochs. Its configuration
 keeps `pretraining` and `classifier` settings separate.
 
+For matched ablations, `pipeline/methods/finetuning.py` provides separate
+uniform and OT continuation functions. Both restore a saved baseline's complete
+model state, validate its pool metadata, then reuse the same classifier loop.
+Their configs require `pretrained_checkpoint`; they do not repeat pretraining.
+See [the comparison guide](reweighting.md#matched-baseline-comparison).
+
 ## Verification
 
 ```bash

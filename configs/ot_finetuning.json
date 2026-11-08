@@ -1,0 +1,25 @@
+{
+  "method": "ot_finetuning",
+  "train_data": "data/prepared/train.npz",
+  "seed": 0,
+  "batch_size": 128,
+  "num_workers": 4,
+  "method_options": {
+    "pretrained_checkpoint": "outputs/baseline_seed0/final.pt",
+    "classifier": {
+      "epochs": 40,
+      "learning_rate": 0.00002,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "nesterov": true,
+      "scheduler": "constant"
+    },
+    "score_learning_rate": 0.001,
+    "score_updates": 1,
+    "epsilon": 0.1,
+    "sinkhorn_iterations": 200,
+    "marginal_tolerance": 0.001,
+    "feature_cost_scale": 0.5,
+    "label_mismatch_cost": 0.01
+  }
+}

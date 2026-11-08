@@ -36,6 +36,53 @@ you want it to fetch that dataset. Use `--device cpu` for CPU execution. Full-da
 training belongs on the server. To change the training seed, edit `seed` in the
 config; keep the preparation seed fixed for comparisons.
 
+## Matched baseline comparison
+
+Compare three final models to distinguish the effect of OT from extra classifier
+training:
+
+| Run | Configuration | Training |
+|---|---|---|
+| Cross-entropy baseline | `configs/baseline.json` | 200 epochs of ordinary full-model training |
+| Uniform continuation | `configs/uniform_finetuning.json` | Load the baseline, freeze its backbone, continue its classifier for 40 epochs with uniform example weights |
+| OT continuation | `configs/ot_finetuning.json` | Load the same baseline and use the same continuation with learned OT weights |
+
+The two continuation configs point to `outputs/baseline_seed0/final.pt`. Neither
+repeats pretraining nor resets the classifier. They use the same deterministic
+raw feature cache, shuffled row order, batch size, SGD settings, and number of
+epochs. Both start a fresh classifier optimizer. Uniform continuation bypasses
+OT entirely; its loss is ordinary mean cross-entropy. OT settings remain the
+existing defaults, including 40 score updates in total, to isolate weighting
+without changing other settings.
+
+Run once with new output folders; skip the first command if that baseline
+checkpoint already exists and uses the intended retained pool and recipe:
+
+```bash
+python -m pipeline.train --config configs/baseline.json --output-dir outputs/baseline_seed0 --device cuda
+python -m pipeline.train --config configs/uniform_finetuning.json --output-dir outputs/uniform_finetuning_seed0 --device cuda
+python -m pipeline.train --config configs/ot_finetuning.json --output-dir outputs/ot_finetuning_seed0 --device cuda
+python -m pipeline.evaluate --checkpoint outputs/baseline_seed0/final.pt --output outputs/baseline_seed0/metrics.json --device cuda
+python -m pipeline.evaluate --checkpoint outputs/uniform_finetuning_seed0/final.pt --output outputs/uniform_finetuning_seed0/metrics.json --device cuda
+python -m pipeline.evaluate --checkpoint outputs/ot_finetuning_seed0/final.pt --output outputs/ot_finetuning_seed0/metrics.json --device cuda
+```
+
+The main comparison is OT versus uniform continuation. Compare each with the
+baseline to measure the total effect of Stage 2. Report overall accuracy and
+Head/Medium/Tail recall for all three. Keep `train_data`, the baseline checkpoint,
+the continuation seed, and classifier settings identical between the two
+continuations. For additional training seeds, first train a baseline for that
+seed, then update both continuation configs' `seed` and `pretrained_checkpoint`
+and choose fresh output folders. Keep preparation settings fixed. Several
+matched seeds are needed to assess small differences reliably.
+
+Checkpoint loading requires `method: "baseline"` and matching real class counts
+and preparation settings. These checks validate metadata, not image contents;
+reuse the exact prepared pool. The source checkpoint is read without being
+modified. Its path is recorded in the resolved config. This is a new Stage 2
+execution, not optimizer resume. An existing `reweighting` final checkpoint
+cannot recover the model before Stage 2; it is rejected as a baseline source.
+
 ## Defaults and their sources
 
 | Component | Defaults | Source and rationale |
@@ -105,6 +152,12 @@ classifier accepts `epochs`, `learning_rate`, `momentum`, `weight_decay`,
 Unknown or invalid values fail before training. Defaults are saved in the run
 configuration; input configuration objects are not modified.
 
+The checkpoint-based methods `uniform_finetuning` and `ot_finetuning` require
+`method_options.pretrained_checkpoint` and accept the same `classifier` options.
+`ot_finetuning` also accepts the OT/score options above. Neither accepts
+`pretraining`; the source baseline's saved configuration supplies the completed
+epoch count. Uniform fine-tuning rejects OT options instead of ignoring them.
+
 Row errors compare each plan row sum to its example weight; column errors compare
 each column sum to 1/100. Absolute errors and per-target relative errors are
 reported. Exceeding `marginal_tolerance` stops before that optimizer step;
@@ -126,6 +179,14 @@ post-update weights. `reweighting_diagnostics.json` records class weight masses
 in class-index order after each completed epoch. Real retained counts still
 define evaluation's Head/Medium/Tail groups. Evaluation adds `metrics.json`.
 
+Checkpoint-based runs save only their continuation history, with global epochs
+following the source baseline (201–240 for a 200-epoch baseline) and
+`stage_epoch` starting at one. Uniform records use `stage: "uniform_finetuning"`,
+include weight maximum and ESS, and omit OT/score measurements. Its
+`uniform_finetuning_diagnostics.json` records class weight masses, which equal
+real class proportions rather than balanced class masses. OT continuation uses
+the existing `stage: "reweighting"` and `reweighting_diagnostics.json` format.
+
 ## Verification and experiment limits
 
 ```bash
@@ -139,6 +200,8 @@ marginals, finite-difference score gradients, convergence rejection, reproducibl
 training, and checkpoint evaluation without training data. CPU tests and the
 synthetic resource check do not establish CUDA memory use or research accuracy.
 
-For attribution, later compare against both the baseline and a matched frozen-
-backbone classifier continuation using uniform weights. Extra classifier training
-alone is a confounder. Do not select or tune a checkpoint using test scores.
+Tests also cover matching the complete source state, identical continuation
+shuffle orders, frozen backbone buffers, source-checkpoint preservation,
+incompatible source rejection, and identical final models when OT is forced to
+return uniform weights. These establish comparison correctness, not an accuracy
+improvement. Do not select or tune a checkpoint using test scores.

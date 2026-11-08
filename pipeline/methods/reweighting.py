@@ -1,4 +1,4 @@
-"""Frozen-feature OT reweighting over the complete retained training pool."""
+"""Frozen-feature classifier training with uniform or full-pool OT weights."""
 
 import math
 
@@ -32,6 +32,33 @@ DEFAULT_OPTIONS = {
 }
 
 
+def prepare_classifier_options(options):
+    if not isinstance(options, dict):
+        raise ValueError("classifier must be a JSON object")
+    unknown = options.keys() - DEFAULT_CLASSIFIER_OPTIONS.keys()
+    if unknown:
+        raise ValueError(f"Unknown classifier options: {', '.join(sorted(unknown))}")
+    classifier_options = DEFAULT_CLASSIFIER_OPTIONS | options
+    value = classifier_options["epochs"]
+    if type(value) is not int or value < 1:
+        raise ValueError("classifier epochs must be a positive integer")
+    for name in ("learning_rate", "momentum", "weight_decay"):
+        value = classifier_options[name]
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"classifier {name} must be a finite nonnegative number")
+    if classifier_options["learning_rate"] == 0:
+        raise ValueError("classifier learning_rate must be positive")
+    if classifier_options["momentum"] >= 1:
+        raise ValueError("classifier momentum must be less than 1")
+    if type(classifier_options["nesterov"]) is not bool:
+        raise ValueError("classifier nesterov must be a boolean")
+    if classifier_options["nesterov"] and classifier_options["momentum"] == 0:
+        raise ValueError("classifier Nesterov requires positive momentum")
+    if classifier_options["scheduler"] != "constant":
+        raise ValueError("The classifier supports scheduler='constant'")
+    return classifier_options
+
+
 def prepare_method_options(options):
     unknown = options.keys() - DEFAULT_OPTIONS.keys()
     if unknown:
@@ -41,13 +68,7 @@ def prepare_method_options(options):
         if not isinstance(method_options[name], dict):
             raise ValueError(f"{name} must be a JSON object")
     method_options["pretraining"] = baseline.prepare_method_options(method_options["pretraining"])
-    classifier_options = method_options["classifier"]
-    unknown = classifier_options.keys() - DEFAULT_CLASSIFIER_OPTIONS.keys()
-    if unknown:
-        raise ValueError(f"Unknown classifier options: {', '.join(sorted(unknown))}")
-    classifier_options = DEFAULT_CLASSIFIER_OPTIONS | classifier_options
     for name, value in (
-        ("classifier epochs", classifier_options["epochs"]),
         ("score_updates", method_options["score_updates"]),
         ("sinkhorn_iterations", method_options["sinkhorn_iterations"]),
     ):
@@ -63,21 +84,7 @@ def prepare_method_options(options):
             raise ValueError(f"{name} must be a finite nonnegative number")
     if method_options["feature_cost_scale"] == 0 and method_options["label_mismatch_cost"] == 0:
         raise ValueError("At least one OT cost coefficient must be positive")
-    for name in ("learning_rate", "momentum", "weight_decay"):
-        value = classifier_options[name]
-        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
-            raise ValueError(f"classifier {name} must be a finite nonnegative number")
-    if classifier_options["learning_rate"] == 0:
-        raise ValueError("classifier learning_rate must be positive")
-    if classifier_options["momentum"] >= 1:
-        raise ValueError("classifier momentum must be less than 1")
-    if type(classifier_options["nesterov"]) is not bool:
-        raise ValueError("classifier nesterov must be a boolean")
-    if classifier_options["nesterov"] and classifier_options["momentum"] == 0:
-        raise ValueError("classifier Nesterov requires positive momentum")
-    if classifier_options["scheduler"] != "constant":
-        raise ValueError("The classifier supports scheduler='constant'")
-    method_options["classifier"] = classifier_options
+    method_options["classifier"] = prepare_classifier_options(method_options["classifier"])
     return method_options
 
 
@@ -357,22 +364,39 @@ def _train_classifier_epoch(model, loader, optimizer, weights, device):
 
 
 def train(model, train_data, config, output_dir, device) -> list[dict]:
-    options = config["method_options"]
     # Fail before pretraining if a balanced reference cannot be constructed.
     if (train_data.class_counts == 0).any():
         raise ValueError("Reweighting requires retained training examples in every class")
     history = _pretrain(model, train_data, config, output_dir, device)
+    history.extend(train_classifier(
+        model, train_data, config, output_dir, device,
+        epoch_offset=config["method_options"]["pretraining"]["epochs"], use_ot=True,
+    ))
+    return history
+
+
+def train_classifier(model, train_data, config, output_dir, device, *, epoch_offset, use_ot):
+    """Continue the existing classifier with matched caching, shuffling, and SGD.
+
+    Uniform continuation bypasses all OT construction and score optimization.
+    Both variants retain the supplied classifier and freeze the complete backbone.
+    """
+    options = config["method_options"]
+    stage = "reweighting" if use_ot else "uniform_finetuning"
     print("Caching deterministic training features for frozen-backbone Stage 2", flush=True)
     raw_features, labels = _cache_training_features(model, train_data, config, device)
-    normalized_features, references, reference_masses = _build_ot_references(raw_features, labels)
-    cost = _build_ot_cost(
-        normalized_features.to(device), references.to(device), labels.to(device),
-        feature_cost_scale=options["feature_cost_scale"],
-        label_mismatch_cost=options["label_mismatch_cost"],
-    )
-    reference_masses = reference_masses.to(device)
-    example_scores = _initialize_example_scores(len(labels), device, dtype=cost.dtype)
-    score_optimizer = _make_score_optimizer(example_scores, options["score_learning_rate"])
+    if use_ot:
+        normalized_features, references, reference_masses = _build_ot_references(raw_features, labels)
+        cost = _build_ot_cost(
+            normalized_features.to(device), references.to(device), labels.to(device),
+            feature_cost_scale=options["feature_cost_scale"],
+            label_mismatch_cost=options["label_mismatch_cost"],
+        )
+        reference_masses = reference_masses.to(device)
+        example_scores = _initialize_example_scores(len(labels), device, dtype=cost.dtype)
+        score_optimizer = _make_score_optimizer(example_scores, options["score_learning_rate"])
+    else:
+        weights = torch.full((len(labels),), 1 / len(labels), device=device, dtype=raw_features.dtype)
     classifier_options = options["classifier"]
     classifier_optimizer = torch.optim.SGD(
         model.fc.parameters(), lr=classifier_options["learning_rate"],
@@ -386,20 +410,23 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
         pin_memory=device.type == "cuda",
         generator=torch.Generator().manual_seed(config["seed"]),
     )
+    history = []
     epoch_diagnostics = []
     for stage_epoch in range(1, classifier_options["epochs"] + 1):
-        print(f"Reweighting epoch {stage_epoch}/{classifier_options['epochs']}: updating global scores", flush=True)
-        weights, transport_diagnostics = _update_example_scores(
-            example_scores, score_optimizer, cost, reference_masses,
-            score_updates=options["score_updates"], epsilon=options["epsilon"],
-            max_iterations=options["sinkhorn_iterations"], marginal_tolerance=options["marginal_tolerance"],
-        )
+        transport_diagnostics = {}
+        if use_ot:
+            print(f"Reweighting epoch {stage_epoch}/{classifier_options['epochs']}: updating global scores", flush=True)
+            weights, transport_diagnostics = _update_example_scores(
+                example_scores, score_optimizer, cost, reference_masses,
+                score_updates=options["score_updates"], epsilon=options["epsilon"],
+                max_iterations=options["sinkhorn_iterations"], marginal_tolerance=options["marginal_tolerance"],
+            )
+            transport_diagnostics["score_learning_rate"] = score_optimizer.param_groups[0]["lr"]
         loss = _train_classifier_epoch(model, loader, classifier_optimizer, weights, device)
-        epoch = options["pretraining"]["epochs"] + stage_epoch
+        epoch = epoch_offset + stage_epoch
         record = {
-            "epoch": epoch, "stage": "reweighting", "stage_epoch": stage_epoch,
+            "epoch": epoch, "stage": stage, "stage_epoch": stage_epoch,
             "loss": loss, "learning_rate": classifier_optimizer.param_groups[0]["lr"],
-            "score_learning_rate": score_optimizer.param_groups[0]["lr"],
             **transport_diagnostics,
             "maximum_weight": weights.max().item(),
             "effective_sample_size": _effective_sample_size(weights),
@@ -408,11 +435,13 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
         class_weight_masses = torch.zeros(NUM_CLASSES, device=device, dtype=weights.dtype)
         class_weight_masses.scatter_add_(0, labels.to(device), weights)
         epoch_diagnostics.append({"epoch": epoch, "class_weight_masses": class_weight_masses.cpu().tolist()})
-        write_json(output_dir / "reweighting_diagnostics.json", epoch_diagnostics)
-        print(
-            f"Reweighting epoch {stage_epoch}/{classifier_options['epochs']} loss={loss:.4f} "
-            f"ot_cost={record['ot_cost_before_update']:.6g} "
-            f"row_error={record['row_relative_error']:.3g} col_error={record['column_relative_error']:.3g}",
-            flush=True,
-        )
+        diagnostics_file = "reweighting_diagnostics.json" if use_ot else "uniform_finetuning_diagnostics.json"
+        write_json(output_dir / diagnostics_file, epoch_diagnostics)
+        message = f"{stage} epoch {stage_epoch}/{classifier_options['epochs']} loss={loss:.4f}"
+        if use_ot:
+            message += (
+                f" ot_cost={record['ot_cost_before_update']:.6g} "
+                f"row_error={record['row_relative_error']:.3g} col_error={record['column_relative_error']:.3g}"
+            )
+        print(message, flush=True)
     return history

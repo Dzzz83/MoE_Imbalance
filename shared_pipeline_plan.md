@@ -1,6 +1,7 @@
 # Shared pipeline implementation plan
 
-Status: shared components, the baseline, and OT reweighting are implemented.
+Status: shared components, the baseline, OT reweighting, and matched uniform/OT
+classifier continuations are implemented.
 The interfaces and commands below describe the implementation; full CIFAR-100
 training and the synthetic-sample method remain separate work.
 This plan replaces the archived version where it conflicts with the decisions
@@ -35,7 +36,10 @@ feature extraction, freezing, and synthetic examples.
 - Keep the data preparation seed fixed when changing the training seed. Use the
   same training seeds across methods when comparing results.
 
-The data and model are shared; a trained first-stage checkpoint is not required.
+The data and model are shared; a trained first-stage checkpoint is not required
+for independent methods. For the matched OT comparison, `uniform_finetuning`
+and `ot_finetuning` load the exact same saved baseline before classifier-only
+training; see [the comparison guide](docs/reweighting.md#matched-baseline-comparison).
 No OOF folds, sample-ID system, hashes, run registry, test-access gate, or
 automatic experiment matrix is part of this implementation. Ridge and the two
 research algorithms are separate work after the shared foundation is ready.
@@ -136,8 +140,9 @@ model.fc(features)      # logits: (batch, 100)
 ```
 
 The runner seeds Python, NumPy, and PyTorch, then constructs a fresh model before
-invoking the method. Equal training seeds therefore give methods the same
-initial weights. Seed data-loader randomness as well. Reproducibility is for
+invoking the method. Checkpoint-based continuations replace its complete state
+with the saved baseline. Other methods with equal training seeds receive the
+same initial weights. Seed data-loader randomness as well. Reproducibility is for
 the same software and hardware environment; do not promise identical results
 across devices.
 
@@ -166,10 +171,11 @@ Its final model must support ordinary image-to-logit inference through the
 shared architecture. Training-only prototypes, OT solvers, SVMs, synthetic
 features, or other auxiliary objects are not needed to evaluate that model.
 
-History records contain `epoch` (one-based within a stage) and `loss` (the mean
-training objective for that epoch). Multistage methods also include a `stage`
-name. Extra scalar training measurements are allowed. The shared evaluator
-computes test metrics separately.
+History records contain global one-based `epoch` and `loss` (the mean training
+objective for that epoch). Multistage methods also include a `stage` name.
+Classifier continuations include one-based `stage_epoch` and count global epochs
+after the source baseline. Extra scalar training measurements are allowed. The
+shared evaluator computes test metrics separately.
 
 ### Responsibilities
 
