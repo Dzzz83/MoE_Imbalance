@@ -56,6 +56,7 @@ python -m pipeline.evaluate \
 - **Change training settings:** edit [configs/baseline.json](configs/baseline.json).
 - **Train OT reweighting:** use `configs/reweighting.json`; see the [method guide](docs/reweighting.md) for its resource check, defaults, and diagnostics.
 - **Compare OT with uniform fine-tuning:** after training the baseline, use `configs/uniform_finetuning.json` and `configs/ot_finetuning.json`. Both load `outputs/baseline_seed0/final.pt`; see the [matched comparison commands](docs/reweighting.md#matched-baseline-comparison).
+- **Test prototype weighting:** compare uniform, class-balanced, cluster-balanced, and Sinkhorn fine-tuning from the same baseline checkpoint. See the [prototype comparison](docs/reweighting.md#prototype-weighting-comparison).
 - **Outputs:** configuration, training history, final checkpoint, and metrics.
 - **Another training run:** choose a new output folder to avoid overwriting results.
 

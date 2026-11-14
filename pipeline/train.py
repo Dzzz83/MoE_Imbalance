@@ -15,6 +15,7 @@ METHODS = {
     "reweighting": (reweighting.train, reweighting.prepare_method_options),
     "uniform_finetuning": (finetuning.train_uniform, finetuning.prepare_uniform_options),
     "ot_finetuning": (finetuning.train_ot, finetuning.prepare_ot_options),
+    "prototype_finetuning": (finetuning.train_prototype, finetuning.prepare_prototype_options),
 }
 
 

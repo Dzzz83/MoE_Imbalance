@@ -1,8 +1,8 @@
-"""Matched uniform and OT classifier continuations from a saved baseline."""
+"""Matched classifier continuations from a saved baseline."""
 
 import torch
 
-from pipeline.methods import baseline, reweighting
+from pipeline.methods import baseline, prototype_weights, reweighting
 
 
 def _prepare_options(options, *, use_ot):
@@ -31,6 +31,16 @@ def prepare_uniform_options(options):
 
 def prepare_ot_options(options):
     return _prepare_options(options, use_ot=True)
+
+
+def prepare_prototype_options(options):
+    shared_names = {"pretrained_checkpoint", "classifier"}
+    shared_options = {name: value for name, value in options.items() if name in shared_names}
+    weighting_options = {name: value for name, value in options.items() if name not in shared_names}
+    return (
+        _prepare_options(shared_options, use_ot=False)
+        | prototype_weights.prepare_options(weighting_options)
+    )
 
 
 def _load_pretrained_baseline(model, train_data, path):
@@ -63,7 +73,7 @@ def _load_pretrained_baseline(model, train_data, path):
     return source_options["epochs"]
 
 
-def _train(model, train_data, config, output_dir, device, *, use_ot):
+def _train(model, train_data, config, output_dir, device, *, use_ot, weight_builder=None):
     if use_ot and (train_data.class_counts == 0).any():
         raise ValueError("OT fine-tuning requires retained training examples in every class")
     checkpoint_path = config["method_options"]["pretrained_checkpoint"]
@@ -71,7 +81,7 @@ def _train(model, train_data, config, output_dir, device, *, use_ot):
     print(f"Loaded baseline after {epoch_offset} epochs from {checkpoint_path}", flush=True)
     return reweighting.train_classifier(
         model, train_data, config, output_dir, device,
-        epoch_offset=epoch_offset, use_ot=use_ot,
+        epoch_offset=epoch_offset, use_ot=use_ot, weight_builder=weight_builder,
     )
 
 
@@ -81,3 +91,12 @@ def train_uniform(model, train_data, config, output_dir, device):
 
 def train_ot(model, train_data, config, output_dir, device):
     return _train(model, train_data, config, output_dir, device, use_ot=True)
+
+
+def train_prototype(model, train_data, config, output_dir, device):
+    if (train_data.class_counts == 0).any():
+        raise ValueError("Prototype fine-tuning requires retained training examples in every class")
+    return _train(
+        model, train_data, config, output_dir, device,
+        use_ot=False, weight_builder=prototype_weights.build_weights,
+    )

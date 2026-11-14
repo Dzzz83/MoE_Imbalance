@@ -375,14 +375,16 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
     return history
 
 
-def train_classifier(model, train_data, config, output_dir, device, *, epoch_offset, use_ot):
+def train_classifier(
+    model, train_data, config, output_dir, device, *, epoch_offset, use_ot, weight_builder=None,
+):
     """Continue the existing classifier with matched caching, shuffling, and SGD.
 
-    Uniform continuation bypasses all OT construction and score optimization.
-    Both variants retain the supplied classifier and freeze the complete backbone.
+    All variants retain the supplied classifier and freeze the complete backbone.
+    A weight builder can provide fixed sample weights from the cached features.
     """
     options = config["method_options"]
-    stage = "reweighting" if use_ot else "uniform_finetuning"
+    stage = "reweighting" if use_ot else config["method"]
     print("Caching deterministic training features for frozen-backbone Stage 2", flush=True)
     raw_features, labels = _cache_training_features(model, train_data, config, device)
     if use_ot:
@@ -395,6 +397,9 @@ def train_classifier(model, train_data, config, output_dir, device, *, epoch_off
         reference_masses = reference_masses.to(device)
         example_scores = _initialize_example_scores(len(labels), device, dtype=cost.dtype)
         score_optimizer = _make_score_optimizer(example_scores, options["score_learning_rate"])
+    elif weight_builder is not None:
+        weights, class_diagnostics = weight_builder(raw_features, labels, config, device)
+        write_json(output_dir / "prototype_weight_diagnostics.json", class_diagnostics)
     else:
         weights = torch.full((len(labels),), 1 / len(labels), device=device, dtype=raw_features.dtype)
     classifier_options = options["classifier"]
@@ -412,6 +417,9 @@ def train_classifier(model, train_data, config, output_dir, device, *, epoch_off
     )
     history = []
     epoch_diagnostics = []
+    initial_classifier = torch.nn.utils.parameters_to_vector(
+        parameter.detach() for parameter in model.fc.parameters()
+    )
     for stage_epoch in range(1, classifier_options["epochs"] + 1):
         transport_diagnostics = {}
         if use_ot:
@@ -423,6 +431,9 @@ def train_classifier(model, train_data, config, output_dir, device, *, epoch_off
             )
             transport_diagnostics["score_learning_rate"] = score_optimizer.param_groups[0]["lr"]
         loss = _train_classifier_epoch(model, loader, classifier_optimizer, weights, device)
+        classifier = torch.nn.utils.parameters_to_vector(
+            parameter.detach() for parameter in model.fc.parameters()
+        )
         epoch = epoch_offset + stage_epoch
         record = {
             "epoch": epoch, "stage": stage, "stage_epoch": stage_epoch,
@@ -430,13 +441,13 @@ def train_classifier(model, train_data, config, output_dir, device, *, epoch_off
             **transport_diagnostics,
             "maximum_weight": weights.max().item(),
             "effective_sample_size": _effective_sample_size(weights),
+            "classifier_parameter_delta_l2": (classifier - initial_classifier).norm().item(),
         }
         history.append(record)
         class_weight_masses = torch.zeros(NUM_CLASSES, device=device, dtype=weights.dtype)
         class_weight_masses.scatter_add_(0, labels.to(device), weights)
         epoch_diagnostics.append({"epoch": epoch, "class_weight_masses": class_weight_masses.cpu().tolist()})
-        diagnostics_file = "reweighting_diagnostics.json" if use_ot else "uniform_finetuning_diagnostics.json"
-        write_json(output_dir / diagnostics_file, epoch_diagnostics)
+        write_json(output_dir / f"{stage}_diagnostics.json", epoch_diagnostics)
         message = f"{stage} epoch {stage_epoch}/{classifier_options['epochs']} loss={loss:.4f}"
         if use_ot:
             message += (

@@ -83,6 +83,51 @@ modified. Its path is recorded in the resolved config. This is a new Stage 2
 execution, not optimizer resume. An existing `reweighting` final checkpoint
 cannot recover the model before Stage 2; it is rejected as a baseline source.
 
+## Prototype weighting comparison
+
+These four continuations start from the same baseline checkpoint, retain its
+classifier, and use the same frozen features, batch order, and SGD settings.
+The three prototype experiment configs use `method: "prototype_finetuning"`
+and compute fixed loss weights before classifier training.
+
+| Config in `configs/` | Weight assignment |
+|---|---|
+| `uniform_finetuning.json` | Equal weight per image |
+| `class_balanced_finetuning.json` | Equal weight per class, split equally across its images |
+| `cluster_balanced_finetuning.json` | Equal weight per class and per cluster within that class |
+| `sinkhorn_finetuning.json` | Equal weight per class, with image weights taken from transport row sums |
+
+The cluster and Sinkhorn modes build the same two seeded cosine clusters per
+class. Classes with fewer than five images in either cluster, or where two
+stable clusters cannot be found, use equal within-class weights. Sinkhorn
+uses cosine distance and fixed equal prototype quotas. Its KL penalty keeps
+sample weights close to uniform within each class. Initial settings are entropy
+`epsilon: 0.1`, `row_kl_strength: 0.2`, `sinkhorn_iterations: 200`, and
+`sinkhorn_tolerance: 0.001`. The tolerance applies to the change in log
+column scaling and to the relative column mass error.
+
+With the seed-0 baseline checkpoint available, run from the repository root:
+
+```bash
+for mode in uniform class_balanced cluster_balanced sinkhorn; do
+  run="outputs/prototype_comparison_${mode}_seed0"
+  python -m pipeline.train --config "configs/${mode}_finetuning.json" --output-dir "$run" --device cuda || break
+done
+```
+
+Check the class masses and `classifier_parameter_delta_l2` in the training
+outputs before evaluating. `prototype_weight_diagnostics.json` records cluster
+sizes, within-class weight ranges relative to uniform, and Sinkhorn residuals.
+The checked-in configs reuse the original fine-tuning schedule. If a training
+pilot shows negligible classifier movement, choose a common schedule before
+the final comparison and apply it to all four runs.
+
+Evaluate the four final checkpoints with `pipeline.evaluate` as above, and report
+overall accuracy and Head/Medium/Tail recall alongside the original CE baseline.
+Use the same prepared pool and a matched baseline checkpoint for each training
+seed. Compare Sinkhorn directly with cluster-balanced weighting to isolate the
+effect of the transport solve.
+
 ## Defaults and their sources
 
 | Component | Defaults | Source and rationale |
