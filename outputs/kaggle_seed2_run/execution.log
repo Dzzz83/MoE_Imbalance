@@ -1864,3 +1864,6 @@ Epoch 198/200 loss=0.0169 lr=5.55063e-05
 Epoch 199/200 loss=0.0174 lr=2.4672e-05
 Epoch 200/200 loss=0.0180 lr=6.16838e-06
 Saved final checkpoint to outputs/baseline_seed2/final.pt
+
+python -m pipeline.extract_features --checkpoint outputs/baseline_seed2/final.pt --train-data data/prepared/train.npz --output outputs/baseline_seed2/train_features.pt --device cuda:0
+Saved features (10847, 64) to outputs/baseline_seed2/train_features.pt
