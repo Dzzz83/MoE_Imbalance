@@ -1,0 +1,46 @@
+{
+  "classifier": {
+    "mode": "synthetic",
+    "seed": 2,
+    "target_count": 500,
+    "epochs": 40,
+    "batch_size": 128,
+    "num_workers": 0,
+    "learning_rate": 0.01,
+    "momentum": 0.9,
+    "weight_decay": 0.0005,
+    "synthetic_features": "outputs/synthesis_5000_seed2/synthetic_features.pt",
+    "pretrained_checkpoint": "outputs/baseline_seed2/final.pt",
+    "feature_cache": "outputs/baseline_seed2/train_features.pt",
+    "output_dir": "outputs/classifier_synthesis_5000_seed2"
+  },
+  "generation_options": {
+    "target_count": 500,
+    "guide_steps": 500,
+    "guide_learning_rate": 0.01,
+    "guide_regularization": 0.001,
+    "temperature": 1.0,
+    "transport_weight": 1.0,
+    "guidance_weight": 1.0,
+    "entropy_coefficient": 0.0005,
+    "max_iterations": 5000,
+    "step_size": 200.0,
+    "max_backtracks": 10,
+    "projection_iterations": 2000,
+    "marginal_tolerance": 1e-08,
+    "objective_tolerance": 1e-12,
+    "acceptance_tolerance": 1e-12,
+    "uniform_targets": false
+  },
+  "evaluation": {
+    "data_root": "data/raw",
+    "download": true,
+    "batch_size": 256,
+    "num_workers": 4
+  },
+  "pretrained_sha256": "ceb2df3a6cc63b5b6d16ebbc915b4fc771b5040b678d2359806454171d7b44fd",
+  "real_cache_sha256": "5e1cbc9bf42643d8cdb725c6a391eb704937c4f0dcd40867eb9c8cc37b3937ac",
+  "full_synthetic_sha256": "fe42c94355fc5ba5b7de57247669c32c9ea2299a1643da57dc72809cb9719bf7",
+  "comparison_code_sha256": "39efbb238a49bd8b3fd45d00e8c8d150ab1a9d828c6cb7c837e4b9c5978ef94f",
+  "synthesis_code_sha256": "3694d1fd7105087c9dddc01d2f5c646f1b35bfd8e74e8c824c1e4cf7be01d0ff"
+}
