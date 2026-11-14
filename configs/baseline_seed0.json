@@ -1,0 +1,20 @@
+{
+  "method": "baseline",
+  "train_data": "/kaggle/working/prototype-data/train.npz",
+  "seed": 0,
+  "batch_size": 128,
+  "num_workers": 2,
+  "method_options": {
+    "epochs": 200,
+    "learning_rate": 0.1,
+    "momentum": 0.9,
+    "weight_decay": 0.0002,
+    "scheduler": "multistep",
+    "warmup_epochs": 5,
+    "decay_epochs": [
+      160,
+      180
+    ],
+    "decay_factor": 0.01
+  }
+}
