@@ -1,0 +1,19 @@
+{
+  "method": "prototype_finetuning",
+  "train_data": "/kaggle/working/prototype-data/train.npz",
+  "seed": 0,
+  "batch_size": 128,
+  "num_workers": 2,
+  "method_options": {
+    "weighting": "class_balanced",
+    "pretrained_checkpoint": "/kaggle/working/prototype-results/runs/baseline_seed0/final.pt",
+    "classifier": {
+      "epochs": 40,
+      "learning_rate": 2e-05,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "nesterov": true,
+      "scheduler": "constant"
+    }
+  }
+}
