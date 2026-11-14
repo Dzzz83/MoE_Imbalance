@@ -24,10 +24,12 @@
   "status": "stage_completed",
   "completed_stages": [
     "pretrain",
-    "extract_features"
+    "extract_features",
+    "synthesis"
   ],
   "note": "Fresh Kaggle seed-2 run. Other seeds may use different software/hardware.",
-  "stage": "extract_features",
-  "updated_utc": "2026-11-14T11:29:16.452031+00:00",
-  "prepared_data_sha256": "de9b551f88d648a3f2a13b9d51fbaba772fa94679fbed7ca518e7ebeb4693538"
+  "stage": "synthesis",
+  "updated_utc": "2026-11-14T12:45:47.158288+00:00",
+  "prepared_data_sha256": "de9b551f88d648a3f2a13b9d51fbaba772fa94679fbed7ca518e7ebeb4693538",
+  "synthesis_iteration_limit_classes": []
 }
