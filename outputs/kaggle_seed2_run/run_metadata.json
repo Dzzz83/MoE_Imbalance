@@ -1,0 +1,32 @@
+{
+  "seed": 2,
+  "branch": "hieu",
+  "source_commit": "cfaf590c2f3a08ca3e3cefa29c51a95991d229b0",
+  "started_utc": "2026-11-14T11:08:30.334981+00:00",
+  "environment": {
+    "python": "3.13.16",
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "numpy": "2.1.3",
+    "torch_cuda_build": "13.0",
+    "gpu": "Tesla T4",
+    "visible_gpu_count": 2
+  },
+  "reference_seed1_environment": {
+    "python": "3.13.16",
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "numpy": "2.1.3",
+    "torch_cuda_build": "13.0",
+    "gpu": "Tesla T4",
+    "visible_gpu_count": 2
+  },
+  "status": "stage_completed",
+  "completed_stages": [
+    "pretrain"
+  ],
+  "note": "Fresh Kaggle seed-2 run. Other seeds may use different software/hardware.",
+  "stage": "pretrain",
+  "updated_utc": "2026-11-14T11:28:48.564189+00:00",
+  "prepared_data_sha256": "de9b551f88d648a3f2a13b9d51fbaba772fa94679fbed7ca518e7ebeb4693538"
+}
