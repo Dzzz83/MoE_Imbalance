@@ -1970,3 +1970,46 @@ Class 97: real=5, generating=495
 Class 98: real=5, generating=495
 Class 99: real=5, generating=495
 Saved synthetic features (39153, 64) to outputs/synthesis_5000_seed2/synthetic_features.pt
+
+python -m pipeline.train_classifier --config configs/classifier_synthesis_5000_seed2.json --device cuda:0 --resume
+Classifier epoch 1/40 loss=0.005851
+Classifier epoch 2/40 loss=0.005130
+Classifier epoch 3/40 loss=0.005319
+Classifier epoch 4/40 loss=0.005624
+Classifier epoch 5/40 loss=0.005972
+Classifier epoch 6/40 loss=0.006337
+Classifier epoch 7/40 loss=0.006706
+Classifier epoch 8/40 loss=0.007080
+Classifier epoch 9/40 loss=0.007448
+Classifier epoch 10/40 loss=0.007811
+Classifier epoch 11/40 loss=0.008160
+Classifier epoch 12/40 loss=0.008500
+Classifier epoch 13/40 loss=0.008822
+Classifier epoch 14/40 loss=0.009125
+Classifier epoch 15/40 loss=0.009412
+Classifier epoch 16/40 loss=0.009678
+Classifier epoch 17/40 loss=0.009928
+Classifier epoch 18/40 loss=0.010159
+Classifier epoch 19/40 loss=0.010368
+Classifier epoch 20/40 loss=0.010561
+Classifier epoch 21/40 loss=0.010737
+Classifier epoch 22/40 loss=0.010890
+Classifier epoch 23/40 loss=0.011034
+Classifier epoch 24/40 loss=0.011157
+Classifier epoch 25/40 loss=0.011270
+Classifier epoch 26/40 loss=0.011367
+Classifier epoch 27/40 loss=0.011454
+Classifier epoch 28/40 loss=0.011528
+Classifier epoch 29/40 loss=0.011590
+Classifier epoch 30/40 loss=0.011644
+Classifier epoch 31/40 loss=0.011687
+Classifier epoch 32/40 loss=0.011724
+Classifier epoch 33/40 loss=0.011752
+Classifier epoch 34/40 loss=0.011775
+Classifier epoch 35/40 loss=0.011791
+Classifier epoch 36/40 loss=0.011803
+Classifier epoch 37/40 loss=0.011811
+Classifier epoch 38/40 loss=0.011816
+Classifier epoch 39/40 loss=0.011818
+Classifier epoch 40/40 loss=0.011819
+Saved final checkpoint to outputs/classifier_synthesis_5000_seed2/final.pt
