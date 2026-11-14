@@ -16,11 +16,12 @@
   "completed_stages": [
     "pretrain",
     "extract_features",
-    "synthesis"
+    "synthesis",
+    "classifier"
   ],
   "note": "Fresh Kaggle seed-1 run. Other seeds may use different software/hardware.",
-  "stage": "synthesis",
-  "updated_utc": "2026-11-14T10:34:02.023864+00:00",
+  "stage": "classifier",
+  "updated_utc": "2026-11-14T10:34:39.337909+00:00",
   "prepared_data_sha256": "de9b551f88d648a3f2a13b9d51fbaba772fa94679fbed7ca518e7ebeb4693538",
   "synthesis_iteration_limit_classes": []
 }
