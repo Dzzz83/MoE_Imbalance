@@ -1,0 +1,6 @@
+{
+  "pretrained_checkpoint_sha256": "576be2df9fb15c7f7c58ce08acbfd74a0ba6c88b2dbbd2e7f4999866be2f83e3",
+  "feature_cache_sha256": "630a6f349db371d2240b0f493d35bdd912a87223fc6c3d09c56524564d881b99",
+  "synthetic_features_sha256": "1d24485bebcb21598b01df3db40ee1d6c0cbbf5925a5045018312b231d569b73",
+  "classifier_code_sha256": "1b46a305b177ccb13d39c28277ae5a7316d431b50dba1af2a6d83d1bb893e225"
+}
