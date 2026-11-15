@@ -36,8 +36,14 @@ def prepare_method_options(options):
         raise ValueError("learning_rate must be positive")
     if method_options["momentum"] >= 1:
         raise ValueError("momentum must be less than 1")
-    if method_options["scheduler"] != "multistep":
-        raise ValueError("The baseline supports scheduler='multistep'")
+    if method_options["scheduler"] not in ("multistep", "cosine"):
+        raise ValueError("The baseline supports scheduler='multistep' or 'cosine'")
+    if method_options["scheduler"] == "cosine":
+        # Historical synthesis pretraining had no warm-up or milestone decays.
+        schedule_keys = {"warmup_epochs", "decay_epochs", "decay_factor"}
+        if options.keys() & schedule_keys:
+            raise ValueError("Cosine scheduling does not use warmup_epochs, decay_epochs, or decay_factor")
+        return {name: value for name, value in method_options.items() if name not in schedule_keys}
     warmup_epochs = method_options["warmup_epochs"]
     if type(warmup_epochs) is not int or warmup_epochs < 0:
         raise ValueError("warmup_epochs must be a nonnegative integer")
@@ -86,13 +92,20 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
         momentum=options["momentum"],
         weight_decay=options["weight_decay"],
     )
+    scheduler = (
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=options["epochs"])
+        if options["scheduler"] == "cosine" else None
+    )
     criterion = nn.CrossEntropyLoss()
     history = []
     for epoch in range(1, options["epochs"] + 1):
         model.train()
         loss_sum = 0.0
         sample_count = 0
-        learning_rate = _learning_rate_for_epoch(epoch, options)
+        learning_rate = (
+            optimizer.param_groups[0]["lr"] if scheduler is not None
+            else _learning_rate_for_epoch(epoch, options)
+        )
         for parameter_group in optimizer.param_groups:
             parameter_group["lr"] = learning_rate
         for images, labels in loader:
@@ -107,5 +120,7 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
             sample_count += len(labels)
         mean_loss = loss_sum / sample_count
         history.append({"epoch": epoch, "loss": mean_loss, "learning_rate": learning_rate})
+        if scheduler is not None:
+            scheduler.step()
         print(f"Epoch {epoch}/{options['epochs']} loss={mean_loss:.4f} lr={learning_rate:.6g}", flush=True)
     return history

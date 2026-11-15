@@ -62,6 +62,14 @@ model state, validate its pool metadata, then reuse the same classifier loop.
 Their configs require `pretrained_checkpoint`; they do not repeat pretraining.
 See [the comparison guide](reweighting.md#matched-baseline-comparison).
 
+The synthesis path uses explicit cache, generation, and classifier commands:
+`pipeline.extract_features`, `pipeline.methods.synthesis`, and
+`pipeline.train_classifier`. Generation produces features rather than a model,
+so it stays outside the image-training method mapping. Its classifier command
+preserves per-epoch resume and saves the shared checkpoint fields; it uses the
+same evaluator. Both paths share frozen feature extraction and runtime file
+helpers. See [running both OT methods](ot_methods.md).
+
 ## Verification
 
 ```bash

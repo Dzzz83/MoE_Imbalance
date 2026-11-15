@@ -1,0 +1,23 @@
+{
+  "feature_cache": "outputs/baseline_seed0/train_features.pt",
+  "output_dir": "outputs/synthesis_seed0",
+  "seed": 0,
+  "method_options": {
+    "target_count": 500,
+    "guide_steps": 500,
+    "guide_learning_rate": 0.01,
+    "guide_regularization": 0.001,
+    "temperature": 1.0,
+    "transport_weight": 1.0,
+    "guidance_weight": 1.0,
+    "entropy_coefficient": 0.05,
+    "max_iterations": 100,
+    "step_size": 20.0,
+    "max_backtracks": 10,
+    "projection_iterations": 200,
+    "marginal_tolerance": 0.0001,
+    "objective_tolerance": 1e-12,
+    "acceptance_tolerance": 1e-12,
+    "uniform_targets": false
+  }
+}

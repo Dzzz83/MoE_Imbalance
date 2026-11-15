@@ -6,9 +6,10 @@ import torch
 import torch.nn.functional as functional
 from torch.utils.data import DataLoader, TensorDataset
 
-from pipeline.data import NUM_CLASSES, evaluation_transform, make_dataset
+from pipeline.data import NUM_CLASSES
+from pipeline.extract_features import extract_features, freeze_backbone as _freeze_backbone
 from pipeline.methods import baseline
-from pipeline.runtime import seed_worker, write_json
+from pipeline.runtime import write_json
 
 DEFAULT_CLASSIFIER_OPTIONS = {
     "epochs": 40,
@@ -98,18 +99,6 @@ def _pretrain(model, train_data, config, output_dir, device) -> list[dict]:
     return [record | {"stage": "pretraining"} for record in history]
 
 
-def _freeze_backbone(model):
-    """Fix backbone parameters and batch-norm state for Stage 2.
-
-    Later classifier training must use model.fc.train(), since model.train()
-    would put the backbone's batch-normalization layers back in training mode.
-    """
-    model.backbone.requires_grad_(False)
-    for parameter in model.backbone.parameters():
-        parameter.grad = None
-    model.backbone.eval()
-
-
 @torch.no_grad()
 def _cache_training_features(model, train_data, config, device):
     """Freeze the backbone and return raw CPU features and labels in retained order.
@@ -118,25 +107,9 @@ def _cache_training_features(model, train_data, config, device):
     separate operation. Use no_grad rather than inference_mode so cached tensors
     can later participate in classifier gradient computation.
     """
-    _freeze_backbone(model)
-    loader = DataLoader(
-        make_dataset(train_data, evaluation_transform()),
-        batch_size=config["batch_size"],
-        shuffle=False,
-        num_workers=config["num_workers"],
-        pin_memory=device.type == "cuda",
-        worker_init_fn=seed_worker,
-        generator=torch.Generator().manual_seed(config["seed"]),
+    return extract_features(
+        model, train_data, device, config["batch_size"], config["num_workers"], config["seed"],
     )
-    feature_batches = []
-    label_batches = []
-    for images, labels in loader:
-        features = model.backbone(images.to(device))
-        if not torch.isfinite(features).all():
-            raise RuntimeError("Nonfinite backbone features during training feature extraction")
-        feature_batches.append(features.cpu())
-        label_batches.append(labels)
-    return torch.cat(feature_batches), torch.cat(label_batches)
 
 
 @torch.no_grad()

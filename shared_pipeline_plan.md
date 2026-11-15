@@ -1,9 +1,10 @@
 # Shared pipeline implementation plan
 
-Status: shared components, the baseline, OT reweighting, and matched uniform/OT
-classifier continuations are implemented.
-The interfaces and commands below describe the implementation; full CIFAR-100
-training and the synthetic-sample method remain separate work.
+Status: shared components, the baseline, OT reweighting, classifier
+continuations, and OT feature synthesis are implemented.
+The interfaces and commands below describe the shared implementation. See the
+[OT integration guide](docs/ot_methods.md) for synthesis commands and recipes;
+full CIFAR-100 and CUDA validation remain separate from the CPU checks.
 This plan replaces the archived version where it conflicts with the decisions
 recorded here.
 
@@ -13,7 +14,8 @@ Build shared data preparation, ResNet-32 creation, training entry point, and
 evaluation so contributors can implement different training methods against the
 same interface. Start with an ordinary cross-entropy baseline as the working
 example. OT reweighting is now implemented; see [its guide](docs/reweighting.md).
-The synthetic-sample method remains future work.
+OT feature synthesis is implemented through explicit extraction, generation,
+and classifier commands; see [its integration guide](docs/ot_methods.md).
 
 Share the inputs and evaluation procedure. Each method owns its training
 algorithm, including stages, losses, optimizers, sampling, augmentation changes,
@@ -40,9 +42,10 @@ The data and model are shared; a trained first-stage checkpoint is not required
 for independent methods. For the matched OT comparison, `uniform_finetuning`
 and `ot_finetuning` load the exact same saved baseline before classifier-only
 training; see [the comparison guide](docs/reweighting.md#matched-baseline-comparison).
-No OOF folds, sample-ID system, hashes, run registry, test-access gate, or
-automatic experiment matrix is part of this implementation. Ridge and the two
-research algorithms are separate work after the shared foundation is ready.
+No OOF folds, sample-ID system, run registry, or test-access gate is part of
+this implementation. Synthesis caches record input hashes for compatibility
+checks when loading and resuming. Method-specific comparison commands and a
+Kaggle script run explicit experiment sets. Ridge remains future research work.
 
 ## Architecture
 

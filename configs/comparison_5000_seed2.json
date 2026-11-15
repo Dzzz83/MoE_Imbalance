@@ -1,0 +1,11 @@
+{
+  "classifier_config": "configs/classifier_synthesis_5000_seed2.json",
+  "generation_config": "configs/synthesis_5000_seed2.json",
+  "output_dir": "outputs/comparison_5000_seed2",
+  "evaluation": {
+    "data_root": "data/raw",
+    "download": true,
+    "batch_size": 256,
+    "num_workers": 4
+  }
+}

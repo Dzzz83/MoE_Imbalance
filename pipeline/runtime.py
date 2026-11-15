@@ -1,5 +1,6 @@
 """Small shared helpers for randomness, JSON, devices, and model checkpoints."""
 
+import hashlib
 import json
 import random
 from pathlib import Path
@@ -43,6 +44,29 @@ def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content)
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def atomic_torch_save(value, path):
+    path = Path(path)
+    temporary = path.with_name(path.name + ".tmp")
+    torch.save(value, temporary)
+    temporary.replace(path)
+
+
+def atomic_write_json(path, value):
+    content = json.dumps(value, indent=2, allow_nan=False) + "\n"
+    path = Path(path)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(content, encoding="utf-8")
+    temporary.replace(path)
 
 
 def save_checkpoint(path, model, config, train_data):

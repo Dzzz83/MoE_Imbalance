@@ -135,27 +135,17 @@ Internet enabled and the `GITHUB_TOKEN` secret available to that notebook.
 The token needs write access to this repository. Attach the CIFAR dataset at
 the configured `RAW_CIFAR_ROOT`, or allow the runner to download it.
 
-The runner pins its `SOURCE_COMMIT`, uses GPU 0, and writes checkpoints,
-configs, histories, diagnostics, and metrics to the separate
-`prototype-weighting-results` branch after each completed run. By default it
-trains only SAVA for seeds `(0, 1, 2)` using their completed baselines; see the
-SAVA section below. With `SAVA_ONLY = False`, it trains the
-200-epoch baseline followed by the four 40-epoch classifier continuations for
-each seed in `TRAINING_SEEDS`. Data preparation keeps seed `42`.
-Each continuation uses the baseline trained with its own seed. Optionally set
-`BASELINE_CHECKPOINTS = {1: "/kaggle/input/.../final.pt"}` to reuse an attached
-compatible baseline for that seed.
+The integration runner pins its `SOURCE_COMMIT`, uses GPU 0, and defaults to
+both OT paths for seeds `(0, 1, 2)`. Set `EXPERIMENT_PATH = "reweighting"` to
+run only the five weighting continuations. It trains or reuses each seed's
+200-epoch baseline, then runs 40-epoch continuations. Preparation keeps seed
+`42`. Results use the separate `ot-methods-results` branch. See the
+[integration guide](ot_methods.md#kaggle) for baseline reuse, synthesis, and
+resume behavior.
 
-The existing seed-0 results and `comparison.json` remain intact. New runs use
-seed-specific directories, `experiment_seed1.json` / `experiment_seed2.json`,
-and `comparison_seed1.json` / `comparison_seed2.json`. To run one seed per
-Kaggle session, set `TRAINING_SEEDS = (1,)` or `(2,)`.
-
-Rerunning restores completed checkpoints from that branch. An interrupted
-training run starts again from its input checkpoint. Epoch-level resume is
-unavailable. Use one active notebook per results branch, and keep its paths and
-experiment settings fixed across sessions. The runner stops on a push failure
-and retains local results for retry.
+For the earlier `prototype-weighting-results` experiments, use the runner from
+commit `3111f7c` on `feat/ot-reweighting` to retain their source pin, paths, and
+settings. The integration runner does not overwrite that results branch.
 
 ### SAVA-inspired fifth candidate
 
@@ -192,13 +182,12 @@ retained-array order, per-class score variation and weight ranges, reference
 versus non-reference mean weights, and solver convergence. The shared history
 also records effective sample size and classifier parameter changes.
 
-For Kaggle, the runner defaults to implementation commit `591869f`,
-`SAVA_ONLY = True`, and `TRAINING_SEEDS = (0, 1, 2)`.
-The runner requires all three existing baseline checkpoints and refuses the old
-source commit without the SAVA config. It reuses completed baselines and writes
-`sava_seedN` runs, `experiment_sava_seedN.json`, and
-`comparison_sava_seedN.json`, preserving all previous summaries. Run a small GPU
-scoring pilot to check memory and runtime before launching the full comparison.
+The integration Kaggle runner includes SAVA among the five reweighting
+continuations by default. With `SAVA_ONLY = True`, the reweighting path requires
+completed baselines and runs only SAVA. Use `EXPERIMENT_PATH = "reweighting"`
+to skip synthesis. It writes `sava_seedN` runs, `experiment_sava_seedN.json`,
+and `comparison_sava_seedN.json`. Run a small GPU scoring pilot to check memory
+and runtime before launching the full comparison.
 
 ## Defaults and their sources
 

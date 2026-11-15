@@ -1,0 +1,15 @@
+{
+  "pretrained_checkpoint": "outputs/baseline_seed0/final.pt",
+  "feature_cache": "outputs/baseline_seed0/train_features.pt",
+  "synthetic_features": "outputs/synthesis_entropy_0p0005_full/synthetic_features.pt",
+  "output_dir": "outputs/classifier_synthesis_seed0",
+  "mode": "synthetic",
+  "seed": 0,
+  "target_count": 500,
+  "epochs": 40,
+  "batch_size": 128,
+  "num_workers": 0,
+  "learning_rate": 0.01,
+  "momentum": 0.9,
+  "weight_decay": 0.0005
+}

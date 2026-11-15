@@ -10,7 +10,7 @@ Compare training methods for imbalanced image classification using the same
 | Baseline | Ordinary cross-entropy training | Implemented |
 | Uniform fine-tuning | Continues a saved baseline classifier with equal example weights | Implemented |
 | OT reweighting | Learns how much each real example contributes | Implemented |
-| OT synthesis | Creates extra features for underrepresented classes | Planned |
+| OT synthesis | Creates extra features for underrepresented classes | Implemented |
 
 All methods use **10,847 retained training images** from CIFAR-100 at imbalance
 factor **0.01**. The original **10,000 test images** are used for evaluation.
@@ -63,6 +63,38 @@ python -m pipeline.evaluate \
 Evaluation reports overall accuracy, balanced accuracy, and per-class and
 Head/Medium/Tail recall.
 
+### Extract features for OT synthesis
+
+After baseline pretraining, freeze the backbone and cache the retained training
+features using deterministic preprocessing:
+
+```bash
+python -m pipeline.extract_features \
+  --checkpoint outputs/baseline_seed0/final.pt \
+  --train-data data/prepared/train.npz \
+  --output outputs/baseline_seed0/train_features.pt \
+  --device cuda
+```
+
+The cache contains raw features `(10847, 64)`, aligned labels, real class counts,
+data settings, the synthesis coordinate scale, and input file SHA-256 hashes.
+Load it with `torch.load(path, map_location="cpu", weights_only=True)`.
+Extraction does not modify the pretrained checkpoint or use test images.
+Existing caches are not overwritten. Loading the checkpoint in a new process
+requires freezing the backbone again before any further classifier training.
+
+Generate synthetic features, continue classifier training, and evaluate:
+
+```bash
+python -m pipeline.methods.synthesis --config configs/synthesis_matched_seed0.json --device cuda
+python -m pipeline.train_classifier --config configs/classifier_synthesis_matched_seed0.json --device cuda
+python -m pipeline.evaluate --checkpoint outputs/classifier_synthesis_matched_seed0/final.pt --output outputs/classifier_synthesis_matched_seed0/metrics.json --device cuda
+```
+
+Both OT paths can start from the baseline above. See the
+[integration guide](docs/ot_methods.md) for matched seeds, historical recipes,
+synthesis resume behavior, and running either or both paths on Kaggle.
+
 ## Project structure
 
 | Location | Purpose |
@@ -70,6 +102,10 @@ Head/Medium/Tail recall.
 | `pipeline/data.py` | Data preparation and image transforms |
 | `pipeline/model.py` | ResNet-32 |
 | `pipeline/train.py` | Training entry point |
+| `pipeline/extract_features.py` | Shared frozen feature extraction and synthesis cache command |
+| `pipeline/methods/synthesis.py` | OT feature generation command |
+| `pipeline/train_classifier.py` | Classifier continuation on real, duplicated, or synthetic features |
+| `pipeline/run_comparison.py` | Synthesis controls and comparison reports |
 | `pipeline/evaluate.py` | Evaluation and metrics |
 | `pipeline/runtime.py` | Seeds, devices, and checkpoint helpers |
 | `pipeline/methods/` | Individual training algorithms |

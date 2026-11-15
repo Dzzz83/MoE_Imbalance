@@ -116,7 +116,10 @@ def test_unavailable_cuda_is_reported(monkeypatch):
         resolve_device("cuda")
 
 
-@pytest.mark.parametrize("module", ["pipeline.data", "pipeline.train", "pipeline.evaluate"])
+@pytest.mark.parametrize("module", [
+    "pipeline.data", "pipeline.train", "pipeline.evaluate", "pipeline.extract_features",
+    "pipeline.methods.synthesis", "pipeline.train_classifier", "pipeline.run_comparison",
+])
 def test_commands_are_runnable(module):
     result = subprocess.run(
         [sys.executable, "-m", module, "--help"], capture_output=True, text=True, check=True,
