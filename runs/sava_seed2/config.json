@@ -1,0 +1,28 @@
+{
+  "seed": 2,
+  "batch_size": 128,
+  "num_workers": 2,
+  "method_options": {
+    "classifier": {
+      "epochs": 40,
+      "learning_rate": 2e-05,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "nesterov": true,
+      "scheduler": "constant"
+    },
+    "pretrained_checkpoint": "/kaggle/working/prototype-results/runs/baseline_seed2/final.pt",
+    "sava": {
+      "reference_per_class": 5,
+      "reference_seed": 42,
+      "scoring_batch_size": 256,
+      "epsilon": 0.1,
+      "label_cost": 1.0,
+      "temperature": 1.0,
+      "sinkhorn_iterations": 1000,
+      "sinkhorn_tolerance": 0.001
+    }
+  },
+  "method": "sava_finetuning",
+  "train_data": "/kaggle/working/prototype-data/train.npz"
+}
