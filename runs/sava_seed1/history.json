@@ -1,0 +1,402 @@
+[
+  {
+    "epoch": 201,
+    "stage": "sava_finetuning",
+    "stage_epoch": 1,
+    "loss": 0.08899753554835345,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.002014242112636566
+  },
+  {
+    "epoch": 202,
+    "stage": "sava_finetuning",
+    "stage_epoch": 2,
+    "loss": 0.08870325488360936,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.004369228612631559
+  },
+  {
+    "epoch": 203,
+    "stage": "sava_finetuning",
+    "stage_epoch": 3,
+    "loss": 0.08840402997147545,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.0065350099466741085
+  },
+  {
+    "epoch": 204,
+    "stage": "sava_finetuning",
+    "stage_epoch": 4,
+    "loss": 0.08811313998339813,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.008756017312407494
+  },
+  {
+    "epoch": 205,
+    "stage": "sava_finetuning",
+    "stage_epoch": 5,
+    "loss": 0.08781815188990723,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.011020460166037083
+  },
+  {
+    "epoch": 206,
+    "stage": "sava_finetuning",
+    "stage_epoch": 6,
+    "loss": 0.08753362106715873,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.013246603310108185
+  },
+  {
+    "epoch": 207,
+    "stage": "sava_finetuning",
+    "stage_epoch": 7,
+    "loss": 0.08724865148707192,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.015506590716540813
+  },
+  {
+    "epoch": 208,
+    "stage": "sava_finetuning",
+    "stage_epoch": 8,
+    "loss": 0.08696661347905751,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.01770136132836342
+  },
+  {
+    "epoch": 209,
+    "stage": "sava_finetuning",
+    "stage_epoch": 9,
+    "loss": 0.08668994808500348,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.019795909523963928
+  },
+  {
+    "epoch": 210,
+    "stage": "sava_finetuning",
+    "stage_epoch": 10,
+    "loss": 0.08641376857250596,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.022001825273036957
+  },
+  {
+    "epoch": 211,
+    "stage": "sava_finetuning",
+    "stage_epoch": 11,
+    "loss": 0.08614415628625202,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.024184899404644966
+  },
+  {
+    "epoch": 212,
+    "stage": "sava_finetuning",
+    "stage_epoch": 12,
+    "loss": 0.08587027016679923,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.026288360357284546
+  },
+  {
+    "epoch": 213,
+    "stage": "sava_finetuning",
+    "stage_epoch": 13,
+    "loss": 0.08560271753884136,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.028456980362534523
+  },
+  {
+    "epoch": 214,
+    "stage": "sava_finetuning",
+    "stage_epoch": 14,
+    "loss": 0.08533613826558194,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.030579732730984688
+  },
+  {
+    "epoch": 215,
+    "stage": "sava_finetuning",
+    "stage_epoch": 15,
+    "loss": 0.08507712234013903,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.03256727382540703
+  },
+  {
+    "epoch": 216,
+    "stage": "sava_finetuning",
+    "stage_epoch": 16,
+    "loss": 0.0848177836063744,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.034739311784505844
+  },
+  {
+    "epoch": 217,
+    "stage": "sava_finetuning",
+    "stage_epoch": 17,
+    "loss": 0.08456207971016723,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.036906857043504715
+  },
+  {
+    "epoch": 218,
+    "stage": "sava_finetuning",
+    "stage_epoch": 18,
+    "loss": 0.08430448000558766,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.03900099918246269
+  },
+  {
+    "epoch": 219,
+    "stage": "sava_finetuning",
+    "stage_epoch": 19,
+    "loss": 0.08404935673847719,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.04103284701704979
+  },
+  {
+    "epoch": 220,
+    "stage": "sava_finetuning",
+    "stage_epoch": 20,
+    "loss": 0.08380161015748032,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.04306928440928459
+  },
+  {
+    "epoch": 221,
+    "stage": "sava_finetuning",
+    "stage_epoch": 21,
+    "loss": 0.0835545092563198,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.04513001814484596
+  },
+  {
+    "epoch": 222,
+    "stage": "sava_finetuning",
+    "stage_epoch": 22,
+    "loss": 0.08331150488727564,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.04721187800168991
+  },
+  {
+    "epoch": 223,
+    "stage": "sava_finetuning",
+    "stage_epoch": 23,
+    "loss": 0.08306615730908826,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.04923856630921364
+  },
+  {
+    "epoch": 224,
+    "stage": "sava_finetuning",
+    "stage_epoch": 24,
+    "loss": 0.08282740454256364,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.05127603933215141
+  },
+  {
+    "epoch": 225,
+    "stage": "sava_finetuning",
+    "stage_epoch": 25,
+    "loss": 0.08258526773565737,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.05327790603041649
+  },
+  {
+    "epoch": 226,
+    "stage": "sava_finetuning",
+    "stage_epoch": 26,
+    "loss": 0.08235056620464519,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.055298272520303726
+  },
+  {
+    "epoch": 227,
+    "stage": "sava_finetuning",
+    "stage_epoch": 27,
+    "loss": 0.08211629380839228,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.05723481997847557
+  },
+  {
+    "epoch": 228,
+    "stage": "sava_finetuning",
+    "stage_epoch": 28,
+    "loss": 0.08188834325244286,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.059267569333314896
+  },
+  {
+    "epoch": 229,
+    "stage": "sava_finetuning",
+    "stage_epoch": 29,
+    "loss": 0.08165646143991892,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.06129639595746994
+  },
+  {
+    "epoch": 230,
+    "stage": "sava_finetuning",
+    "stage_epoch": 30,
+    "loss": 0.08142635661439296,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.06314784288406372
+  },
+  {
+    "epoch": 231,
+    "stage": "sava_finetuning",
+    "stage_epoch": 31,
+    "loss": 0.08120386207587361,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.06521667540073395
+  },
+  {
+    "epoch": 232,
+    "stage": "sava_finetuning",
+    "stage_epoch": 32,
+    "loss": 0.08097972507585388,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.06708125025033951
+  },
+  {
+    "epoch": 233,
+    "stage": "sava_finetuning",
+    "stage_epoch": 33,
+    "loss": 0.0807565648833035,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.06904967874288559
+  },
+  {
+    "epoch": 234,
+    "stage": "sava_finetuning",
+    "stage_epoch": 34,
+    "loss": 0.0805374864247402,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.07091977447271347
+  },
+  {
+    "epoch": 235,
+    "stage": "sava_finetuning",
+    "stage_epoch": 35,
+    "loss": 0.08031828190930097,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.07299191504716873
+  },
+  {
+    "epoch": 236,
+    "stage": "sava_finetuning",
+    "stage_epoch": 36,
+    "loss": 0.08010043229880619,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.07489612698554993
+  },
+  {
+    "epoch": 237,
+    "stage": "sava_finetuning",
+    "stage_epoch": 37,
+    "loss": 0.07988745457012554,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.07679235935211182
+  },
+  {
+    "epoch": 238,
+    "stage": "sava_finetuning",
+    "stage_epoch": 38,
+    "loss": 0.07967596098325917,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.07876589149236679
+  },
+  {
+    "epoch": 239,
+    "stage": "sava_finetuning",
+    "stage_epoch": 39,
+    "loss": 0.07946399128457923,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.08062084019184113
+  },
+  {
+    "epoch": 240,
+    "stage": "sava_finetuning",
+    "stage_epoch": 40,
+    "loss": 0.07925524476926245,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.009708761237561703,
+    "effective_sample_size": 834.6087440397382,
+    "classifier_parameter_delta_l2": 0.08244632184505463
+  }
+]
