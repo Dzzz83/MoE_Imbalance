@@ -1,0 +1,14 @@
+{
+  "source_commit": "7ff1eda64ac722580785412ab1af5f3208ccecb4",
+  "seed": 1,
+  "data_seed": 42,
+  "imbalance_factor": 0.01,
+  "modes": [
+    "uniform",
+    "class_balanced",
+    "cluster_balanced",
+    "sinkhorn"
+  ],
+  "baseline_input": null,
+  "runner_version": 1
+}
