@@ -183,3 +183,38 @@ def test_synthesis_uses_matched_baseline_and_resumes_stages(tmp_path, monkeypatc
     monkeypatch.setattr(kaggle, "SOURCE_COMMIT", "different-implementation")
     with pytest.raises(RuntimeError, match="configuration differs"):
         kaggle.run_synthesis(2, prepared, tmp_path / "raw", {}, {})
+
+
+def test_attached_baseline_reuse_requires_the_same_checkpoint(tmp_path, training_data, monkeypatch):
+    import torch
+
+    from pipeline.data import save_training_data
+    from pipeline.model import create_model
+    from pipeline.runtime import save_checkpoint
+    from pipeline.train import resolve_config
+
+    monkeypatch.setattr(kaggle, "STATE_ROOT", tmp_path / "results")
+    monkeypatch.setattr(kaggle, "CODE_ROOT", Path(__file__).resolve().parents[1])
+    monkeypatch.setattr(kaggle, "push_state", lambda *args: None)
+    temporary_directory = kaggle.tempfile.TemporaryDirectory
+    monkeypatch.setattr(
+        kaggle.tempfile, "TemporaryDirectory",
+        lambda **kwargs: temporary_directory(dir=tmp_path),
+    )
+    prepared = tmp_path / "train.npz"
+    save_training_data(prepared, training_data)
+    config = json.loads((kaggle.CODE_ROOT / "configs/baseline.json").read_text())
+    config.update(train_data=str(prepared), num_workers=2, seed=0)
+    attached = tmp_path / "attached.pt"
+    model = create_model()
+    save_checkpoint(attached, model, resolve_config(config), training_data)
+    monkeypatch.setattr(kaggle, "BASELINE_CHECKPOINTS", {0: str(attached)})
+    destination = kaggle.prepare_baseline(0, prepared, {}, {})
+    assert kaggle.prepare_baseline(0, prepared, {}, {}) == destination
+    original = (destination / "final.pt").read_bytes()
+    with torch.no_grad():
+        model.fc.weight.add_(1)
+    save_checkpoint(attached, model, resolve_config(config), training_data)
+    with pytest.raises(RuntimeError, match="Saved baseline differs"):
+        kaggle.prepare_baseline(0, prepared, {}, {})
+    assert (destination / "final.pt").read_bytes() == original

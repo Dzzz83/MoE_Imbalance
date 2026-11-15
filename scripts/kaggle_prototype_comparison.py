@@ -139,6 +139,7 @@ def prepare_baseline(seed, prepared, auth_env, training_env):
         from pipeline.data import load_training_data
         from pipeline.methods.finetuning import _load_pretrained_baseline
         from pipeline.model import create_model
+        from pipeline.runtime import file_sha256
 
         checkpoint = torch.load(baseline_checkpoint, map_location="cpu", weights_only=True)
         if checkpoint["config"] != train.resolve_config(baseline_config):
@@ -148,12 +149,16 @@ def prepare_baseline(seed, prepared, auth_env, training_env):
                 raise RuntimeError("Attached baseline recipe does not match the experiment")
         _load_pretrained_baseline(create_model(), load_training_data(prepared), baseline_checkpoint)
         destination = STATE_ROOT / "runs" / f"baseline_seed{seed}"
-        if not (destination / "final.pt").exists():
+        saved_checkpoint = destination / "final.pt"
+        if saved_checkpoint.exists():
+            if file_sha256(saved_checkpoint) != file_sha256(baseline_checkpoint):
+                raise RuntimeError(f"Saved baseline differs from the attached checkpoint for seed {seed}")
+        else:
             destination.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(dir="/kaggle/working") as temporary_dir:
                 pending_checkpoint = Path(temporary_dir) / "final.pt"
                 shutil.copyfile(baseline_checkpoint, pending_checkpoint)
-                pending_checkpoint.replace(destination / "final.pt")
+                pending_checkpoint.replace(saved_checkpoint)
         push_state("save attached baseline", auth_env)
     else:
         destination = train_run(f"baseline_seed{seed}", baseline_config, auth_env, training_env)
