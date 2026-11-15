@@ -30,35 +30,29 @@ in the generation environment.
 
 ## Figures
 
-Overall accuracy: [PDF](accuracy_improvement.pdf), [SVG](accuracy_improvement.svg),
-[PNG](accuracy_improvement.png).
+![Bar chart of mean overall accuracy for the baseline and five reweighting continuations. All methods are close to 39 percent accuracy.](reweighting_accuracy.png)
 
-![Overall accuracy changes for all five continuations in each experiment family, showing three seed markers and mean plus or minus sample SD. Class-balanced weighting has the highest mean change among reweighting methods; random duplication has the highest among synthesis methods.](accuracy_improvement.png)
+**Figure 1. Reweighting accuracy.** Each bar shows mean overall accuracy across
+training seeds 0, 1, and 2; error bars show sample SD. The baseline uses the
+warm-up/multistep recipe. Numbers above the error bars are mean accuracy in
+percent. Gray marks the baseline; blue marks the classifier continuations.
 
-**Figure 1. Overall accuracy change from each family's own baseline.** Panel A
-contains reweighting continuations from the warm-up/multistep baseline. Panel B
-contains synthesis and its controls from the cosine baseline. Circles, squares,
-and triangles show seeds 0, 1, and 2. Black diamonds and horizontal error bars
-show mean ± sample SD of the three paired changes. Vertical offsets separate
-the seed markers from the summary; they encode no extra measurement. The dashed
-line is zero change. Both panels use the same horizontal scale in percentage
-points (pp). Baseline rows are omitted because all their changes are zero.
+![Bar chart of mean overall accuracy for the synthesis baseline and five comparison methods. Random duplication has the highest mean accuracy among these runs.](synthesis_accuracy.png)
 
-Tail recall: [PDF](tail_recall_improvement.pdf), [SVG](tail_recall_improvement.svg),
-[PNG](tail_recall_improvement.png).
+**Figure 2. Synthesis accuracy.** Each bar shows mean overall accuracy across
+training seeds 0, 1, and 2; error bars show sample SD. The baseline uses the
+cosine recipe. Numbers above the error bars are mean accuracy in percent.
+Gray marks the baseline; green marks the classifier continuations and controls.
 
-![Tail recall changes for all five continuations in each experiment family, showing three seeds and mean plus or minus sample SD. Rebalancing improves tail recall in these runs; uniform continuation has little change in the reweighting experiment.](tail_recall_improvement.png)
+Both charts use the same zero-based accuracy axis, currently 0–45%. They include
+all six methods in each family. There are no individual seed markers or legends;
+method labels identify every bar. Small differences are easier to read precisely
+in the accompanying tables. The error bars describe training-seed variability,
+not confidence intervals or statistical significance.
 
-**Figure 2. Tail recall change from each family's own baseline.** Tail recall is
-the macro average of class recalls for classes with fewer than 20 retained
-training images. Layout, seed markers, units, reference line, and SD calculation
-follow Figure 1. Both panels share the horizontal scale for this outcome.
-
-Figures are 7.2 × 3.8 inches. PNG exports use 300 DPI (2160 × 1140 pixels).
-PDFs embed TrueType fonts; SVG text remains editable and requires the displayed
-font (DejaVu Sans) on the viewing system. The palette is supplemented by distinct
-marker shapes. These are general manuscript figures, not verified compliance
-with any journal's submission requirements.
+Only PNG images are exported. Each figure is 7.2 × 4.2 inches at 300 DPI
+(2160 × 1260 pixels), with a white background. These are general manuscript
+figures, not verified compliance with a journal's submission requirements.
 
 ## What is included
 
@@ -68,13 +62,12 @@ with any journal's submission requirements.
   the three-seed summaries; it remains preserved in the raw archive.
 - All required results must be present and finite. Missing values are rejected,
   rather than replaced with zeros or silently dropped.
-- [seed_metrics.csv](seed_metrics.csv) contains every plotted value, the absolute
-  percentage scores, the family/method/seed identifiers, and the source file.
-- [analysis.json](analysis.json) records the input hashes, calculation rules,
-  full-precision summaries, figure dimensions, script hash, and software versions.
+- Summary CSV tables contain the full-precision means and SDs used by the charts.
+- Original metrics, configurations, source commits, and file hashes remain in
+  the [raw archive](../README.md) and [source manifest](../manifest.json).
 
-The two families used **different baseline and classifier recipes**. Within-family
-changes describe each experiment; they do not isolate the effect of synthesis
+The two families used **different baseline and classifier recipes**. Their results
+describe each experiment; they do not isolate the effect of synthesis
 versus reweighting under a common protocol. See the
 [historical recipe details](../../docs/ot_methods.md#historical-recipes-and-comparisons).
 All data and choices are descriptive of these existing experiments. The fixed
@@ -89,7 +82,8 @@ python -m pip install -e '.[reporting]'
 python scripts/report_results.py
 ```
 
-An existing report directory is protected; regenerate the derived files with:
+The script generates only the two tables (Markdown, LaTeX, CSV) and two PNG
+bar charts. An existing report directory is protected; regenerate with:
 
 ```bash
 python scripts/report_results.py --overwrite
@@ -99,6 +93,9 @@ Use `--output-dir /path/to/new/report` to generate a separate copy. The script
 refuses output paths inside the imported reweighting or synthesis directories.
 It uses Matplotlib directly, with scoped styling and a temporary font cache;
 no LaTeX executable, SciencePlots package, or network access is needed to render.
+With `--overwrite`, it also removes the previous point plots, PDF/SVG exports,
+and auxiliary JSON/seed CSV exports created by this script. Unrelated files are
+preserved. The charts were generated with Matplotlib 3.11.2.
 
 ## Software and design references
 

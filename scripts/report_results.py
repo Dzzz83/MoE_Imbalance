@@ -2,14 +2,13 @@
 
 import argparse
 import csv
-import hashlib
 import json
 import math
 import os
 from pathlib import Path
-import platform
 import statistics
 import tempfile
+import textwrap
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -40,7 +39,11 @@ COLUMNS = (
     ("tail_recall_percent", "Tail (%)"),
     ("accuracy_delta_pp", "Delta accuracy (pp)"),
 )
-SEED_STYLES = (("o", "#0072B2"), ("s", "#B34700"), ("^", "#007F5F"))
+LEGACY_OUTPUTS = tuple(
+    f"{metric}_improvement.{extension}"
+    for metric in ("accuracy", "tail_recall")
+    for extension in ("pdf", "svg", "png")
+) + ("analysis.json", "seed_metrics.csv")
 
 
 def validate_metrics(metrics, path):
@@ -63,7 +66,7 @@ def validate_metrics(metrics, path):
 
 
 def load_records(results_root):
-    records, inputs = [], []
+    records = []
     for family, methods in METHODS.items():
         for seed in SEEDS:
             seed_records = []
@@ -76,7 +79,6 @@ def load_records(results_root):
                 path = results_root / relative
                 metrics = json.loads(path.read_text())
                 validate_metrics(metrics, path)
-                inputs.append(path)
                 seed_records.append({
                     "family": family, "method": method, "label": label, "seed": seed,
                     "source_file": relative.as_posix(),
@@ -89,7 +91,7 @@ def load_records(results_root):
                         record[metric + "_percent"] - baseline[metric + "_percent"]
                     )
                 records.append(record)
-    return records, inputs
+    return records
 
 
 def summarize_method(records):
@@ -184,68 +186,42 @@ def write_tables(family, summary, output):
     write_csv(output / f"{family}.csv", csv_rows)
 
 
-def plot_changes(records, summaries, metric, output):
+def plot_accuracy_bars(family, summary, output, accuracy_limit):
     import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
 
-    key = metric + "_delta_pp"
-    title = "Overall accuracy improvement" if metric == "accuracy" else "Tail recall improvement"
-    limits = [0.0]
-    for family, methods in METHODS.items():
-        for method, _ in methods[1:]:
-            values = summaries[family][method][key]
-            limits.extend((values["mean"] - values["sd"], values["mean"] + values["sd"]))
-            limits.extend(row[key] for row in records if row["family"] == family and row["method"] == method)
-    lower, upper = min(limits), max(limits)
-    padding = 0.08 * max(upper - lower, 0.1)
+    methods = METHODS[family]
+    means = [summary[method]["accuracy_percent"]["mean"] for method, _ in methods]
+    deviations = [summary[method]["accuracy_percent"]["sd"] for method, _ in methods]
+    labels = [textwrap.fill(label, width=17, break_long_words=False) for _, label in methods]
+    color = "#0072B2" if family == "reweighting" else "#007F5F"
+    recipe = "warm-up/multistep baseline" if family == "reweighting" else "cosine baseline"
     style = {
-        "font.family": "DejaVu Sans", "font.size": 8, "axes.titlesize": 9,
+        "font.family": "DejaVu Sans", "font.size": 9,
         "axes.linewidth": 0.7, "axes.spines.top": False, "axes.spines.right": False,
-        "pdf.fonttype": 42, "svg.fonttype": "none", "text.usetex": False,
-        "savefig.facecolor": "white", "figure.facecolor": "white",
+        "text.usetex": False, "savefig.facecolor": "white", "figure.facecolor": "white",
     }
     with plt.rc_context(style):
-        fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.8), sharex=True, layout="constrained")
-        for panel, (family, methods), ax in zip("AB", METHODS.items(), axes, strict=True):
-            for index, (method, _) in enumerate(methods[1:]):
-                rows = sorted(
-                    (row for row in records if row["family"] == family and row["method"] == method),
-                    key=lambda row: row["seed"],
-                )
-                for offset, row, (marker, color) in zip((-0.24, -0.12, 0), rows, SEED_STYLES, strict=True):
-                    ax.plot(row[key], index + offset, marker=marker, color=color,
-                            markersize=4, linestyle="none", markeredgewidth=0.7, zorder=4)
-                values = summaries[family][method][key]
-                ax.errorbar(values["mean"], index + 0.24, xerr=values["sd"],
-                            fmt="D", color="#222222", markersize=3.8,
-                            elinewidth=1.1, capsize=2.5, zorder=3)
-            recipe = "warm-up/multistep baseline" if family == "reweighting" else "cosine baseline"
-            ax.set_title(f"{panel}  {family.capitalize()}\n{recipe}", loc="left", pad=10)
-            ax.set_yticks(range(len(methods) - 1), [label for _, label in methods[1:]])
-            ax.set_ylim(len(methods) - 1 - 0.5, -0.55)
-            ax.set_xlim(lower - padding, upper + padding)
-            ax.axvline(0, color="#555555", linewidth=0.9, linestyle="--", zorder=1)
-            ax.grid(axis="x", color="#DDDDDD", linewidth=0.5)
-            ax.set_axisbelow(True)
-            ax.tick_params(axis="y", length=0)
-            ax.set_xlabel("Change from own baseline (pp)", labelpad=7)
-        handles = [
-            Line2D([], [], marker=marker, color=color, linestyle="none", markersize=4,
-                   label=f"Seed {seed}")
-            for seed, (marker, color) in zip(SEEDS, SEED_STYLES, strict=True)
-        ]
-        handles.append(Line2D([], [], marker="D", color="#222222", markersize=4,
-                              linewidth=1, label="Mean ± SD"))
-        fig.legend(handles=handles, loc="outside lower center", ncol=4, frameon=False)
-        fig.suptitle(title, fontsize=11)
-        for extension in ("pdf", "svg", "png"):
-            metadata = {"Date": None} if extension == "svg" else None
-            figure_path = output / f"{metric}_improvement.{extension}"
-            fig.savefig(figure_path, dpi=300,
-                        facecolor="white", transparent=False, metadata=metadata)
-            if extension == "svg":
-                # Preserve path-command separators while removing backend trailing spaces.
-                figure_path.write_text("\n".join(line.rstrip() for line in figure_path.read_text().splitlines()) + "\n")
+        fig, ax = plt.subplots(figsize=(7.2, 4.2), layout="constrained")
+        bars = ax.bar(
+            range(len(methods)), means, yerr=deviations, width=0.65,
+            color=["#777777"] + [color] * (len(methods) - 1),
+            error_kw={"ecolor": "#222222", "elinewidth": 1.0, "capsize": 4},
+            zorder=3,
+        )
+        for bar, mean, deviation in zip(bars, means, deviations, strict=True):
+            ax.text(bar.get_x() + bar.get_width() / 2, mean + deviation + 0.6,
+                    f"{mean:.2f}", ha="center", va="bottom", fontsize=9)
+        ax.set_title(f"{family.capitalize()} methods", loc="left", fontsize=13, pad=27)
+        ax.text(0, 1.02, f"Mean ± SD across seeds 0, 1, 2 · {recipe}",
+                transform=ax.transAxes, fontsize=8, color="#444444")
+        ax.set_ylabel("Overall accuracy (%)")
+        ax.set_xticks(range(len(methods)), labels)
+        ax.tick_params(axis="x", length=0, pad=8, labelsize=8)
+        ax.set_ylim(0, accuracy_limit)
+        ax.grid(axis="y", color="#DDDDDD", linewidth=0.5)
+        ax.set_axisbelow(True)
+        fig.savefig(output / f"{family}_accuracy.png", dpi=300,
+                    facecolor="white", transparent=False)
         plt.close(fig)
 
 
@@ -255,34 +231,23 @@ def build_report(results_root, output, overwrite=False):
         raise ValueError("Output must be separate from the imported source results")
     if output.exists() and not overwrite:
         raise FileExistsError(f"Report directory exists: {output}; use --overwrite to regenerate")
-    records, inputs = load_records(results_root)
-    summaries = summarize(records)
+    summaries = summarize(load_records(results_root))
     import matplotlib
     matplotlib.use("Agg")
     output.mkdir(parents=True, exist_ok=True)
-    write_csv(output / "seed_metrics.csv", records)
+    # Both charts start at zero and use the same upper bound for context.
+    largest_error_bar = max(
+        values["accuracy_percent"]["mean"] + values["accuracy_percent"]["sd"]
+        for family_summary in summaries.values() for values in family_summary.values()
+    )
+    accuracy_limit = 5 * math.ceil((largest_error_bar + 2) / 5)
     for family in METHODS:
         write_tables(family, summaries[family], output)
-    for metric in ("accuracy", "tail_recall"):
-        plot_changes(records, summaries, metric, output)
-    inputs.append(results_root / "manifest.json")
-    metadata = {
-        "training_seeds": list(SEEDS), "n_seeds": 3,
-        "aggregation": "Arithmetic mean and sample SD (ddof=1) across training seeds",
-        "deltas": "100 * (method fraction - same-family, same-seed baseline fraction); SD of these paired differences",
-        "excluded": ["synthesis/comparison_seed0: additional historical seed-0 experiment"],
-        "missing_data": "Require complete finite metrics for every included method and seed; no imputation or exclusions within the included experiment sets",
-        "inference": "Descriptive only; no hypothesis tests or significance claims",
-        "figure": {"width_inches": 7.2, "height_inches": 3.8, "png_dpi": 300,
-                   "axis_limits": "Shared across the two panels for each outcome; include zero, all seeds, and mean ± SD",
-                   "seed_vertical_offsets": [-0.24, -0.12, 0], "mean_vertical_offset": 0.24},
-        "software": {"python": platform.python_version(), "matplotlib": matplotlib.__version__},
-        "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        "inputs": [{"path": path.relative_to(results_root).as_posix(),
-                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest()} for path in inputs],
-        "summaries": summaries,
-    }
-    (output / "analysis.json").write_text(json.dumps(metadata, indent=2, allow_nan=False) + "\n")
+        plot_accuracy_bars(family, summaries[family], output, accuracy_limit)
+    if overwrite:
+        # Remove only exports owned by the previous reporting script.
+        for name in LEGACY_OUTPUTS:
+            (output / name).unlink(missing_ok=True)
     return output
 
 

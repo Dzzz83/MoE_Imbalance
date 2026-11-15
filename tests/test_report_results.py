@@ -39,9 +39,9 @@ def test_missing_or_inconsistent_metrics_are_rejected(change):
 
 def test_archived_results_have_three_seeds_and_no_legacy_duplicate():
     root = Path(__file__).resolve().parents[1] / "results"
-    records, paths = report.load_records(root)
-    assert len(records) == len(paths) == 36
-    assert all("/comparison_seed0/" not in str(path) for path in paths)
+    records = report.load_records(root)
+    assert len(records) == 36
+    assert all("/comparison_seed0/" not in row["source_file"] for row in records)
     summaries = report.summarize(records)
     assert summaries["reweighting"]["class_balanced"]["accuracy_percent"]["mean"] == pytest.approx(38.9933333333)
     assert summaries["reweighting"]["sava"]["accuracy_delta_pp"]["mean"] == pytest.approx(0.2933333333)
@@ -85,3 +85,24 @@ def test_output_cannot_replace_raw_results_or_implicitly_overwrite(tmp_path):
     with pytest.raises(FileExistsError, match="--overwrite"):
         report.build_report(root, existing)
     assert sentinel.read_text() == "keep"
+
+
+def test_report_exports_only_tables_and_pngs_and_preserves_unrelated_files(tmp_path, monkeypatch):
+    pytest.importorskip("matplotlib")
+    root = Path(__file__).resolve().parents[1] / "results"
+    for name in report.LEGACY_OUTPUTS:
+        (tmp_path / name).write_text("previous export")
+    (tmp_path / "keep.txt").write_text("unrelated")
+    chart_limits = []
+
+    def save_chart(family, summary, output, accuracy_limit):
+        chart_limits.append(accuracy_limit)
+        (output / f"{family}_accuracy.png").write_bytes(b"chart")
+
+    monkeypatch.setattr(report, "plot_accuracy_bars", save_chart)
+    report.build_report(root, tmp_path, overwrite=True)
+    expected = {f"{family}.{extension}" for family in report.METHODS for extension in ("md", "tex", "csv")}
+    expected |= {f"{family}_accuracy.png" for family in report.METHODS} | {"keep.txt"}
+    assert {path.name for path in tmp_path.iterdir()} == expected
+    assert (tmp_path / "keep.txt").read_text() == "unrelated"
+    assert chart_limits == [45, 45]
