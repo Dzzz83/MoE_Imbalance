@@ -135,11 +135,13 @@ Internet enabled and the `GITHUB_TOKEN` secret available to that notebook.
 The token needs write access to this repository. Attach the CIFAR dataset at
 the configured `RAW_CIFAR_ROOT`, or allow the runner to download it.
 
-The runner pins source commit `7ff1eda`, uses GPU 0, and writes checkpoints,
+The runner pins its `SOURCE_COMMIT`, uses GPU 0, and writes checkpoints,
 configs, histories, diagnostics, and metrics to the separate
-`prototype-weighting-results` branch after each completed run. It trains the
+`prototype-weighting-results` branch after each completed run. By default it
+trains only SAVA for seeds `(0, 1, 2)` using their completed baselines; see the
+SAVA section below. With `SAVA_ONLY = False`, it trains the
 200-epoch baseline followed by the four 40-epoch classifier continuations for
-each seed in `TRAINING_SEEDS`, now `(1, 2)`. Data preparation keeps seed `42`.
+each seed in `TRAINING_SEEDS`. Data preparation keeps seed `42`.
 Each continuation uses the baseline trained with its own seed. Optionally set
 `BASELINE_CHECKPOINTS = {1: "/kaggle/input/.../final.pt"}` to reuse an attached
 compatible baseline for that seed.
@@ -190,8 +192,8 @@ retained-array order, per-class score variation and weight ranges, reference
 versus non-reference mean weights, and solver convergence. The shared history
 also records effective sample size and classifier parameter changes.
 
-For Kaggle, publish the implementation first, set the runner's `SOURCE_COMMIT`
-to that exact commit, set `SAVA_ONLY = True`, and `TRAINING_SEEDS = (0, 1, 2)`.
+For Kaggle, the runner defaults to implementation commit `591869f`,
+`SAVA_ONLY = True`, and `TRAINING_SEEDS = (0, 1, 2)`.
 The runner requires all three existing baseline checkpoints and refuses the old
 source commit without the SAVA config. It reuses completed baselines and writes
 `sava_seedN` runs, `experiment_sava_seedN.json`, and
