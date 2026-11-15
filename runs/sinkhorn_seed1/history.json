@@ -1,0 +1,402 @@
+[
+  {
+    "epoch": 201,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 1,
+    "loss": 0.10808475155115808,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.002372040180489421
+  },
+  {
+    "epoch": 202,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 2,
+    "loss": 0.10769606368329279,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.0050140563398599625
+  },
+  {
+    "epoch": 203,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 3,
+    "loss": 0.10729888384533091,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.007468102965503931
+  },
+  {
+    "epoch": 204,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 4,
+    "loss": 0.10691765796438146,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.010070035234093666
+  },
+  {
+    "epoch": 205,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 5,
+    "loss": 0.10652133155618602,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.012698140926659107
+  },
+  {
+    "epoch": 206,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 6,
+    "loss": 0.1061422844250224,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.01523061003535986
+  },
+  {
+    "epoch": 207,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 7,
+    "loss": 0.10577256460990501,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.01780463196337223
+  },
+  {
+    "epoch": 208,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 8,
+    "loss": 0.10539718507323285,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.020327160134911537
+  },
+  {
+    "epoch": 209,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 9,
+    "loss": 0.10502868367428932,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.02280469797551632
+  },
+  {
+    "epoch": 210,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 10,
+    "loss": 0.10466409064338231,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.025295035913586617
+  },
+  {
+    "epoch": 211,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 11,
+    "loss": 0.10430591952869989,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.027794064953923225
+  },
+  {
+    "epoch": 212,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 12,
+    "loss": 0.10394512746846103,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.03021826781332493
+  },
+  {
+    "epoch": 213,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 13,
+    "loss": 0.103595133811425,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.03266741335391998
+  },
+  {
+    "epoch": 214,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 14,
+    "loss": 0.103244551365337,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.035149216651916504
+  },
+  {
+    "epoch": 215,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 15,
+    "loss": 0.10290105081356274,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.037469759583473206
+  },
+  {
+    "epoch": 216,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 16,
+    "loss": 0.10255820747673364,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.039914634078741074
+  },
+  {
+    "epoch": 217,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 17,
+    "loss": 0.10222418004231507,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.04239855706691742
+  },
+  {
+    "epoch": 218,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 18,
+    "loss": 0.1018833782882078,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.04475485906004906
+  },
+  {
+    "epoch": 219,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 19,
+    "loss": 0.1015532108191533,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.04708230495452881
+  },
+  {
+    "epoch": 220,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 20,
+    "loss": 0.10122338567360806,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.04948141798377037
+  },
+  {
+    "epoch": 221,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 21,
+    "loss": 0.10089517778744371,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.05183994024991989
+  },
+  {
+    "epoch": 222,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 22,
+    "loss": 0.10057623977360335,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.05417035520076752
+  },
+  {
+    "epoch": 223,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 23,
+    "loss": 0.10025512869270198,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.05648180469870567
+  },
+  {
+    "epoch": 224,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 24,
+    "loss": 0.09994363277735684,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.0587923489511013
+  },
+  {
+    "epoch": 225,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 25,
+    "loss": 0.09962591342542142,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.061130132526159286
+  },
+  {
+    "epoch": 226,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 26,
+    "loss": 0.09931808282893638,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.06344084441661835
+  },
+  {
+    "epoch": 227,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 27,
+    "loss": 0.09901289053338898,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.0657234713435173
+  },
+  {
+    "epoch": 228,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 28,
+    "loss": 0.09871217009991015,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.06797992438077927
+  },
+  {
+    "epoch": 229,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 29,
+    "loss": 0.09840994626812542,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.0702836886048317
+  },
+  {
+    "epoch": 230,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 30,
+    "loss": 0.09811112227924103,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.07234557718038559
+  },
+  {
+    "epoch": 231,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 31,
+    "loss": 0.09782390528710287,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.07476411759853363
+  },
+  {
+    "epoch": 232,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 32,
+    "loss": 0.09752700139138296,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.07686974853277206
+  },
+  {
+    "epoch": 233,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 33,
+    "loss": 0.09723614752560517,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.07917723804712296
+  },
+  {
+    "epoch": 234,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 34,
+    "loss": 0.09694896293167828,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.08127500116825104
+  },
+  {
+    "epoch": 235,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 35,
+    "loss": 0.09666405579450768,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.08363974839448929
+  },
+  {
+    "epoch": 236,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 36,
+    "loss": 0.09638304718496794,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.08580722659826279
+  },
+  {
+    "epoch": 237,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 37,
+    "loss": 0.09610298820436852,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.08794935792684555
+  },
+  {
+    "epoch": 238,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 38,
+    "loss": 0.09582942786939992,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.09017983824014664
+  },
+  {
+    "epoch": 239,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 39,
+    "loss": 0.09555166525654807,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.09229867160320282
+  },
+  {
+    "epoch": 240,
+    "stage": "prototype_finetuning",
+    "stage_epoch": 40,
+    "loss": 0.0952816241006703,
+    "learning_rate": 2e-05,
+    "maximum_weight": 0.0020000000949949026,
+    "effective_sample_size": 2184.2286171357023,
+    "classifier_parameter_delta_l2": 0.09439069032669067
+  }
+]
