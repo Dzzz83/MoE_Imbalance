@@ -31,7 +31,7 @@ METHODS = {
         ("full_ot", "Full guided OT"),
     ),
 }
-METRICS = ("accuracy", "head_recall", "medium_recall", "tail_recall")
+METRICS = ("accuracy", "balanced_accuracy", "head_recall", "medium_recall", "tail_recall")
 COLUMNS = (
     ("accuracy_percent", "Accuracy (%)"),
     ("head_recall_percent", "Head (%)"),
@@ -40,19 +40,19 @@ COLUMNS = (
     ("accuracy_delta_pp", "Delta accuracy (pp)"),
 )
 CHARTS = {
-    "accuracy": ("accuracy_percent", "Overall accuracy (%)"),
+    "balanced_accuracy": ("balanced_accuracy_percent", "Balanced accuracy (%)"),
     "tail_accuracy": ("tail_recall_percent", "Tail accuracy (macro recall, %)"),
 }
 LEGACY_OUTPUTS = tuple(
     f"{metric}_improvement.{extension}"
     for metric in ("accuracy", "tail_recall")
     for extension in ("pdf", "svg", "png")
-) + ("analysis.json", "seed_metrics.csv")
+) + ("analysis.json", "seed_metrics.csv", "reweighting_accuracy.png", "synthesis_accuracy.png")
 
 
 def validate_metrics(metrics, path):
     """Require complete balanced-test results; never turn missing values into zero."""
-    for key in (*METRICS, "balanced_accuracy"):
+    for key in METRICS:
         value = metrics.get(key)
         if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
             raise ValueError(f"{path}: expected a finite fraction for {key}")
@@ -217,6 +217,8 @@ def plot_metric_bars(family, summary, chart, output, upper_limit):
         title = f"{family.capitalize()} methods"
         if chart == "tail_accuracy":
             title += " — tail accuracy"
+        elif chart == "balanced_accuracy":
+            title += " — balanced accuracy"
         ax.set_title(title, loc="left", fontsize=13, pad=27)
         ax.text(0, 1.02, f"Mean across seeds 0, 1, 2 · {recipe}",
                 transform=ax.transAxes, fontsize=8, color="#444444")

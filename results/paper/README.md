@@ -22,6 +22,8 @@ Bold marks the highest unrounded mean within each table column, including ties.
 It does not imply statistical significance. Balanced accuracy is omitted because
 the balanced test set has 100 examples per class, making it equal to overall
 accuracy. The baseline's change is shown as a dash; its numeric CSV value is zero.
+The main charts read the saved `balanced_accuracy` metric directly; balanced
+accuracy is the macro mean of all 100 class recalls.
 
 LaTeX files are `table*` snippets requiring `\usepackage{booktabs,amsmath}`.
 They are intended for adaptation to the manuscript template; a target journal
@@ -30,21 +32,21 @@ in the generation environment.
 
 ## Figures
 
-![Bar chart of mean overall accuracy for the baseline and five reweighting continuations. All methods are close to 39 percent accuracy.](reweighting_accuracy.png)
+![Bar chart of mean balanced accuracy for the baseline and five reweighting continuations. All methods are close to 39 percent accuracy.](reweighting_balanced_accuracy.png)
 
-**Figure 1. Reweighting accuracy.** Each bar shows mean overall accuracy across
+**Figure 1. Reweighting balanced accuracy.** Each bar shows mean balanced accuracy across
 training seeds 0, 1, and 2. The baseline uses the
-warm-up/multistep recipe. Numbers above the bars are mean accuracy in
+warm-up/multistep recipe. Numbers above the bars are mean balanced accuracy in
 percent. Gray marks the baseline; blue marks the classifier continuations.
 
-![Bar chart of mean overall accuracy for the synthesis baseline and five comparison methods. Random duplication has the highest mean accuracy among these runs.](synthesis_accuracy.png)
+![Bar chart of mean balanced accuracy for the synthesis baseline and five comparison methods. Random duplication has the highest mean accuracy among these runs.](synthesis_balanced_accuracy.png)
 
-**Figure 2. Synthesis accuracy.** Each bar shows mean overall accuracy across
+**Figure 2. Synthesis balanced accuracy.** Each bar shows mean balanced accuracy across
 training seeds 0, 1, and 2. The baseline uses the
-cosine recipe. Numbers above the bars are mean accuracy in percent.
+cosine recipe. Numbers above the bars are mean balanced accuracy in percent.
 Gray marks the baseline; green marks the classifier continuations and controls.
 
-These overall-accuracy charts use the same zero-based axis, currently 0–45%.
+These balanced-accuracy charts use the same zero-based axis, currently 0–45%.
 
 ![Mean macro tail recall for the baseline and five reweighting continuations. Class-balanced, cluster-balanced, and prototype Sinkhorn weighting have the highest mean tail accuracy in these runs.](reweighting_tail_accuracy.png)
 

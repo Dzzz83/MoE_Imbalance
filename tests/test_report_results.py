@@ -1,4 +1,5 @@
 import copy
+import json
 from pathlib import Path
 
 import pytest
@@ -51,6 +52,8 @@ def test_archived_results_have_three_seeds_and_no_legacy_duplicate():
             rows = [row for row in records if row["family"] == family and row["method"] == method]
             assert sorted(row["seed"] for row in rows) == [0, 1, 2]
             for row in rows:
+                source = json.loads((root / row["source_file"]).read_text())
+                assert row["balanced_accuracy_percent"] == 100 * source["balanced_accuracy"]
                 baseline = next(r for r in records if r["family"] == family
                                 and r["method"] == "baseline" and r["seed"] == row["seed"])
                 assert row["tail_recall_delta_pp"] == pytest.approx(
@@ -102,7 +105,7 @@ def test_report_exports_only_tables_and_pngs_and_preserves_unrelated_files(tmp_p
     monkeypatch.setattr(report, "plot_metric_bars", save_chart)
     report.build_report(root, tmp_path, overwrite=True)
     expected = {f"{family}.{extension}" for family in report.METHODS for extension in ("md", "tex", "csv")}
-    expected |= {f"{family}_{chart}.png" for family in report.METHODS for chart in ("accuracy", "tail_accuracy")} | {"keep.txt"}
+    expected |= {f"{family}_{chart}.png" for family in report.METHODS for chart in ("balanced_accuracy", "tail_accuracy")} | {"keep.txt"}
     assert {path.name for path in tmp_path.iterdir()} == expected
     assert (tmp_path / "keep.txt").read_text() == "unrelated"
-    assert chart_limits == [("accuracy", 45), ("accuracy", 45), ("tail_accuracy", 20), ("tail_accuracy", 20)]
+    assert chart_limits == [("balanced_accuracy", 45), ("balanced_accuracy", 45), ("tail_accuracy", 20), ("tail_accuracy", 20)]
