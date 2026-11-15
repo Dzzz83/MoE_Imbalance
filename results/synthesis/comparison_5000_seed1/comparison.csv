@@ -1,0 +1,7 @@
+method,accuracy_percent,balanced_accuracy_percent,head_recall_percent,medium_recall_percent,tail_recall_percent,accuracy_delta_pp,tail_recall_delta_pp,classifier_examples_per_epoch,classifier_total_examples_processed,classifier_training_seconds,generation_seconds_this_invocation,generation_iteration_limit_classes,checkpoint
+baseline,37.47,37.470000000000006,64.02857142857142,34.91428571428571,9.466666666666669,0.0,0.0,,,,,,outputs/baseline_seed1/final.pt
+real_only,37.63,37.63,64.2,34.82857142857143,9.899999999999999,0.16000000000000458,0.4333333333333314,10847,433880,6.34447483999611,,,outputs/comparison_5000_seed1/classifiers/real_only/final.pt
+random_duplicate,40.1,40.1,63.114285714285714,38.42857142857143,15.200000000000003,2.6300000000000043,5.733333333333334,50000,2000000,27.541896346999238,,,outputs/comparison_5000_seed1/classifiers/random_duplicate/final.pt
+uniform_ot,39.35,39.35,62.91428571428571,36.65714285714286,15.0,1.880000000000004,5.533333333333331,50000,2000000,27.598005385999386,145.35332560499955,0,outputs/comparison_5000_seed1/classifiers/uniform_ot/final.pt
+loss_shifted_ot,39.35,39.35,62.942857142857136,36.628571428571426,15.0,1.880000000000004,5.533333333333331,50000,2000000,27.11732288100211,146.0427052089999,0,outputs/comparison_5000_seed1/classifiers/loss_shifted_ot/final.pt
+full_ot,39.34,39.34,63.22857142857142,36.25714285714285,15.066666666666666,1.870000000000005,5.6,50000,2000000,28.00953202900382,,0,outputs/classifier_synthesis_5000_seed1/final.pt

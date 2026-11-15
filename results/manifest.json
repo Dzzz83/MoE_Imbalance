@@ -1,0 +1,658 @@
+{
+  "repository": "Dzzz83/MoE_Imbalance",
+  "sources": [
+    {
+      "kind": "reweighting",
+      "branch": "prototype-weighting-results",
+      "commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_prefix": "",
+      "destination_prefix": "results/reweighting/"
+    },
+    {
+      "kind": "synthesis",
+      "branch": "hieu",
+      "commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_prefix": "outputs/",
+      "destination_prefix": "results/synthesis/"
+    }
+  ],
+  "files": [
+    {
+      "path": "results/reweighting/comparison.json",
+      "source_path": "comparison.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "cedb65cd629277eb4df1df438ce59f5c32fc1a69"
+    },
+    {
+      "path": "results/reweighting/comparison_sava_seed0.json",
+      "source_path": "comparison_sava_seed0.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "5b6b50b0086ceb12868fe00b621fbb3427fba565"
+    },
+    {
+      "path": "results/reweighting/comparison_sava_seed1.json",
+      "source_path": "comparison_sava_seed1.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "385a81f3d1c005eef340781c00bc8bdf713a3977"
+    },
+    {
+      "path": "results/reweighting/comparison_sava_seed2.json",
+      "source_path": "comparison_sava_seed2.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "3d1ce55f7422945379c70065cb10e6834fa50162"
+    },
+    {
+      "path": "results/reweighting/comparison_seed1.json",
+      "source_path": "comparison_seed1.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "1459fd000f4e47c1b1e895dc0ac4e385833f7022"
+    },
+    {
+      "path": "results/reweighting/comparison_seed2.json",
+      "source_path": "comparison_seed2.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "22520995d0e063bab02268dd718605319654df35"
+    },
+    {
+      "path": "results/reweighting/experiment.json",
+      "source_path": "experiment.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "069c424bc8d33cb200cc1c46170828196d0079f3"
+    },
+    {
+      "path": "results/reweighting/experiment_sava_seed0.json",
+      "source_path": "experiment_sava_seed0.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "f929c0f6cea979a1856207e1ec550bb4c0c1cb52"
+    },
+    {
+      "path": "results/reweighting/experiment_sava_seed1.json",
+      "source_path": "experiment_sava_seed1.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "31349e40e6f43fc0182a0ecba635f199781af8ff"
+    },
+    {
+      "path": "results/reweighting/experiment_sava_seed2.json",
+      "source_path": "experiment_sava_seed2.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "298141d9e1733cca6ca9d4a4fc6ab8801cd06f4f"
+    },
+    {
+      "path": "results/reweighting/experiment_seed1.json",
+      "source_path": "experiment_seed1.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "900b7e5a985a622b7e4f4c741487d1f0e06a1fdd"
+    },
+    {
+      "path": "results/reweighting/experiment_seed2.json",
+      "source_path": "experiment_seed2.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "aaa9cfb0a180a518395faab90da7693b3bc318f0"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed0/config.json",
+      "source_path": "runs/baseline_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "97429c9ae591f6d7119a13c346b89948e04a01a5"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed0/metrics.json",
+      "source_path": "runs/baseline_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "cdb163af1c08d8e4b5cda22ddb5d18aed472cd14"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed1/config.json",
+      "source_path": "runs/baseline_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "c124e3ca2a1cd619b143bfec17a61faf98b58d80"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed1/metrics.json",
+      "source_path": "runs/baseline_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "f2eda98e7d63826ea5fc6551eeeaf5f91d57e74a"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed2/config.json",
+      "source_path": "runs/baseline_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "31d16bc71439acab5704817898365e19aaea438c"
+    },
+    {
+      "path": "results/reweighting/runs/baseline_seed2/metrics.json",
+      "source_path": "runs/baseline_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "910dc7df7758c643b5e93fa7d043a0ef7e4c287e"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed0/config.json",
+      "source_path": "runs/class_balanced_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "77cdc87f00124ccb7746a76d78a9f5f912bc6ffb"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed0/metrics.json",
+      "source_path": "runs/class_balanced_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "96f6603441f6d72cbccdbae4f1fb2f4b7eb9b6ec"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed1/config.json",
+      "source_path": "runs/class_balanced_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "9d64558b407980c21e109c23f7ab1d85e4c22362"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed1/metrics.json",
+      "source_path": "runs/class_balanced_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "b040bdecb86fb2405c4ddaf1f9e87e3a1c447f22"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed2/config.json",
+      "source_path": "runs/class_balanced_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "98a4ee9e9597316fa627f82cb178f3e705255d1e"
+    },
+    {
+      "path": "results/reweighting/runs/class_balanced_seed2/metrics.json",
+      "source_path": "runs/class_balanced_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "441427b70842d8a3616c64b34e71b2bfdcd1e904"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed0/config.json",
+      "source_path": "runs/cluster_balanced_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "f9fecd588ac3dee273837fc9ef999f2fbb4bd95e"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed0/metrics.json",
+      "source_path": "runs/cluster_balanced_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "8822b5d8a5a5c43c95fa7b26d5ec39e1d7621727"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed1/config.json",
+      "source_path": "runs/cluster_balanced_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "4c00c6963b17854a7c5c321fbe451e9bc33ac649"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed1/metrics.json",
+      "source_path": "runs/cluster_balanced_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "607b80a9d142f82e6db1303f57ba9795394659a3"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed2/config.json",
+      "source_path": "runs/cluster_balanced_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "17af7f64417be140a7a276de0a78adb850b9bbe3"
+    },
+    {
+      "path": "results/reweighting/runs/cluster_balanced_seed2/metrics.json",
+      "source_path": "runs/cluster_balanced_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "85c7fe48450a6361fdb40e180a6b22b654c8d4d3"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed0/config.json",
+      "source_path": "runs/sava_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "0e84dde67265b55d4ce42e4d6b4e1c86adf07c93"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed0/metrics.json",
+      "source_path": "runs/sava_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "660ef949f74cfdcb6028f45a53e88f61f1f1a774"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed1/config.json",
+      "source_path": "runs/sava_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "072d0197e9888707044d04ec3e0b5158afa0cbb5"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed1/metrics.json",
+      "source_path": "runs/sava_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "56e9f88dc4564e4d070cc0000452dd4abf39102a"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed2/config.json",
+      "source_path": "runs/sava_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "d4ea88333a2ef8edb85a71823987ee7dc81309c4"
+    },
+    {
+      "path": "results/reweighting/runs/sava_seed2/metrics.json",
+      "source_path": "runs/sava_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "bc28f13e29509c5d35112c9fc1439fd72a8b7466"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed0/config.json",
+      "source_path": "runs/sinkhorn_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "4876c481fbf2b1cb6d9d4a9e01565e344a4c909a"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed0/metrics.json",
+      "source_path": "runs/sinkhorn_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "e970394997421afcdb611c433a01e3bb4b8075ab"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed1/config.json",
+      "source_path": "runs/sinkhorn_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "e375f4d39a314aab7f11a12cebd5a0b6770701af"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed1/metrics.json",
+      "source_path": "runs/sinkhorn_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "28b71a5721cd5e2168ad9633e00e6cb30c0c0bd9"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed2/config.json",
+      "source_path": "runs/sinkhorn_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "bab305a5a7d264bb84c8518ae187023e61b0c05c"
+    },
+    {
+      "path": "results/reweighting/runs/sinkhorn_seed2/metrics.json",
+      "source_path": "runs/sinkhorn_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "5ebc4ccbc3c1f56c89519136ea64429bbb1727a6"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed0/config.json",
+      "source_path": "runs/uniform_seed0/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "9fb8b18b52ed09e118c63c6b836c66b88f1cfbff"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed0/metrics.json",
+      "source_path": "runs/uniform_seed0/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "3efb5f17abcc1ee20bc88ead02f02458c98ecdfa"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed1/config.json",
+      "source_path": "runs/uniform_seed1/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "d4d383cb22cd91b38298f85bff5741993de4d419"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed1/metrics.json",
+      "source_path": "runs/uniform_seed1/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "c0b43c081f9e3da4d09e35aeb6726f06e101ee20"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed2/config.json",
+      "source_path": "runs/uniform_seed2/config.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "e370a615e20f4e73b95cd8217f4dc90a0d024170"
+    },
+    {
+      "path": "results/reweighting/runs/uniform_seed2/metrics.json",
+      "source_path": "runs/uniform_seed2/metrics.json",
+      "source_branch": "prototype-weighting-results",
+      "source_commit": "f39296984fc5b03ca844ac5578a387238efdc5a7",
+      "source_blob": "b438200e54ef54fa8457ad6fba4787cf11331d2b"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/baseline_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/baseline_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b545765b1251347aedc044a2fdbfb8a1159b4284"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/comparison.csv",
+      "source_path": "outputs/comparison_5000_seed0/comparison.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "5bb48859b68a941853f8dca3577fabf236cf7f40"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/comparison.json",
+      "source_path": "outputs/comparison_5000_seed0/comparison.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "fd282fd54a7df8928765b8d89849545bb0b5dfca"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/experiment_config.json",
+      "source_path": "outputs/comparison_5000_seed0/experiment_config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "db39918345de0f9171dc0c4f2ea33424328e6e9e"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/full_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/full_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "73211e1c6de475d770b57aaf94d8a70606ef9c2c"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/loss_shifted_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/loss_shifted_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "8535b2635b035ec0e6d109ff4fbcf811db44f40d"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/per_class_recall.csv",
+      "source_path": "outputs/comparison_5000_seed0/per_class_recall.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "92e787eb85b786b630683577484568469bf2f10d"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/random_duplicate_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/random_duplicate_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "93aa203123ec42c32487440443c46a8eb6edfa3f"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/real_only_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/real_only_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "5b74cc82908963c3840919bd711bea925db6b528"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed0/uniform_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed0/uniform_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b6d6121131b533f8bc43874165147cce99414c57"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/baseline_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/baseline_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "fd286ec766bfb2ae8d23ffcebcd3bfb2e9cc45a6"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/comparison.csv",
+      "source_path": "outputs/comparison_5000_seed1/comparison.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "3ea583c0057a63d273b3c6f1b10f5e9391a0e4b9"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/comparison.json",
+      "source_path": "outputs/comparison_5000_seed1/comparison.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "4ada4b946b1414d839c713d66980cf404a373bde"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/experiment_config.json",
+      "source_path": "outputs/comparison_5000_seed1/experiment_config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "be55e6c21a6d43e371fec72c970201adae9fe85a"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/full_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/full_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "03b06505ca75b224eb5b5abfac6b710bc6a12358"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/loss_shifted_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/loss_shifted_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "9f7d692d8deb2a8d0cb5684c2a8ca2fc63606a69"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/per_class_recall.csv",
+      "source_path": "outputs/comparison_5000_seed1/per_class_recall.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "1334388591355791ab681427f050b55e80575852"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/random_duplicate_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/random_duplicate_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "8dfb7cd36451411a12b32425e237eec153190e23"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/real_only_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/real_only_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "008fc5e14bf53514a8d9b29f1750050a76673fb3"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed1/uniform_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed1/uniform_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "4376932e80ba46aa4d0f25b5b3f5cd7d7cf1c6cd"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/baseline_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/baseline_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "50ea4358451113a45aae695c79b2eed2b3680523"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/comparison.csv",
+      "source_path": "outputs/comparison_5000_seed2/comparison.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "18a1aed327fe40b922d8f137422aa440741c1732"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/comparison.json",
+      "source_path": "outputs/comparison_5000_seed2/comparison.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "7cd713c54d732789d1fe76e9c219b9ded8d42725"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/experiment_config.json",
+      "source_path": "outputs/comparison_5000_seed2/experiment_config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "bc9b1f9f5d909f3397a59765e636f3d4ced99c07"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/full_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/full_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "600e386cb869bf223d9c7860d3101a2e7ca7912d"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/loss_shifted_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/loss_shifted_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "23e606ac566b7d808129782d494ea2820d90e4af"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/per_class_recall.csv",
+      "source_path": "outputs/comparison_5000_seed2/per_class_recall.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b184c6d0f9ade941fba9ce61120d320cbb39a565"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/random_duplicate_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/random_duplicate_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b01fd47e6184e1435fc5301ab317dba3eeae1938"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/real_only_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/real_only_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "933cb8fd588338b129cf2c81d0135c65a448619e"
+    },
+    {
+      "path": "results/synthesis/comparison_5000_seed2/uniform_ot_metrics.json",
+      "source_path": "outputs/comparison_5000_seed2/uniform_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "a22d453c234d2e513c8609cdef274be38304cfa3"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/baseline_metrics.json",
+      "source_path": "outputs/comparison_seed0/baseline_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "bb35ee6870ee720714cd8c79719a4f282a41f357"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/comparison.csv",
+      "source_path": "outputs/comparison_seed0/comparison.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "d904dcda2f1cc67706e3ee3fc4d4aace17f17d41"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/comparison.json",
+      "source_path": "outputs/comparison_seed0/comparison.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "8bb2c6a4298d2c77f32fe1156d3789beb6f5c5de"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/experiment_config.json",
+      "source_path": "outputs/comparison_seed0/experiment_config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b8bb3972fd147b568c74cbada88e386cc0fed839"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/full_ot_metrics.json",
+      "source_path": "outputs/comparison_seed0/full_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "17f5a731221ceac414b6d78e02c69e21240e9332"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/loss_shifted_ot_metrics.json",
+      "source_path": "outputs/comparison_seed0/loss_shifted_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "6c526db592038f37bbe76803ceffb89b2a613656"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/per_class_recall.csv",
+      "source_path": "outputs/comparison_seed0/per_class_recall.csv",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "a0a05c1b287f5f410fc79fbb6c0074a061e01631"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/random_duplicate_metrics.json",
+      "source_path": "outputs/comparison_seed0/random_duplicate_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "857d0246a831903e237fcd2e77c2d63142902471"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/real_only_metrics.json",
+      "source_path": "outputs/comparison_seed0/real_only_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "f15ec6493455302a110bd00b7eb3b8a682152859"
+    },
+    {
+      "path": "results/synthesis/comparison_seed0/uniform_ot_metrics.json",
+      "source_path": "outputs/comparison_seed0/uniform_ot_metrics.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "5cfb673995ece02cb65650c1729780573e99d1d8"
+    },
+    {
+      "path": "results/synthesis/baseline_seed0/config.json",
+      "source_path": "outputs/baseline_seed0/config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "b5c84a0ed76c97b2b966505debda86a443ef3a05"
+    },
+    {
+      "path": "results/synthesis/baseline_seed1/config.json",
+      "source_path": "outputs/baseline_seed1/config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "e1aa39c13ffdc0f578719a2c171974b5b33648fd"
+    },
+    {
+      "path": "results/synthesis/baseline_seed2/config.json",
+      "source_path": "outputs/baseline_seed2/config.json",
+      "source_branch": "hieu",
+      "source_commit": "30ac14ca302ab0e6698a88fe97ee371bef04cbb1",
+      "source_blob": "09fd7cc6499134eb54dd3bf010ef545b79b703bd"
+    }
+  ]
+}
