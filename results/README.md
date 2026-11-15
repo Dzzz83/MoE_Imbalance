@@ -4,6 +4,9 @@ These are copies of completed experiments from the source branches, imported
 into `integration/ot-methods`. They are not new evaluations of the merged code.
 Only evaluation reports and experiment configurations are included.
 
+For mean ± SD tables and figures across seeds 0, 1, 2, see the
+[paper report](paper/README.md). The imported source files below remain unchanged.
+
 ## Reweighting
 
 Source: [prototype-weighting-results](https://github.com/Dzzz83/MoE_Imbalance/tree/f39296984fc5b03ca844ac5578a387238efdc5a7),

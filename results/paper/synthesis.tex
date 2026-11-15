@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\caption{Synthesis results on CIFAR-100-LT (imbalance factor 0.01), using the cosine baseline. Values are mean $\pm$ sample SD over training seeds 0, 1, 2. Head/Medium/Tail are macro class recalls. Accuracy changes are computed within seed against this family's baseline and measured in percentage points (pp). Bold marks the highest mean within each column, not statistical significance.}
+\label{tab:ot-synthesis}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & Accuracy (\%) & Head (\%) & Medium (\%) & Tail (\%) & $\Delta$ accuracy (pp) \\
+\midrule
+Baseline & $38.66 \pm 1.04$ & $\boldsymbol{65.70 \pm 1.45}$ & $36.64 \pm 1.55$ & $9.46 \pm 0.12$ & --- \\
+Real-only continuation & $38.67 \pm 0.92$ & $65.69 \pm 1.30$ & $36.47 \pm 1.55$ & $9.73 \pm 0.21$ & $+0.02 \pm 0.13$ \\
+Random duplication & $\boldsymbol{41.02 \pm 0.85}$ & $64.26 \pm 0.99$ & $\boldsymbol{39.66 \pm 1.24}$ & $15.49 \pm 0.28$ & $\boldsymbol{+2.36 \pm 0.27}$ \\
+Uniform OT & $40.66 \pm 1.15$ & $64.34 \pm 1.24$ & $38.41 \pm 1.59$ & $\boldsymbol{15.64 \pm 0.56}$ & $+2.00 \pm 0.11$ \\
+Loss-shifted OT & $40.65 \pm 1.13$ & $64.35 \pm 1.22$ & $38.37 \pm 1.58$ & $\boldsymbol{15.64 \pm 0.56}$ & $+1.99 \pm 0.10$ \\
+Full guided OT & $40.54 \pm 1.06$ & $64.50 \pm 1.11$ & $38.06 \pm 1.67$ & $15.47 \pm 0.35$ & $+1.88 \pm 0.05$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
