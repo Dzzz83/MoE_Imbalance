@@ -39,6 +39,10 @@ COLUMNS = (
     ("tail_recall_percent", "Tail (%)"),
     ("accuracy_delta_pp", "Delta accuracy (pp)"),
 )
+CHARTS = {
+    "accuracy": ("accuracy_percent", "Overall accuracy (%)"),
+    "tail_accuracy": ("tail_recall_percent", "Tail accuracy (macro recall, %)"),
+}
 LEGACY_OUTPUTS = tuple(
     f"{metric}_improvement.{extension}"
     for metric in ("accuracy", "tail_recall")
@@ -186,11 +190,12 @@ def write_tables(family, summary, output):
     write_csv(output / f"{family}.csv", csv_rows)
 
 
-def plot_accuracy_bars(family, summary, output, accuracy_limit):
+def plot_metric_bars(family, summary, chart, output, upper_limit):
     import matplotlib.pyplot as plt
 
     methods = METHODS[family]
-    means = [summary[method]["accuracy_percent"]["mean"] for method, _ in methods]
+    key, axis_label = CHARTS[chart]
+    means = [summary[method][key]["mean"] for method, _ in methods]
     labels = [textwrap.fill(label, width=17, break_long_words=False) for _, label in methods]
     color = "#0072B2" if family == "reweighting" else "#007F5F"
     recipe = "warm-up/multistep baseline" if family == "reweighting" else "cosine baseline"
@@ -209,16 +214,19 @@ def plot_accuracy_bars(family, summary, output, accuracy_limit):
         for bar, mean in zip(bars, means, strict=True):
             ax.text(bar.get_x() + bar.get_width() / 2, mean + 0.6,
                     f"{mean:.2f}", ha="center", va="bottom", fontsize=9)
-        ax.set_title(f"{family.capitalize()} methods", loc="left", fontsize=13, pad=27)
+        title = f"{family.capitalize()} methods"
+        if chart == "tail_accuracy":
+            title += " — tail accuracy"
+        ax.set_title(title, loc="left", fontsize=13, pad=27)
         ax.text(0, 1.02, f"Mean across seeds 0, 1, 2 · {recipe}",
                 transform=ax.transAxes, fontsize=8, color="#444444")
-        ax.set_ylabel("Overall accuracy (%)")
+        ax.set_ylabel(axis_label)
         ax.set_xticks(range(len(methods)), labels)
         ax.tick_params(axis="x", length=0, pad=8, labelsize=8)
-        ax.set_ylim(0, accuracy_limit)
+        ax.set_ylim(0, upper_limit)
         ax.grid(axis="y", color="#DDDDDD", linewidth=0.5)
         ax.set_axisbelow(True)
-        fig.savefig(output / f"{family}_accuracy.png", dpi=300,
+        fig.savefig(output / f"{family}_{chart}.png", dpi=300,
                     facecolor="white", transparent=False)
         plt.close(fig)
 
@@ -233,15 +241,17 @@ def build_report(results_root, output, overwrite=False):
     import matplotlib
     matplotlib.use("Agg")
     output.mkdir(parents=True, exist_ok=True)
-    # Both charts start at zero and use the same upper bound for context.
-    largest_mean = max(
-        values["accuracy_percent"]["mean"]
-        for family_summary in summaries.values() for values in family_summary.values()
-    )
-    accuracy_limit = 5 * math.ceil((largest_mean + 2) / 5)
     for family in METHODS:
         write_tables(family, summaries[family], output)
-        plot_accuracy_bars(family, summaries[family], output, accuracy_limit)
+    for chart, (key, _) in CHARTS.items():
+        # Each outcome uses the same zero-based scale for both method families.
+        largest_mean = max(
+            values[key]["mean"]
+            for family_summary in summaries.values() for values in family_summary.values()
+        )
+        upper_limit = 5 * math.ceil((largest_mean + 2) / 5)
+        for family in METHODS:
+            plot_metric_bars(family, summaries[family], chart, output, upper_limit)
     if overwrite:
         # Remove only exports owned by the previous reporting script.
         for name in LEGACY_OUTPUTS:

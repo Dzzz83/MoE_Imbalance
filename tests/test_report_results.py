@@ -95,14 +95,14 @@ def test_report_exports_only_tables_and_pngs_and_preserves_unrelated_files(tmp_p
     (tmp_path / "keep.txt").write_text("unrelated")
     chart_limits = []
 
-    def save_chart(family, summary, output, accuracy_limit):
-        chart_limits.append(accuracy_limit)
-        (output / f"{family}_accuracy.png").write_bytes(b"chart")
+    def save_chart(family, summary, chart, output, upper_limit):
+        chart_limits.append((chart, upper_limit))
+        (output / f"{family}_{chart}.png").write_bytes(b"chart")
 
-    monkeypatch.setattr(report, "plot_accuracy_bars", save_chart)
+    monkeypatch.setattr(report, "plot_metric_bars", save_chart)
     report.build_report(root, tmp_path, overwrite=True)
     expected = {f"{family}.{extension}" for family in report.METHODS for extension in ("md", "tex", "csv")}
-    expected |= {f"{family}_accuracy.png" for family in report.METHODS} | {"keep.txt"}
+    expected |= {f"{family}_{chart}.png" for family in report.METHODS for chart in ("accuracy", "tail_accuracy")} | {"keep.txt"}
     assert {path.name for path in tmp_path.iterdir()} == expected
     assert (tmp_path / "keep.txt").read_text() == "unrelated"
-    assert chart_limits == [45, 45]
+    assert chart_limits == [("accuracy", 45), ("accuracy", 45), ("tail_accuracy", 20), ("tail_accuracy", 20)]

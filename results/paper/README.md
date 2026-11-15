@@ -44,8 +44,23 @@ training seeds 0, 1, and 2. The baseline uses the
 cosine recipe. Numbers above the bars are mean accuracy in percent.
 Gray marks the baseline; green marks the classifier continuations and controls.
 
-Both charts use the same zero-based accuracy axis, currently 0–45%. They include
-all six methods in each family. There are no individual seed markers or legends;
+These overall-accuracy charts use the same zero-based axis, currently 0–45%.
+
+![Mean macro tail recall for the baseline and five reweighting continuations. Class-balanced, cluster-balanced, and prototype Sinkhorn weighting have the highest mean tail accuracy in these runs.](reweighting_tail_accuracy.png)
+
+**Figure 3. Reweighting tail accuracy.** Bars show mean macro Tail recall across
+training seeds 0, 1, and 2. Tail classes have fewer than 20 retained training
+images. Recall is averaged equally across these classes, then across seeds.
+The baseline uses the warm-up/multistep recipe.
+
+![Mean macro tail recall for the synthesis baseline and five comparison methods. Uniform OT and loss-shifted OT have the highest mean tail accuracy in these runs.](synthesis_tail_accuracy.png)
+
+**Figure 4. Synthesis tail accuracy.** Bars show mean macro Tail recall across
+training seeds 0, 1, and 2, using the same class definition and averaging as
+Figure 3. The baseline uses the cosine recipe. Both tail-accuracy charts use
+the same zero-based axis, currently 0–20%.
+
+All four charts include all six methods in each family. There are no individual seed markers or legends;
 method labels identify every bar. Small differences are easier to read precisely
 in the accompanying tables. The charts show means only; variability across
 training seeds remains available as sample SD in the tables.
@@ -82,7 +97,7 @@ python -m pip install -e '.[reporting]'
 python scripts/report_results.py
 ```
 
-The script generates only the two tables (Markdown, LaTeX, CSV) and two PNG
+The script generates only the two tables (Markdown, LaTeX, CSV) and four PNG
 bar charts. An existing report directory is protected; regenerate with:
 
 ```bash
