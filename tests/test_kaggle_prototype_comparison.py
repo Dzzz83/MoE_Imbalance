@@ -86,7 +86,7 @@ def test_remaining_seeds_use_matched_baselines_and_preserve_seed_zero(tmp_path, 
     )
     for seed in (1, 2):
         kaggle.run_comparison(seed, tmp_path / "train.npz", tmp_path / "raw", {}, {})
-        seed_calls = calls[-5:]
+        seed_calls = calls[-(len(kaggle.MODES) + 1):]
         assert [name for name, _ in seed_calls] == [
             f"{mode}_seed{seed}" for mode in ("baseline", *kaggle.MODES)
         ]
@@ -135,3 +135,51 @@ def test_sava_only_reuses_completed_runs_and_preserves_previous_summary(tmp_path
     assert set(summary) == {"baseline", "sava"}
     manifest = json.loads((kaggle.STATE_ROOT / "experiment_sava_seed1.json").read_text())
     assert manifest["modes"] == ["sava"]
+
+
+def test_synthesis_uses_matched_baseline_and_resumes_stages(tmp_path, monkeypatch):
+    monkeypatch.setattr(kaggle, "STATE_ROOT", tmp_path / "results")
+    # Read the real recipes, but do not train, access Kaggle, or push results.
+    monkeypatch.setattr(kaggle, "CODE_ROOT", Path(__file__).resolve().parents[1])
+    monkeypatch.setattr(kaggle, "BASELINE_CHECKPOINTS", {})
+    baseline = kaggle.STATE_ROOT / "runs/baseline_seed2"
+    baseline.mkdir(parents=True)
+    (baseline / "final.pt").write_bytes(b"checkpoint")
+    monkeypatch.setattr(kaggle, "prepare_baseline", lambda *args: baseline)
+    monkeypatch.setattr(kaggle, "push_state", lambda *args: None)
+    calls = []
+    temporary_directory = kaggle.tempfile.TemporaryDirectory
+    monkeypatch.setattr(
+        kaggle.tempfile, "TemporaryDirectory",
+        lambda **kwargs: temporary_directory(dir=tmp_path),
+    )
+
+    def execute(command, **kwargs):
+        calls.append(command)
+        module = command[2]
+        if module == "pipeline.extract_features":
+            assert Path(command[command.index("--checkpoint") + 1]) == baseline / "final.pt"
+            Path(command[command.index("--output") + 1]).write_bytes(b"cache")
+        else:
+            assert "--resume" in command
+            config = json.loads(Path(command[command.index("--config") + 1]).read_text())
+            assert config["seed"] == 2
+            assert config["feature_cache"] == str(baseline / "train_features.pt")
+            if module == "pipeline.train_classifier":
+                assert config["pretrained_checkpoint"] == str(baseline / "final.pt")
+                assert config["synthetic_features"] == str(
+                    kaggle.STATE_ROOT / "synthesis_seed2/synthetic_features.pt"
+                )
+
+    monkeypatch.setattr(kaggle, "run", execute)
+    monkeypatch.setattr(kaggle, "evaluate_run", lambda *args: {"accuracy": 0.4})
+    prepared = tmp_path / "train.npz"
+    first = kaggle.run_synthesis(2, prepared, tmp_path / "raw", {}, {})
+    second = kaggle.run_synthesis(2, prepared, tmp_path / "raw", {}, {})
+    assert first == second == {"baseline": {"accuracy": 0.4}, "synthetic": {"accuracy": 0.4}}
+    assert [command[2] for command in calls].count("pipeline.extract_features") == 1
+    assert [command[2] for command in calls].count("pipeline.methods.synthesis") == 2
+    assert [command[2] for command in calls].count("pipeline.train_classifier") == 2
+    monkeypatch.setattr(kaggle, "SOURCE_COMMIT", "different-implementation")
+    with pytest.raises(RuntimeError, match="configuration differs"):
+        kaggle.run_synthesis(2, prepared, tmp_path / "raw", {}, {})

@@ -1,4 +1,4 @@
-"""Paste into a Kaggle notebook cell to run SAVA for three completed baselines."""
+"""Paste into Kaggle to compare OT reweighting and feature synthesis."""
 
 import json
 import os
@@ -10,23 +10,24 @@ import tempfile
 
 
 REPOSITORY = "https://github.com/Dzzz83/MoE_Imbalance.git"
-SOURCE_COMMIT = "591869f6d371c6b0eee3c6b0327d9de0744b7979"
-RESULTS_BRANCH = "prototype-weighting-results"
+SOURCE_COMMIT = "01840f81d159ecdfd09659fcb5b4984e0fc141fc"
+RESULTS_BRANCH = "ot-methods-results"
 GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
-CODE_ROOT = Path("/kaggle/working/prototype-code")
-STATE_ROOT = Path("/kaggle/working/prototype-results")
-DATA_ROOT = Path("/kaggle/working/prototype-data")
+CODE_ROOT = Path("/kaggle/working/ot-methods-code")
+STATE_ROOT = Path("/kaggle/working/ot-methods-results")
+DATA_ROOT = Path("/kaggle/working/ot-methods-data")
 RAW_CIFAR_ROOT = Path("/kaggle/input/datasets/dzzz833/cifar100")
 TRAINING_SEEDS = (0, 1, 2)
-# Reuse the three saved baselines and train only the fifth candidate.
-# Set False to run the original four-candidate comparison instead.
-SAVA_ONLY = True
+# Choose "reweighting", "synthesis", or "both". Both paths share each baseline.
+EXPERIMENT_PATH = "both"
+# Optional shortcut to run only SAVA within the reweighting path.
+SAVA_ONLY = False
 # Optional seed -> attached baseline checkpoint path. Each must match that seed
 # and the pinned baseline recipe and retained pool.
 BASELINE_CHECKPOINTS = {}
-MODES = ("uniform", "class_balanced", "cluster_balanced", "sinkhorn")
+MODES = ("uniform", "class_balanced", "cluster_balanced", "sinkhorn", "sava")
 
 
 def run(command, cwd=None, env=None, capture=False):
@@ -112,10 +113,7 @@ def prepare_data(training_env):
 
 def train_run(name, config, auth_env, training_env):
     output_dir = STATE_ROOT / "runs" / name
-    saved_config = STATE_ROOT / "configs" / f"{name}.json"
-    if saved_config.exists() and json.loads(saved_config.read_text()) != config:
-        raise RuntimeError(f"Saved configuration differs for {name}")
-    write_json(saved_config, config)
+    saved_config = save_stage_config(name, config)
     if not (output_dir / "final.pt").exists():
         # Keep unfinished attempts outside the result repository. A fresh attempt
         # starts from the source checkpoint because the pipeline has no epoch resume.
@@ -129,26 +127,8 @@ def train_run(name, config, auth_env, training_env):
     return output_dir
 
 
-def run_comparison(seed, prepared, raw_root, auth_env, training_env):
-    modes = ("sava",) if SAVA_ONLY else MODES
-    suffix = f"_sava_seed{seed}" if SAVA_ONLY else ("" if seed == 0 else f"_seed{seed}")
-    if SAVA_ONLY:
-        if not (CODE_ROOT / "configs/sava_finetuning.json").is_file():
-            raise RuntimeError("Pin SOURCE_COMMIT to a published SAVA implementation commit")
-        if not (STATE_ROOT / "runs" / f"baseline_seed{seed}" / "final.pt").is_file():
-            raise RuntimeError(f"SAVA requires the completed baseline for seed {seed}")
+def prepare_baseline(seed, prepared, auth_env, training_env):
     baseline_checkpoint = BASELINE_CHECKPOINTS.get(seed)
-    manifest = {
-        "source_commit": SOURCE_COMMIT, "seed": seed, "data_seed": 42,
-        "imbalance_factor": 0.01, "modes": list(modes),
-        "baseline_input": str(baseline_checkpoint) if baseline_checkpoint else None,
-        "runner_version": 1,
-    }
-    manifest_path = STATE_ROOT / f"experiment{suffix}.json"
-    if manifest_path.exists() and json.loads(manifest_path.read_text()) != manifest:
-        raise RuntimeError("Experiment settings changed; choose a new RESULTS_BRANCH and STATE_ROOT")
-    write_json(manifest_path, manifest)
-    push_state("initialize prototype comparison", auth_env)
     baseline_config = json.loads((CODE_ROOT / "configs/baseline.json").read_text())
     baseline_config.update(train_data=str(prepared), num_workers=2, seed=seed)
     if baseline_checkpoint is not None:
@@ -177,6 +157,30 @@ def run_comparison(seed, prepared, raw_root, auth_env, training_env):
         push_state("save attached baseline", auth_env)
     else:
         destination = train_run(f"baseline_seed{seed}", baseline_config, auth_env, training_env)
+    return destination
+
+
+def run_comparison(seed, prepared, raw_root, auth_env, training_env):
+    modes = ("sava",) if SAVA_ONLY else MODES
+    suffix = f"_sava_seed{seed}" if SAVA_ONLY else ("" if seed == 0 else f"_seed{seed}")
+    if SAVA_ONLY:
+        if not (CODE_ROOT / "configs/sava_finetuning.json").is_file():
+            raise RuntimeError("Pin SOURCE_COMMIT to a published SAVA implementation commit")
+        if not (STATE_ROOT / "runs" / f"baseline_seed{seed}" / "final.pt").is_file():
+            raise RuntimeError(f"SAVA requires the completed baseline for seed {seed}")
+    baseline_checkpoint = BASELINE_CHECKPOINTS.get(seed)
+    manifest = {
+        "source_commit": SOURCE_COMMIT, "seed": seed, "data_seed": 42,
+        "imbalance_factor": 0.01, "modes": list(modes),
+        "baseline_input": str(baseline_checkpoint) if baseline_checkpoint else None,
+        "runner_version": 1,
+    }
+    manifest_path = STATE_ROOT / f"experiment{suffix}.json"
+    if manifest_path.exists() and json.loads(manifest_path.read_text()) != manifest:
+        raise RuntimeError("Experiment settings changed; choose a new RESULTS_BRANCH and STATE_ROOT")
+    write_json(manifest_path, manifest)
+    push_state("initialize prototype comparison", auth_env)
+    destination = prepare_baseline(seed, prepared, auth_env, training_env)
     runs = {"baseline": destination}
     for mode in modes:
         config = json.loads((CODE_ROOT / "configs" / f"{mode}_finetuning.json").read_text())
@@ -185,24 +189,85 @@ def run_comparison(seed, prepared, raw_root, auth_env, training_env):
         runs[mode] = train_run(f"{mode}_seed{seed}", config, auth_env, training_env)
     summary = {}
     for mode, output_dir in runs.items():
-        metrics = output_dir / "metrics.json"
-        if not metrics.exists():
-            with tempfile.TemporaryDirectory(dir="/kaggle/working") as temporary_dir:
-                pending_metrics = Path(temporary_dir) / "metrics.json"
-                run([sys.executable, "-m", "pipeline.evaluate",
-                     "--checkpoint", output_dir / "final.pt",
-                     "--data-root", raw_root, "--output", pending_metrics, "--device", "cuda",
-                     "--num-workers", "2", "--download"], cwd=CODE_ROOT, env=training_env)
-                json.loads(pending_metrics.read_text())
-                pending_metrics.replace(metrics)
-        summary[mode] = json.loads(metrics.read_text())
-        push_state(f"evaluate {mode}", auth_env)
+        summary[mode] = evaluate_run(mode, output_dir, raw_root, auth_env, training_env)
     write_json(STATE_ROOT / f"comparison{suffix}.json", summary)
     push_state(f"save seed {seed} prototype comparison summary", auth_env)
     print(json.dumps(summary, indent=2))
+    return summary
+
+
+def evaluate_run(name, output_dir, raw_root, auth_env, training_env):
+    metrics = output_dir / "metrics.json"
+    if not metrics.exists():
+        with tempfile.TemporaryDirectory(dir="/kaggle/working") as temporary_dir:
+            pending_metrics = Path(temporary_dir) / "metrics.json"
+            run([sys.executable, "-m", "pipeline.evaluate",
+                 "--checkpoint", output_dir / "final.pt",
+                 "--data-root", raw_root, "--output", pending_metrics, "--device", "cuda",
+                 "--num-workers", "2", "--download"], cwd=CODE_ROOT, env=training_env)
+            json.loads(pending_metrics.read_text())
+            pending_metrics.replace(metrics)
+    push_state(f"evaluate {name}", auth_env)
+    return json.loads(metrics.read_text())
+
+
+def save_stage_config(name, config):
+    path = STATE_ROOT / "configs" / f"{name}.json"
+    if path.exists() and json.loads(path.read_text()) != config:
+        raise RuntimeError(f"Saved configuration differs for {name}")
+    write_json(path, config)
+    return path
+
+
+def run_synthesis(seed, prepared, raw_root, auth_env, training_env):
+    save_stage_config(f"experiment_synthesis_seed{seed}", {
+        "source_commit": SOURCE_COMMIT, "seed": seed, "data_seed": 42,
+        "imbalance_factor": 0.01,
+        "baseline_input": str(BASELINE_CHECKPOINTS[seed]) if seed in BASELINE_CHECKPOINTS else None,
+    })
+    baseline = prepare_baseline(seed, prepared, auth_env, training_env)
+    checkpoint = baseline / "final.pt"
+    cache = baseline / "train_features.pt"
+    if not cache.exists():
+        with tempfile.TemporaryDirectory(dir="/kaggle/working") as temporary_dir:
+            pending_cache = Path(temporary_dir) / "train_features.pt"
+            run([sys.executable, "-m", "pipeline.extract_features",
+                 "--checkpoint", checkpoint, "--train-data", prepared,
+                 "--output", pending_cache, "--device", "cuda", "--num-workers", "2"],
+                cwd=CODE_ROOT, env=training_env)
+            pending_cache.replace(cache)
+        push_state(f"save seed {seed} training features", auth_env)
+    generation_dir = STATE_ROOT / f"synthesis_seed{seed}"
+    generation = json.loads((CODE_ROOT / "configs/synthesis_final.json").read_text())
+    generation.update(feature_cache=str(cache), output_dir=str(generation_dir), seed=seed)
+    generation_config = save_stage_config(f"synthesis_seed{seed}", generation)
+    # Generation resumes per class and verifies the cache, seed, and recipe.
+    run([sys.executable, "-m", "pipeline.methods.synthesis", "--config", generation_config,
+         "--device", "cuda", "--resume"], cwd=CODE_ROOT, env=training_env)
+    push_state(f"save seed {seed} synthetic features", auth_env)
+    output_dir = STATE_ROOT / "runs" / f"synthetic_seed{seed}"
+    classifier = json.loads((CODE_ROOT / "configs/classifier_synthesis.json").read_text())
+    classifier.update(pretrained_checkpoint=str(checkpoint), feature_cache=str(cache),
+                      synthetic_features=str(generation_dir / "synthetic_features.pt"),
+                      output_dir=str(output_dir), seed=seed, num_workers=0,
+                      target_count=generation["method_options"]["target_count"])
+    classifier_config = save_stage_config(f"synthetic_seed{seed}", classifier)
+    # The synthesis classifier resumes at epoch boundaries, including RNG state.
+    run([sys.executable, "-m", "pipeline.train_classifier", "--config", classifier_config,
+         "--device", "cuda", "--resume"], cwd=CODE_ROOT, env=training_env)
+    push_state(f"save seed {seed} synthetic classifier", auth_env)
+    summary = {
+        name: evaluate_run(name, path, raw_root, auth_env, training_env)
+        for name, path in (("baseline", baseline), ("synthetic", output_dir))
+    }
+    write_json(STATE_ROOT / f"comparison_synthesis_seed{seed}.json", summary)
+    push_state(f"save seed {seed} synthesis comparison", auth_env)
+    return summary
 
 
 def main():
+    if EXPERIMENT_PATH not in {"reweighting", "synthesis", "both"}:
+        raise ValueError("EXPERIMENT_PATH must be reweighting, synthesis, or both")
     from kaggle_secrets import UserSecretsClient
 
     token = UserSecretsClient().get_secret("GITHUB_TOKEN")
@@ -233,7 +298,13 @@ def main():
             cwd=CODE_ROOT, env=training_env)
         prepared, raw_root = prepare_data(training_env)
         for seed in TRAINING_SEEDS:
-            run_comparison(seed, prepared, raw_root, auth_env, training_env)
+            summary = {}
+            if EXPERIMENT_PATH in {"reweighting", "both"}:
+                summary.update(run_comparison(seed, prepared, raw_root, auth_env, training_env))
+            if EXPERIMENT_PATH in {"synthesis", "both"}:
+                summary.update(run_synthesis(seed, prepared, raw_root, auth_env, training_env))
+            write_json(STATE_ROOT / f"comparison_ot_seed{seed}.json", summary)
+            push_state(f"save seed {seed} OT methods comparison", auth_env)
 
 
 if __name__ == "__main__":
