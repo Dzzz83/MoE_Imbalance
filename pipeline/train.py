@@ -11,6 +11,7 @@ from pipeline.runtime import resolve_device, save_checkpoint, seed_everything, w
 
 # A method supplies its training function and its own option preparation function.
 METHODS = {
+    "sava_finetuning": (finetuning.train_sava, finetuning.prepare_sava_options),
     "baseline": (baseline.train, baseline.prepare_method_options),
     "reweighting": (reweighting.train, reweighting.prepare_method_options),
     "uniform_finetuning": (finetuning.train_uniform, finetuning.prepare_uniform_options),

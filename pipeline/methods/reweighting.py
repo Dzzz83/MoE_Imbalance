@@ -398,8 +398,12 @@ def train_classifier(
         example_scores = _initialize_example_scores(len(labels), device, dtype=cost.dtype)
         score_optimizer = _make_score_optimizer(example_scores, options["score_learning_rate"])
     elif weight_builder is not None:
-        weights, class_diagnostics = weight_builder(raw_features, labels, config, device)
-        write_json(output_dir / "prototype_weight_diagnostics.json", class_diagnostics)
+        weights, weight_diagnostics = weight_builder(raw_features, labels, config, device)
+        diagnostic_name = (
+            "sava_weight_diagnostics.json" if config["method"] == "sava_finetuning"
+            else "prototype_weight_diagnostics.json"
+        )
+        write_json(output_dir / diagnostic_name, weight_diagnostics)
     else:
         weights = torch.full((len(labels),), 1 / len(labels), device=device, dtype=raw_features.dtype)
     classifier_options = options["classifier"]

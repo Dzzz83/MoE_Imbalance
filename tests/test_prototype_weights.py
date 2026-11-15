@@ -55,7 +55,7 @@ def test_sinkhorn_changes_row_weights_and_rejects_unconverged_plan():
         prototype_weights._relaxed_sinkhorn(cost, sinkhorn_iterations=1, **options)
 
 
-@pytest.mark.parametrize("mode", ["class_balanced", "cluster_balanced", "sinkhorn"])
+@pytest.mark.parametrize("mode", ["class_balanced", "cluster_balanced", "sinkhorn", "sava"])
 def test_prototype_finetuning_config_and_checkpoint(tmp_path, all_class_training_data, mode):
     config_dir = Path(__file__).resolve().parents[1] / "configs"
     uniform = train.resolve_config(json.loads((config_dir / "uniform_finetuning.json").read_text()))
@@ -65,7 +65,11 @@ def test_prototype_finetuning_config_and_checkpoint(tmp_path, all_class_training
     options = config["method_options"]
     for key in ("classifier", "pretrained_checkpoint"):
         assert options[key] == uniform["method_options"][key]
-    assert options["weighting"] == mode
+    if mode != "sava":
+        assert options["weighting"] == mode
+    else:
+        options["sava"]["reference_per_class"] = 1
+        options["sava"]["scoring_batch_size"] = 64
 
     data_path = tmp_path / "train.npz"
     save_training_data(data_path, all_class_training_data)
@@ -84,5 +88,6 @@ def test_prototype_finetuning_config_and_checkpoint(tmp_path, all_class_training
         torch.testing.assert_close(value, final_model.backbone.state_dict()[name], rtol=0, atol=0)
     history = json.loads((output_dir / "history.json").read_text())
     assert history[0]["classifier_parameter_delta_l2"] > 0
-    diagnostics = json.loads((output_dir / "prototype_finetuning_diagnostics.json").read_text())
+    diagnostic_file = "sava_finetuning_diagnostics.json" if mode == "sava" else "prototype_finetuning_diagnostics.json"
+    diagnostics = json.loads((output_dir / diagnostic_file).read_text())
     assert diagnostics[0]["class_weight_masses"] == pytest.approx([0.01] * 100)

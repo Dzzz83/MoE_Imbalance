@@ -2,7 +2,19 @@
 
 import torch
 
-from pipeline.methods import baseline, prototype_weights, reweighting
+from pipeline.methods import baseline, prototype_weights, reweighting, sava_weights
+
+
+def prepare_sava_options(options):
+    shared = {name: value for name, value in options.items() if name != "sava"}
+    return _prepare_options(shared, use_ot=False) | {
+        "sava": sava_weights.prepare_options(options.get("sava", {})),
+    }
+
+
+def train_sava(model, train_data, config, output_dir, device):
+    return _train(model, train_data, config, output_dir, device,
+                  use_ot=False, weight_builder=sava_weights.build_weights)
 
 
 def _prepare_options(options, *, use_ot):

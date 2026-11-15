@@ -128,6 +128,76 @@ Use the same prepared pool and a matched baseline checkpoint for each training
 seed. Compare Sinkhorn directly with cluster-balanced weighting to isolate the
 effect of the transport solve.
 
+### Kaggle execution
+
+Paste `scripts/kaggle_prototype_comparison.py` into a notebook cell with GPU and
+Internet enabled and the `GITHUB_TOKEN` secret available to that notebook.
+The token needs write access to this repository. Attach the CIFAR dataset at
+the configured `RAW_CIFAR_ROOT`, or allow the runner to download it.
+
+The runner pins source commit `7ff1eda`, uses GPU 0, and writes checkpoints,
+configs, histories, diagnostics, and metrics to the separate
+`prototype-weighting-results` branch after each completed run. It trains the
+200-epoch baseline followed by the four 40-epoch classifier continuations for
+each seed in `TRAINING_SEEDS`, now `(1, 2)`. Data preparation keeps seed `42`.
+Each continuation uses the baseline trained with its own seed. Optionally set
+`BASELINE_CHECKPOINTS = {1: "/kaggle/input/.../final.pt"}` to reuse an attached
+compatible baseline for that seed.
+
+The existing seed-0 results and `comparison.json` remain intact. New runs use
+seed-specific directories, `experiment_seed1.json` / `experiment_seed2.json`,
+and `comparison_seed1.json` / `comparison_seed2.json`. To run one seed per
+Kaggle session, set `TRAINING_SEEDS = (1,)` or `(2,)`.
+
+Rerunning restores completed checkpoints from that branch. An interrupted
+training run starts again from its input checkpoint. Epoch-level resume is
+unavailable. Use one active notebook per results branch, and keep its paths and
+experiment settings fixed across sessions. The runner stops on a push failure
+and retains local results for retry.
+
+### SAVA-inspired fifth candidate
+
+`configs/sava_finetuning.json` loads a matched baseline and uses the same frozen
+backbone, deterministic feature cache, 40-epoch classifier schedule, and weighted
+loss as the other continuations. This is an adaptation, not a reproduction of
+the previous pixel/OTDD SAVA implementation.
+
+Scoring uses normalized backbone features with cost `1 - cosine_similarity`
+plus a label-disagreement cost of 1. Five retained images per class form a
+balanced reference, selected with reference seed 42. They remain training
+images; reference overlap is intentional and is recorded for inspection.
+Training seed controls reproducibly shuffled scoring batches. Balanced chunks
+of approximately the configured size (256 by default) avoid singleton batches.
+For size 2 with an odd population, one chunk contains three rows.
+Within each batch pair, balanced
+entropy-regularized OT yields centered source dual potentials, calibrated by
+`batch_size / (batch_size - 1)`. A second OT solve combines batch pairs using
+their sizes as masses; its costs are divided by the maximum batch cost and its
+row-conditional transport probabilities aggregate the calibrated potentials.
+Both solves use epsilon 0.1, at most 1000 iterations, and relative marginal
+tolerance 0.001. Failed convergence stops training.
+
+Scores are centered and divided by their population standard deviation within
+each class (scale floor `1e-12`). Softmax of negative standardized scores with
+temperature 1 gives within-class weights; every class receives total mass
+1/100. Equal scores recover class-balanced weighting. These defaults have not
+been selected for test accuracy. Any performance-based parameter selection must
+use a separate training-only development procedure with held-out development
+images excluded from scoring references, before freezing the final recipe.
+
+`sava_weight_diagnostics.json` saves reference positions, scores and weights in
+retained-array order, per-class score variation and weight ranges, reference
+versus non-reference mean weights, and solver convergence. The shared history
+also records effective sample size and classifier parameter changes.
+
+For Kaggle, publish the implementation first, set the runner's `SOURCE_COMMIT`
+to that exact commit, set `SAVA_ONLY = True`, and `TRAINING_SEEDS = (0, 1, 2)`.
+The runner requires all three existing baseline checkpoints and refuses the old
+source commit without the SAVA config. It reuses completed baselines and writes
+`sava_seedN` runs, `experiment_sava_seedN.json`, and
+`comparison_sava_seedN.json`, preserving all previous summaries. Run a small GPU
+scoring pilot to check memory and runtime before launching the full comparison.
+
 ## Defaults and their sources
 
 | Component | Defaults | Source and rationale |
