@@ -1,0 +1,11 @@
+{
+  "source_commit": "591869f6d371c6b0eee3c6b0327d9de0744b7979",
+  "seed": 2,
+  "data_seed": 42,
+  "imbalance_factor": 0.01,
+  "modes": [
+    "sava"
+  ],
+  "baseline_input": null,
+  "runner_version": 1
+}
