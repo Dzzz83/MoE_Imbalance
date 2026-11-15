@@ -1,0 +1,830 @@
+[
+  {
+    "class_index": 0,
+    "cluster_sizes": [
+      162,
+      338
+    ],
+    "minimum_weight_multiplier": 0.7396450042724609,
+    "maximum_weight_multiplier": 1.5432099103927612
+  },
+  {
+    "class_index": 1,
+    "cluster_sizes": [
+      236,
+      241
+    ],
+    "minimum_weight_multiplier": 0.9896265864372253,
+    "maximum_weight_multiplier": 1.0105931758880615
+  },
+  {
+    "class_index": 2,
+    "cluster_sizes": [
+      266,
+      189
+    ],
+    "minimum_weight_multiplier": 0.8552631735801697,
+    "maximum_weight_multiplier": 1.2037036418914795
+  },
+  {
+    "class_index": 3,
+    "cluster_sizes": [
+      237,
+      197
+    ],
+    "minimum_weight_multiplier": 0.915611743927002,
+    "maximum_weight_multiplier": 1.1015228033065796
+  },
+  {
+    "class_index": 4,
+    "cluster_sizes": [
+      268,
+      147
+    ],
+    "minimum_weight_multiplier": 0.7742537260055542,
+    "maximum_weight_multiplier": 1.411564588546753
+  },
+  {
+    "class_index": 5,
+    "cluster_sizes": [
+      226,
+      170
+    ],
+    "minimum_weight_multiplier": 0.8761062026023865,
+    "maximum_weight_multiplier": 1.1647058725357056
+  },
+  {
+    "class_index": 6,
+    "cluster_sizes": [
+      212,
+      166
+    ],
+    "minimum_weight_multiplier": 0.891509473323822,
+    "maximum_weight_multiplier": 1.1385542154312134
+  },
+  {
+    "class_index": 7,
+    "cluster_sizes": [
+      178,
+      183
+    ],
+    "minimum_weight_multiplier": 0.9863387942314148,
+    "maximum_weight_multiplier": 1.014045000076294
+  },
+  {
+    "class_index": 8,
+    "cluster_sizes": [
+      153,
+      191
+    ],
+    "minimum_weight_multiplier": 0.9005235433578491,
+    "maximum_weight_multiplier": 1.1241830587387085
+  },
+  {
+    "class_index": 9,
+    "cluster_sizes": [
+      206,
+      122
+    ],
+    "minimum_weight_multiplier": 0.7961165308952332,
+    "maximum_weight_multiplier": 1.3442622423171997
+  },
+  {
+    "class_index": 10,
+    "cluster_sizes": [
+      164,
+      150
+    ],
+    "minimum_weight_multiplier": 0.957317054271698,
+    "maximum_weight_multiplier": 1.0466667413711548
+  },
+  {
+    "class_index": 11,
+    "cluster_sizes": [
+      114,
+      185
+    ],
+    "minimum_weight_multiplier": 0.8081081509590149,
+    "maximum_weight_multiplier": 1.311403512954712
+  },
+  {
+    "class_index": 12,
+    "cluster_sizes": [
+      158,
+      128
+    ],
+    "minimum_weight_multiplier": 0.9050633311271667,
+    "maximum_weight_multiplier": 1.1171875
+  },
+  {
+    "class_index": 13,
+    "cluster_sizes": [
+      118,
+      155
+    ],
+    "minimum_weight_multiplier": 0.8806451559066772,
+    "maximum_weight_multiplier": 1.1567796468734741
+  },
+  {
+    "class_index": 14,
+    "cluster_sizes": [
+      148,
+      112
+    ],
+    "minimum_weight_multiplier": 0.8783783912658691,
+    "maximum_weight_multiplier": 1.1607143878936768
+  },
+  {
+    "class_index": 15,
+    "cluster_sizes": [
+      118,
+      130
+    ],
+    "minimum_weight_multiplier": 0.9538461565971375,
+    "maximum_weight_multiplier": 1.0508474111557007
+  },
+  {
+    "class_index": 16,
+    "cluster_sizes": [
+      90,
+      147
+    ],
+    "minimum_weight_multiplier": 0.8061224222183228,
+    "maximum_weight_multiplier": 1.3166667222976685
+  },
+  {
+    "class_index": 17,
+    "cluster_sizes": [
+      102,
+      124
+    ],
+    "minimum_weight_multiplier": 0.9112902879714966,
+    "maximum_weight_multiplier": 1.1078431606292725
+  },
+  {
+    "class_index": 18,
+    "cluster_sizes": [
+      122,
+      94
+    ],
+    "minimum_weight_multiplier": 0.8852458596229553,
+    "maximum_weight_multiplier": 1.148936152458191
+  },
+  {
+    "class_index": 19,
+    "cluster_sizes": [
+      105,
+      101
+    ],
+    "minimum_weight_multiplier": 0.9809524416923523,
+    "maximum_weight_multiplier": 1.0198019742965698
+  },
+  {
+    "class_index": 20,
+    "cluster_sizes": [
+      91,
+      106
+    ],
+    "minimum_weight_multiplier": 0.9292452931404114,
+    "maximum_weight_multiplier": 1.082417607307434
+  },
+  {
+    "class_index": 21,
+    "cluster_sizes": [
+      96,
+      92
+    ],
+    "minimum_weight_multiplier": 0.9791666865348816,
+    "maximum_weight_multiplier": 1.02173912525177
+  },
+  {
+    "class_index": 22,
+    "cluster_sizes": [
+      104,
+      75
+    ],
+    "minimum_weight_multiplier": 0.8605769276618958,
+    "maximum_weight_multiplier": 1.193333387374878
+  },
+  {
+    "class_index": 23,
+    "cluster_sizes": [
+      51,
+      120
+    ],
+    "minimum_weight_multiplier": 0.7125000357627869,
+    "maximum_weight_multiplier": 1.6764706373214722
+  },
+  {
+    "class_index": 24,
+    "cluster_sizes": [
+      101,
+      62
+    ],
+    "minimum_weight_multiplier": 0.806930661201477,
+    "maximum_weight_multiplier": 1.3145160675048828
+  },
+  {
+    "class_index": 25,
+    "cluster_sizes": [
+      83,
+      73
+    ],
+    "minimum_weight_multiplier": 0.9397590160369873,
+    "maximum_weight_multiplier": 1.068493127822876
+  },
+  {
+    "class_index": 26,
+    "cluster_sizes": [
+      80,
+      69
+    ],
+    "minimum_weight_multiplier": 0.9312500357627869,
+    "maximum_weight_multiplier": 1.0797101259231567
+  },
+  {
+    "class_index": 27,
+    "cluster_sizes": [
+      67,
+      75
+    ],
+    "minimum_weight_multiplier": 0.9466667175292969,
+    "maximum_weight_multiplier": 1.0597014427185059
+  },
+  {
+    "class_index": 28,
+    "cluster_sizes": [
+      61,
+      74
+    ],
+    "minimum_weight_multiplier": 0.912162184715271,
+    "maximum_weight_multiplier": 1.1065573692321777
+  },
+  {
+    "class_index": 29,
+    "cluster_sizes": [
+      67,
+      62
+    ],
+    "minimum_weight_multiplier": 0.9626865386962891,
+    "maximum_weight_multiplier": 1.0403225421905518
+  },
+  {
+    "class_index": 30,
+    "cluster_sizes": [
+      28,
+      95
+    ],
+    "minimum_weight_multiplier": 0.6473684310913086,
+    "maximum_weight_multiplier": 2.1964287757873535
+  },
+  {
+    "class_index": 31,
+    "cluster_sizes": [
+      40,
+      78
+    ],
+    "minimum_weight_multiplier": 0.7564102411270142,
+    "maximum_weight_multiplier": 1.475000023841858
+  },
+  {
+    "class_index": 32,
+    "cluster_sizes": [
+      59,
+      53
+    ],
+    "minimum_weight_multiplier": 0.9491525292396545,
+    "maximum_weight_multiplier": 1.0566037893295288
+  },
+  {
+    "class_index": 33,
+    "cluster_sizes": [
+      53,
+      54
+    ],
+    "minimum_weight_multiplier": 0.9907407760620117,
+    "maximum_weight_multiplier": 1.0094339847564697
+  },
+  {
+    "class_index": 34,
+    "cluster_sizes": [
+      46,
+      56
+    ],
+    "minimum_weight_multiplier": 0.910714328289032,
+    "maximum_weight_multiplier": 1.10869562625885
+  },
+  {
+    "class_index": 35,
+    "cluster_sizes": [
+      58,
+      40
+    ],
+    "minimum_weight_multiplier": 0.8448275923728943,
+    "maximum_weight_multiplier": 1.225000023841858
+  },
+  {
+    "class_index": 36,
+    "cluster_sizes": [
+      41,
+      52
+    ],
+    "minimum_weight_multiplier": 0.8942307829856873,
+    "maximum_weight_multiplier": 1.1341463327407837
+  },
+  {
+    "class_index": 37,
+    "cluster_sizes": [
+      26,
+      63
+    ],
+    "minimum_weight_multiplier": 0.70634925365448,
+    "maximum_weight_multiplier": 1.711538553237915
+  },
+  {
+    "class_index": 38,
+    "cluster_sizes": [
+      46,
+      39
+    ],
+    "minimum_weight_multiplier": 0.9239130616188049,
+    "maximum_weight_multiplier": 1.0897436141967773
+  },
+  {
+    "class_index": 39,
+    "cluster_sizes": [
+      34,
+      47
+    ],
+    "minimum_weight_multiplier": 0.8617020845413208,
+    "maximum_weight_multiplier": 1.1911765336990356
+  },
+  {
+    "class_index": 40,
+    "cluster_sizes": [
+      40,
+      37
+    ],
+    "minimum_weight_multiplier": 0.9625000357627869,
+    "maximum_weight_multiplier": 1.0405405759811401
+  },
+  {
+    "class_index": 41,
+    "cluster_sizes": [
+      37,
+      37
+    ],
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 42,
+    "cluster_sizes": [
+      29,
+      41
+    ],
+    "minimum_weight_multiplier": 0.8536584973335266,
+    "maximum_weight_multiplier": 1.2068965435028076
+  },
+  {
+    "class_index": 43,
+    "cluster_sizes": [
+      33,
+      34
+    ],
+    "minimum_weight_multiplier": 0.9852941036224365,
+    "maximum_weight_multiplier": 1.0151515007019043
+  },
+  {
+    "class_index": 44,
+    "cluster_sizes": [
+      20,
+      44
+    ],
+    "minimum_weight_multiplier": 0.7272727489471436,
+    "maximum_weight_multiplier": 1.600000023841858
+  },
+  {
+    "class_index": 45,
+    "cluster_sizes": [
+      39,
+      22
+    ],
+    "minimum_weight_multiplier": 0.7820512652397156,
+    "maximum_weight_multiplier": 1.3863636255264282
+  },
+  {
+    "class_index": 46,
+    "cluster_sizes": [
+      17,
+      41
+    ],
+    "minimum_weight_multiplier": 0.707317054271698,
+    "maximum_weight_multiplier": 1.7058823108673096
+  },
+  {
+    "class_index": 47,
+    "cluster_sizes": [
+      34,
+      22
+    ],
+    "minimum_weight_multiplier": 0.8235294222831726,
+    "maximum_weight_multiplier": 1.2727272510528564
+  },
+  {
+    "class_index": 48,
+    "cluster_sizes": [
+      34,
+      19
+    ],
+    "minimum_weight_multiplier": 0.779411792755127,
+    "maximum_weight_multiplier": 1.394736886024475
+  },
+  {
+    "class_index": 49,
+    "cluster_sizes": [
+      19,
+      32
+    ],
+    "minimum_weight_multiplier": 0.796875,
+    "maximum_weight_multiplier": 1.3421052694320679
+  },
+  {
+    "class_index": 50,
+    "cluster_sizes": [
+      40,
+      8
+    ],
+    "minimum_weight_multiplier": 0.6000000238418579,
+    "maximum_weight_multiplier": 3.0
+  },
+  {
+    "class_index": 51,
+    "cluster_sizes": [
+      10,
+      36
+    ],
+    "minimum_weight_multiplier": 0.6388888955116272,
+    "maximum_weight_multiplier": 2.299999952316284
+  },
+  {
+    "class_index": 52,
+    "cluster_sizes": [
+      19,
+      25
+    ],
+    "minimum_weight_multiplier": 0.8799999952316284,
+    "maximum_weight_multiplier": 1.1578947305679321
+  },
+  {
+    "class_index": 53,
+    "cluster_sizes": [
+      24,
+      18
+    ],
+    "minimum_weight_multiplier": 0.875,
+    "maximum_weight_multiplier": 1.1666666269302368
+  },
+  {
+    "class_index": 54,
+    "cluster_sizes": [
+      23,
+      17
+    ],
+    "minimum_weight_multiplier": 0.8695652484893799,
+    "maximum_weight_multiplier": 1.1764706373214722
+  },
+  {
+    "class_index": 55,
+    "cluster_sizes": [
+      26,
+      12
+    ],
+    "minimum_weight_multiplier": 0.7307692766189575,
+    "maximum_weight_multiplier": 1.5833333730697632
+  },
+  {
+    "class_index": 56,
+    "cluster_sizes": [
+      14,
+      22
+    ],
+    "minimum_weight_multiplier": 0.8181818723678589,
+    "maximum_weight_multiplier": 1.2857143878936768
+  },
+  {
+    "class_index": 57,
+    "cluster_sizes": [
+      25,
+      10
+    ],
+    "minimum_weight_multiplier": 0.699999988079071,
+    "maximum_weight_multiplier": 1.75
+  },
+  {
+    "class_index": 58,
+    "cluster_sizes": [
+      17,
+      16
+    ],
+    "minimum_weight_multiplier": 0.9705882668495178,
+    "maximum_weight_multiplier": 1.03125
+  },
+  {
+    "class_index": 59,
+    "cluster_sizes": [
+      12,
+      20
+    ],
+    "minimum_weight_multiplier": 0.800000011920929,
+    "maximum_weight_multiplier": 1.3333333730697632
+  },
+  {
+    "class_index": 60,
+    "cluster_sizes": [
+      24,
+      6
+    ],
+    "minimum_weight_multiplier": 0.625,
+    "maximum_weight_multiplier": 2.5
+  },
+  {
+    "class_index": 61,
+    "cluster_sizes": [
+      12,
+      17
+    ],
+    "minimum_weight_multiplier": 0.8529411554336548,
+    "maximum_weight_multiplier": 1.2083333730697632
+  },
+  {
+    "class_index": 62,
+    "cluster_sizes": [
+      17,
+      10
+    ],
+    "minimum_weight_multiplier": 0.7941176295280457,
+    "maximum_weight_multiplier": 1.350000023841858
+  },
+  {
+    "class_index": 63,
+    "cluster_sizes": [
+      15,
+      11
+    ],
+    "minimum_weight_multiplier": 0.8666667342185974,
+    "maximum_weight_multiplier": 1.1818182468414307
+  },
+  {
+    "class_index": 64,
+    "cluster_sizes": [
+      20,
+      5
+    ],
+    "minimum_weight_multiplier": 0.625,
+    "maximum_weight_multiplier": 2.5
+  },
+  {
+    "class_index": 65,
+    "cluster_sizes": [
+      9,
+      15
+    ],
+    "minimum_weight_multiplier": 0.8000000715255737,
+    "maximum_weight_multiplier": 1.3333333730697632
+  },
+  {
+    "class_index": 66,
+    "cluster_sizes": [
+      5,
+      18
+    ],
+    "minimum_weight_multiplier": 0.6388888955116272,
+    "maximum_weight_multiplier": 2.299999952316284
+  },
+  {
+    "class_index": 67,
+    "cluster_sizes": [
+      13,
+      9
+    ],
+    "minimum_weight_multiplier": 0.8461538553237915,
+    "maximum_weight_multiplier": 1.2222222089767456
+  },
+  {
+    "class_index": 68,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 69,
+    "cluster_sizes": [
+      8,
+      12
+    ],
+    "minimum_weight_multiplier": 0.8333333730697632,
+    "maximum_weight_multiplier": 1.25
+  },
+  {
+    "class_index": 70,
+    "cluster_sizes": [
+      14,
+      5
+    ],
+    "minimum_weight_multiplier": 0.6785714626312256,
+    "maximum_weight_multiplier": 1.899999976158142
+  },
+  {
+    "class_index": 71,
+    "cluster_sizes": [
+      7,
+      11
+    ],
+    "minimum_weight_multiplier": 0.8181818723678589,
+    "maximum_weight_multiplier": 1.2857143878936768
+  },
+  {
+    "class_index": 72,
+    "cluster_sizes": [
+      8,
+      9
+    ],
+    "minimum_weight_multiplier": 0.944444477558136,
+    "maximum_weight_multiplier": 1.0625
+  },
+  {
+    "class_index": 73,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 74,
+    "cluster_sizes": [
+      8,
+      7
+    ],
+    "minimum_weight_multiplier": 0.9375,
+    "maximum_weight_multiplier": 1.071428656578064
+  },
+  {
+    "class_index": 75,
+    "cluster_sizes": [
+      9,
+      6
+    ],
+    "minimum_weight_multiplier": 0.8333333134651184,
+    "maximum_weight_multiplier": 1.25
+  },
+  {
+    "class_index": 76,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 77,
+    "cluster_sizes": [
+      8,
+      5
+    ],
+    "minimum_weight_multiplier": 0.8125,
+    "maximum_weight_multiplier": 1.3000000715255737
+  },
+  {
+    "class_index": 78,
+    "cluster_sizes": [
+      8,
+      5
+    ],
+    "minimum_weight_multiplier": 0.8125,
+    "maximum_weight_multiplier": 1.3000000715255737
+  },
+  {
+    "class_index": 79,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 80,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 81,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 82,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 83,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 84,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 85,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 86,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 87,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 88,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 89,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 90,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 91,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 92,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 93,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 94,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 95,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 96,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 97,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 98,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  },
+  {
+    "class_index": 99,
+    "cluster_sizes": null,
+    "minimum_weight_multiplier": 1.0,
+    "maximum_weight_multiplier": 1.0
+  }
+]
