@@ -33,22 +33,22 @@ in the generation environment.
 ![Bar chart of mean overall accuracy for the baseline and five reweighting continuations. All methods are close to 39 percent accuracy.](reweighting_accuracy.png)
 
 **Figure 1. Reweighting accuracy.** Each bar shows mean overall accuracy across
-training seeds 0, 1, and 2; error bars show sample SD. The baseline uses the
-warm-up/multistep recipe. Numbers above the error bars are mean accuracy in
+training seeds 0, 1, and 2. The baseline uses the
+warm-up/multistep recipe. Numbers above the bars are mean accuracy in
 percent. Gray marks the baseline; blue marks the classifier continuations.
 
 ![Bar chart of mean overall accuracy for the synthesis baseline and five comparison methods. Random duplication has the highest mean accuracy among these runs.](synthesis_accuracy.png)
 
 **Figure 2. Synthesis accuracy.** Each bar shows mean overall accuracy across
-training seeds 0, 1, and 2; error bars show sample SD. The baseline uses the
-cosine recipe. Numbers above the error bars are mean accuracy in percent.
+training seeds 0, 1, and 2. The baseline uses the
+cosine recipe. Numbers above the bars are mean accuracy in percent.
 Gray marks the baseline; green marks the classifier continuations and controls.
 
 Both charts use the same zero-based accuracy axis, currently 0–45%. They include
 all six methods in each family. There are no individual seed markers or legends;
 method labels identify every bar. Small differences are easier to read precisely
-in the accompanying tables. The error bars describe training-seed variability,
-not confidence intervals or statistical significance.
+in the accompanying tables. The charts show means only; variability across
+training seeds remains available as sample SD in the tables.
 
 Only PNG images are exported. Each figure is 7.2 × 4.2 inches at 300 DPI
 (2160 × 1260 pixels), with a white background. These are general manuscript

@@ -191,7 +191,6 @@ def plot_accuracy_bars(family, summary, output, accuracy_limit):
 
     methods = METHODS[family]
     means = [summary[method]["accuracy_percent"]["mean"] for method, _ in methods]
-    deviations = [summary[method]["accuracy_percent"]["sd"] for method, _ in methods]
     labels = [textwrap.fill(label, width=17, break_long_words=False) for _, label in methods]
     color = "#0072B2" if family == "reweighting" else "#007F5F"
     recipe = "warm-up/multistep baseline" if family == "reweighting" else "cosine baseline"
@@ -203,16 +202,15 @@ def plot_accuracy_bars(family, summary, output, accuracy_limit):
     with plt.rc_context(style):
         fig, ax = plt.subplots(figsize=(7.2, 4.2), layout="constrained")
         bars = ax.bar(
-            range(len(methods)), means, yerr=deviations, width=0.65,
+            range(len(methods)), means, width=0.65,
             color=["#777777"] + [color] * (len(methods) - 1),
-            error_kw={"ecolor": "#222222", "elinewidth": 1.0, "capsize": 4},
             zorder=3,
         )
-        for bar, mean, deviation in zip(bars, means, deviations, strict=True):
-            ax.text(bar.get_x() + bar.get_width() / 2, mean + deviation + 0.6,
+        for bar, mean in zip(bars, means, strict=True):
+            ax.text(bar.get_x() + bar.get_width() / 2, mean + 0.6,
                     f"{mean:.2f}", ha="center", va="bottom", fontsize=9)
         ax.set_title(f"{family.capitalize()} methods", loc="left", fontsize=13, pad=27)
-        ax.text(0, 1.02, f"Mean ± SD across seeds 0, 1, 2 · {recipe}",
+        ax.text(0, 1.02, f"Mean across seeds 0, 1, 2 · {recipe}",
                 transform=ax.transAxes, fontsize=8, color="#444444")
         ax.set_ylabel("Overall accuracy (%)")
         ax.set_xticks(range(len(methods)), labels)
@@ -236,11 +234,11 @@ def build_report(results_root, output, overwrite=False):
     matplotlib.use("Agg")
     output.mkdir(parents=True, exist_ok=True)
     # Both charts start at zero and use the same upper bound for context.
-    largest_error_bar = max(
-        values["accuracy_percent"]["mean"] + values["accuracy_percent"]["sd"]
+    largest_mean = max(
+        values["accuracy_percent"]["mean"]
         for family_summary in summaries.values() for values in family_summary.values()
     )
-    accuracy_limit = 5 * math.ceil((largest_error_bar + 2) / 5)
+    accuracy_limit = 5 * math.ceil((largest_mean + 2) / 5)
     for family in METHODS:
         write_tables(family, summaries[family], output)
         plot_accuracy_bars(family, summaries[family], output, accuracy_limit)
