@@ -209,7 +209,8 @@
     "study/seed2/uniform/starting_metrics.json": "f14c225f044eedf059d975af2bf0c65aed7fca530e5f70addeb1d00f66382776",
     "study/seed2/uniform/weight_diagnostics.json": "27bd8b9ecaafaaea53b2a421ecf1a9a5167ee02ce41a802300ef71f9fb3fefd8",
     "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260",
-    "study_results.json": "90b6d92168976e611834dbc8b11b3f29b62ef607c22fd318a89b95c3a7173361"
+    "study_results.json": "90b6d92168976e611834dbc8b11b3f29b62ef607c22fd318a89b95c3a7173361",
+    "study_summary.json": "c2f638d48a292cb8131961e37053b450288c1c03b4515cf24db35879c732b319"
   },
   "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
 }
