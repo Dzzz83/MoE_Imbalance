@@ -57,6 +57,8 @@ python -m pipeline.evaluate \
 - **Train OT reweighting:** use `configs/reweighting.json`; see the [method guide](docs/reweighting.md) for its resource check, defaults, and diagnostics.
 - **Compare OT with uniform fine-tuning:** after training the baseline, use `configs/uniform_finetuning.json` and `configs/ot_finetuning.json`. Both load `outputs/baseline_seed0/final.pt`; see the [matched comparison commands](docs/reweighting.md#matched-baseline-comparison).
 - **Test prototype weighting:** compare uniform, class-balanced, cluster-balanced, and Sinkhorn fine-tuning from the same baseline checkpoint. See the [prototype comparison](docs/reweighting.md#prototype-weighting-comparison).
+- **Run OT ablations:** use the fixed fitting/development split and staged commands in [docs/PLAN.md](docs/PLAN.md#running-the-study). Development images are excluded from baseline training and OT fitting.
+- **Run ablations on Kaggle:** paste `scripts/kaggle_ablation_study.py` into a notebook; see [Kaggle setup and GitHub publishing](docs/PLAN.md#kaggle-and-github-results).
 - **Outputs:** configuration, training history, final checkpoint, and metrics.
 - **Another training run:** choose a new output folder to avoid overwriting results.
 

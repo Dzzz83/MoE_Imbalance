@@ -1,0 +1,12 @@
+{
+  "train_data": "data/prepared/train.npz",
+  "split_seed": 43,
+  "seeds": [0, 1, 2],
+  "shuffle_seeds": [0, 1, 2],
+  "learning_rates": [0.00002, 0.0002, 0.002, 0.02],
+  "batch_size": 128,
+  "num_workers": 4,
+  "baseline": {},
+  "classifier": {},
+  "final_baselines": {}
+}

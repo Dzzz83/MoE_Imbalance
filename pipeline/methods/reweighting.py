@@ -350,16 +350,29 @@ def train(model, train_data, config, output_dir, device) -> list[dict]:
 
 def train_classifier(
     model, train_data, config, output_dir, device, *, epoch_offset, use_ot, weight_builder=None,
+    cached_features=None, epoch_callback=None,
 ):
     """Continue the existing classifier with matched caching, shuffling, and SGD.
 
     All variants retain the supplied classifier and freeze the complete backbone.
     A weight builder can provide fixed sample weights from the cached features.
+    An optional raw feature cache must come from this model's frozen backbone.
+    An epoch callback may add development measurements to the history record.
     """
     options = config["method_options"]
     stage = "reweighting" if use_ot else config["method"]
     print("Caching deterministic training features for frozen-backbone Stage 2", flush=True)
-    raw_features, labels = _cache_training_features(model, train_data, config, device)
+    if cached_features is None:
+        raw_features, labels = _cache_training_features(model, train_data, config, device)
+    else:
+        _freeze_backbone(model)
+        raw_features, labels = cached_features
+        if (
+            raw_features.shape != (len(train_data.labels), 64)
+            or not torch.equal(labels.cpu(), torch.as_tensor(train_data.labels))
+            or not torch.isfinite(raw_features).all()
+        ):
+            raise ValueError("Cached features must match the fitting data in retained order")
     if use_ot:
         normalized_features, references, reference_masses = _build_ot_references(raw_features, labels)
         cost = _build_ot_cost(
@@ -421,6 +434,8 @@ def train_classifier(
             "classifier_parameter_delta_l2": (classifier - initial_classifier).norm().item(),
         }
         history.append(record)
+        if epoch_callback is not None:
+            epoch_callback(model, record)
         class_weight_masses = torch.zeros(NUM_CLASSES, device=device, dtype=weights.dtype)
         class_weight_masses.scatter_add_(0, labels.to(device), weights)
         epoch_diagnostics.append({"epoch": epoch, "class_weight_masses": class_weight_masses.cpu().tolist()})

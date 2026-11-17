@@ -33,14 +33,19 @@ def prepare_options(options):
     return resolved
 
 
-def _cluster_class(features, minimum_size, generator):
+def _cluster_class(features, minimum_size, generator, diagnostics=None):
+    # Keep the existing return contract; callers may also request a fallback reason.
+    if diagnostics is None:
+        diagnostics = {}
     if len(features) < 2 * minimum_size:
+        diagnostics["fallback_reason"] = "too_few_examples"
         return None
     first_index = torch.randint(len(features), (), generator=generator)
     first_center = features[first_index]
     distances = (1 - features @ first_center).clamp_min(0)
     distances[first_index] = 0
     if distances.max() <= 1e-6:
+        diagnostics["fallback_reason"] = "indistinguishable_features"
         return None
     second_center = features[torch.multinomial(distances, 1, generator=generator)[0]]
     centers = torch.stack((first_center, second_center))
@@ -49,16 +54,20 @@ def _cluster_class(features, minimum_size, generator):
         assignments = (features @ centers.T).argmax(dim=1)
         sizes = torch.bincount(assignments, minlength=2)
         if (sizes == 0).any():
+            diagnostics["fallback_reason"] = "empty_cluster"
             return None
         if previous_assignments is not None and torch.equal(assignments, previous_assignments):
             if (sizes < minimum_size).any():
+                diagnostics["fallback_reason"] = "cluster_below_minimum_size"
                 return None
             return assignments, sizes, centers
         centers = torch.stack([features[assignments == cluster].mean(dim=0) for cluster in range(2)])
         if (centers.norm(dim=1) <= 1e-6).any():
+            diagnostics["fallback_reason"] = "zero_cluster_center"
             return None
         centers = functional.normalize(centers, dim=1)
         previous_assignments = assignments
+    diagnostics["fallback_reason"] = "clustering_did_not_stabilize"
     return None
 
 
@@ -107,10 +116,13 @@ def build_weights(raw_features, labels, config, device):
     for class_index, count in enumerate(counts.tolist()):
         class_rows = labels == class_index
         class_weights = weights.new_full((count,), 1 / count)
-        diagnostics = {"class_index": class_index, "cluster_sizes": None}
+        diagnostics = {
+            "class_index": class_index, "cluster_sizes": None,
+            "used_ot": False, "fallback_reason": None,
+        }
         if weighting != "class_balanced":
             features = functional.normalize(raw_features[class_rows], dim=1)
-            clusters = _cluster_class(features, options["minimum_cluster_size"], generator)
+            clusters = _cluster_class(features, options["minimum_cluster_size"], generator, diagnostics)
             if clusters is not None:
                 assignments, sizes, centers = clusters
                 diagnostics["cluster_sizes"] = sizes.tolist()
@@ -125,6 +137,7 @@ def build_weights(raw_features, labels, config, device):
                     )
                     class_weights = plan.sum(dim=1).to(weights.dtype)
                     diagnostics.update(transport_diagnostics)
+                    diagnostics["used_ot"] = True
         weights[class_rows] = class_weights / NUM_CLASSES
         diagnostics["minimum_weight_multiplier"] = (count * class_weights.min()).item()
         diagnostics["maximum_weight_multiplier"] = (count * class_weights.max()).item()
