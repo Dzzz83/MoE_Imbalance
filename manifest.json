@@ -42,7 +42,8 @@
     "pilot_results.json": "6fdef4631089c5ac582572e644d77016dd85f896021d5ad103ab4920690ff01b",
     "selected_schedule.json": "cae64e080a9faa5226dfa6dc0141bd8d4e7e3f10292b1270309e5c13c0c0743b",
     "split/split.json": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00",
-    "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260"
+    "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260",
+    "study_results.json": "10d6923183a677f37f940135c8608ee8f1b0a7cd4a7a1cca5040cd9efe9ffced"
   },
   "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
 }
