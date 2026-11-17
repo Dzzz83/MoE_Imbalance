@@ -1,0 +1,11 @@
+{
+  "source_commit": "22e413fd113f9a3a4fbaf65031bfff6b0f61ee4e",
+  "source_ref": "ablation_study",
+  "runner_version": 1,
+  "report_hashes": {
+    "implementation.json": "635b05af336dc8bfa121e315188b0dfd5650e0f64f85fcb412593cba311a258c",
+    "split/split.json": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00",
+    "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260"
+  },
+  "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
+}
