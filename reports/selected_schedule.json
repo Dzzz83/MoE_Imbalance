@@ -1,0 +1,5 @@
+{
+  "learning_rate": 0.002,
+  "pilot_results_sha256": "6fdef4631089c5ac582572e644d77016dd85f896021d5ad103ab4920690ff01b",
+  "selection": "highest final-epoch development balanced accuracy; smaller rate breaks ties"
+}
