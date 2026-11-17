@@ -176,6 +176,14 @@
     "study/seed2/ot/prototype_weight_diagnostics.json": "88f9eff35c3d3db29fcfe47d2f8ee614dbb75c80cc33e71e7074774664e9c27e",
     "study/seed2/ot/starting_metrics.json": "f14c225f044eedf059d975af2bf0c65aed7fca530e5f70addeb1d00f66382776",
     "study/seed2/ot/weight_diagnostics.json": "966109bd49888f13b33778cc91ea12c9b97ff9b83557d52f163d825cc7a01f3b",
+    "study/seed2/shuffled_ot_0/ablation_finetuning_diagnostics.json": "c88626b96f09cbc6d2a765ee5d446a22f792f7615d6a3ec0d101f1e421f2020a",
+    "study/seed2/shuffled_ot_0/complete.json": "b0f12778d4c27aabd02e0bf1fa99d1fbbd11baab6878cb452a9bc3d84fd15c07",
+    "study/seed2/shuffled_ot_0/config.json": "49f838f94a44de885045fd7c4777216570dc57f438c0c86c356b3751c6673149",
+    "study/seed2/shuffled_ot_0/history.json": "e6bdf63ca451fc85c9e20152c5136b152d91c337678fac1fb1a76488c523363c",
+    "study/seed2/shuffled_ot_0/metrics.json": "0f36f0b25bf3f36678b8ac23b52f957272445e2c37d87b07447073f5c957cfa1",
+    "study/seed2/shuffled_ot_0/prototype_weight_diagnostics.json": "88f9eff35c3d3db29fcfe47d2f8ee614dbb75c80cc33e71e7074774664e9c27e",
+    "study/seed2/shuffled_ot_0/starting_metrics.json": "f14c225f044eedf059d975af2bf0c65aed7fca530e5f70addeb1d00f66382776",
+    "study/seed2/shuffled_ot_0/weight_diagnostics.json": "15a01f8be311d2733a44790b43b0e91adc31708cd56d98858755c40bc265491b",
     "study/seed2/uniform/ablation_finetuning_diagnostics.json": "8eef3f2bb54ce4c84d1e7e1c5b008e68c9405be985288259b371f300a2d89725",
     "study/seed2/uniform/complete.json": "11a223e75781c59f439d56430d71d6dcc205eec98c9653ae684978e452aa0a29",
     "study/seed2/uniform/config.json": "050f63a9f47c5b35264dea420d12c38e21ed19479ec9e9650ba5d1adee81c191",
@@ -185,7 +193,7 @@
     "study/seed2/uniform/starting_metrics.json": "f14c225f044eedf059d975af2bf0c65aed7fca530e5f70addeb1d00f66382776",
     "study/seed2/uniform/weight_diagnostics.json": "27bd8b9ecaafaaea53b2a421ecf1a9a5167ee02ce41a802300ef71f9fb3fefd8",
     "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260",
-    "study_results.json": "cb05b292ec5fe4ff33947351acace48f5cd22756069c3b46c1e46a762d18d896"
+    "study_results.json": "3205103ad432957abc387152fb41d785241e946e2fc661c4dd26c11b8d1ae288"
   },
   "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
 }
