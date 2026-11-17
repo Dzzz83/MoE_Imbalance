@@ -1,0 +1,20 @@
+{
+  "method": "ablation_finetuning",
+  "train_data": "/kaggle/working/ot-ablation/study/split/fitting.npz",
+  "seed": 0,
+  "batch_size": 128,
+  "num_workers": 2,
+  "method_options": {
+    "pretrained_checkpoint": "/kaggle/working/ot-ablation/study/baselines/seed0/final.pt",
+    "classifier": {
+      "epochs": 40,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "nesterov": true,
+      "scheduler": "constant",
+      "learning_rate": 0.002
+    },
+    "condition": "class_balanced",
+    "shuffle_seed": null
+  }
+}
