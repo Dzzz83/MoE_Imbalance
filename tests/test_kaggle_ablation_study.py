@@ -100,6 +100,7 @@ def test_restore_preserves_artifacts_and_does_not_overwrite_local_workspace(tmp_
     working = tmp_path / "working"
     monkeypatch.setattr(kaggle, "RESTORE_ROOT", source)
     monkeypatch.setattr(kaggle, "WORK_ROOT", working)
+    monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", False)
     kaggle.restore_workspace()
     assert (working / "data/train.npz").read_bytes() == b"original pool"
     (working / "data/train.npz").write_bytes(b"local edits")
@@ -108,12 +109,15 @@ def test_restore_preserves_artifacts_and_does_not_overwrite_local_workspace(tmp_
 
     (source / "data/train.npz").unlink()
     strength_working = tmp_path / "strength-working"
+    (strength_working / "data").mkdir(parents=True)
+    (strength_working / "data/train.npz").write_bytes(b"data from an earlier attempt")
     monkeypatch.setattr(kaggle, "WORK_ROOT", strength_working)
     with pytest.raises(ValueError, match="data/train.npz"):
         kaggle.restore_workspace()
     monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
     kaggle.restore_workspace()
     assert (strength_working / "study/study_config.json").is_file()
+    assert (strength_working / "data/train.npz").read_bytes() == b"data from an earlier attempt"
 
 
 def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):
@@ -194,6 +198,10 @@ def test_strength_stage_publishes_separately_and_rejects_an_older_restore(tmp_pa
     original = kaggle.WORK_ROOT / "study"
     strength = original / "strength"
     publications = []
+    with monkeypatch.context() as old_checkout:
+        old_checkout.delattr(run_ablation, "run_strength_study")
+        with pytest.raises(RuntimeError, match="lacks the stronger OT stage"):
+            kaggle.execute_strength("a" * 40, {})
     with pytest.raises(RuntimeError, match="Restore the completed"):
         kaggle.execute_strength("a" * 40, {})
     kaggle.write_json(original / "study_summary.json", {})

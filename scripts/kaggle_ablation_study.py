@@ -17,8 +17,9 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Run development first. For the follow-up use ("strength",) on saved artifacts.
-STAGES = ("prepare", "pilot", "study")
+# Run the stronger OT follow-up on the saved development study.
+# To start the original development study, use ("prepare", "pilot", "study").
+STAGES = ("strength",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 RESULTS_BRANCH = "ablation-strength-results" if IS_STRENGTH_STUDY else "ablation-study-results"
 GIT_USER_NAME = "Dzzz83"
@@ -114,11 +115,25 @@ def restore_workspace():
         raise ValueError("RESTORE_ROOT must contain the saved study/ directory")
     if not IS_STRENGTH_STUDY and not (source / "data/train.npz").is_file():
         raise ValueError("RESTORE_ROOT must also contain data/train.npz for the original stages")
-    if WORK_ROOT.exists():
-        # Re-running the cell should not overwrite its current local artifacts.
-        print(f"Using existing local workspace {WORK_ROOT}; restore skipped", flush=True)
+    if not WORK_ROOT.exists():
+        shutil.copytree(source, WORK_ROOT, symlinks=True)
         return
-    shutil.copytree(source, WORK_ROOT, symlinks=True)
+    study_root = WORK_ROOT / "study"
+    if study_root.exists():
+        print(f"Using existing local study {study_root}; restore skipped", flush=True)
+        return
+
+    # A failed startup can leave prepared data behind without a study directory.
+    with tempfile.TemporaryDirectory(dir=WORK_ROOT) as staging_dir:
+        staged_study = Path(staging_dir) / "study"
+        shutil.copytree(source / "study", staged_study, symlinks=True)
+        prepared = WORK_ROOT / "data/train.npz"
+        if not IS_STRENGTH_STUDY and not prepared.exists():
+            prepared.parent.mkdir(exist_ok=True)
+            staged_data = Path(staging_dir) / "train.npz"
+            shutil.copy2(source / "data/train.npz", staged_data)
+            staged_data.rename(prepared)
+        staged_study.rename(study_root)
 
 
 def prepare_data():
@@ -221,7 +236,10 @@ def execute_stages(config, source_commit, raw_root, auth_env):
     from pipeline.runtime import resolve_device
 
     if (RESULTS_ROOT / "manifest.json").exists() and not (WORK_ROOT / "study/study_config.json").exists():
-        raise RuntimeError("Results already exist: restore the saved Kaggle workspace or choose a new results branch")
+        raise RuntimeError(
+            "Results already exist for the original study: restore the saved Kaggle workspace with RESTORE_ROOT. "
+            'For the stronger OT follow-up, set STAGES = ("strength",) and restore the completed study.'
+        )
     config, root, split = run_ablation.prepare_study(config, WORK_ROOT / "study")
     if (RESULTS_ROOT / "manifest.json").exists():
         for relative, expected in (("study_config.json", config), ("split/split.json", split)):
@@ -249,9 +267,11 @@ def execute_stages(config, source_commit, raw_root, auth_env):
 
 
 def execute_strength(source_commit, auth_env):
-    from pipeline.run_ablation import run_strength_study
+    from pipeline import run_ablation
     from pipeline.runtime import resolve_device
 
+    if not hasattr(run_ablation, "run_strength_study"):
+        raise RuntimeError(f"Source commit {source_commit} lacks the stronger OT stage. Use the updated source branch.")
     original = WORK_ROOT / "study"
     if not (original / "study_summary.json").is_file():
         raise RuntimeError("Restore the completed Kaggle development study using RESTORE_ROOT")
@@ -270,7 +290,7 @@ def execute_strength(source_commit, auth_env):
     def publish(message):
         publish_reports(output, source_commit, message, auth_env)
 
-    run_strength_study(original, resolve_device("cuda"), on_progress=publish)
+    run_ablation.run_strength_study(original, resolve_device("cuda"), on_progress=publish)
     publish("complete stronger OT study")
 
 
@@ -281,6 +301,7 @@ def main():
             raise ValueError('Use ("strength",) alone, or distinct prepare/pilot/study/freeze/final stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
+    print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
     from kaggle_secrets import UserSecretsClient
 
     token = UserSecretsClient().get_secret("GITHUB_TOKEN")

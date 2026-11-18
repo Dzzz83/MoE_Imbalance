@@ -264,11 +264,10 @@ secret `GITHUB_TOKEN` with write access to `Dzzz83/MoE_Imbalance`. Attach CIFAR
 and set `RAW_CIFAR_ROOT` to its directory, or explicitly set
 `ALLOW_DOWNLOAD = True`.
 
-The script defaults to `STAGES = ("prepare", "pilot", "study")`, one GPU, seeds
-0/1/2, and two data-loader workers. It stops after development. Results are
-pushed after completed baselines, pilot runs, and ablation runs to the separate
-`ablation-study-results` branch. No GitHub operation is performed by the local
-implementation tests.
+To run the original development study, set `STAGES = ("prepare", "pilot", "study")`.
+It uses one GPU, seeds 0/1/2, and two data-loader workers. It publishes results
+after each completed run to `ablation-study-results` and stops after development.
+No GitHub operation is performed by the local implementation tests.
 
 On the first run, `SOURCE_REF = "ablation_study"` is resolved to an exact commit
 and recorded in the results manifest. Later sessions reuse that commit, even
@@ -322,14 +321,21 @@ weight spread and Head/Medium/Tail recall alongside the primary score.
 python -m pipeline.run_ablation strength --output-dir outputs/ablation_study --device cuda
 ```
 
-On Kaggle, paste the updated runner into a new notebook session and set
-`STAGES = ("strength",)`. Use the completed development workspace from the
-first run, or attach its saved output and point `RESTORE_ROOT` to the directory
-containing `study/`. This stage uses the saved study settings directly and can
-run without `data/train.npz`. The updated source must be
-published on `ablation_study`. The runner saves the follow-up in
-`study/strength/` and pushes its JSON reports to `ablation-strength-results`.
-Keep the updated workspace to resume a partially published follow-up.
+On Kaggle, paste `scripts/kaggle_ablation_study.py` into a new notebook session.
+The runner already selects `STAGES = ("strength",)`. Attach the output from
+the successful development run and set `RESTORE_ROOT`:
+
+```python
+RESTORE_ROOT = Path("/kaggle/input/<attached-output-path>/ot-ablation")
+```
+
+Use the exact directory that contains `study/study_config.json`. The follow-up
+reads the saved study settings and can run without `data/train.npz`. If the
+completed workspace is already under `WORK_ROOT`, leave `RESTORE_ROOT = None`.
+Use source from `ablation_study` that contains the stronger OT stage. The
+follow-up checks out code in `ot-strength-code`, saves runs in
+`study/strength/`, and publishes JSON to `ablation-strength-results`. Keep the
+updated workspace to resume a partially published follow-up.
 
 Implementation checks use artificial images and do not download CIFAR:
 
