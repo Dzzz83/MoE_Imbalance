@@ -106,6 +106,15 @@ def test_restore_preserves_artifacts_and_does_not_overwrite_local_workspace(tmp_
     kaggle.restore_workspace()
     assert (working / "data/train.npz").read_bytes() == b"local edits"
 
+    (source / "data/train.npz").unlink()
+    strength_working = tmp_path / "strength-working"
+    monkeypatch.setattr(kaggle, "WORK_ROOT", strength_working)
+    with pytest.raises(ValueError, match="data/train.npz"):
+        kaggle.restore_workspace()
+    monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
+    kaggle.restore_workspace()
+    assert (strength_working / "study/study_config.json").is_file()
+
 
 def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):
     code = tmp_path / "code"
@@ -176,6 +185,36 @@ def test_development_stages_publish_progress_without_freezing_or_running_test(tm
     kaggle.write_json(kaggle.RESULTS_ROOT / "reports/split/split.json", {})
     with pytest.raises(RuntimeError, match="does not match the published study"):
         kaggle.execute_stages({}, "a" * 40, tmp_path / "raw", {})
+
+
+def test_strength_stage_publishes_separately_and_rejects_an_older_restore(tmp_path, monkeypatch):
+    monkeypatch.setattr(kaggle, "WORK_ROOT", tmp_path / "working")
+    monkeypatch.setattr(kaggle, "RESULTS_ROOT", tmp_path / "results")
+    monkeypatch.setattr("pipeline.runtime.resolve_device", lambda device: "cpu")
+    original = kaggle.WORK_ROOT / "study"
+    strength = original / "strength"
+    publications = []
+    with pytest.raises(RuntimeError, match="Restore the completed"):
+        kaggle.execute_strength("a" * 40, {})
+    kaggle.write_json(original / "study_summary.json", {})
+
+    def run_strength(root, device, *, on_progress):
+        assert root == original and device == "cpu"
+        kaggle.write_json(strength / "strength_config.json", {"weight_exponent": 3})
+        on_progress("save stronger OT run")
+
+    monkeypatch.setattr(run_ablation, "run_strength_study", run_strength)
+    monkeypatch.setattr(kaggle, "publish_reports",
+                        lambda root, commit, message, auth: publications.append((root, message)))
+    kaggle.execute_strength("a" * 40, {})
+    assert publications == [(strength, "save stronger OT run"), (strength, "complete stronger OT study")]
+    kaggle.write_json(kaggle.RESULTS_ROOT / "manifest.json", {"report_hashes": {
+        "strength_config.json": kaggle.sha256(strength / "strength_config.json"),
+        "study/seed0/strong_ot/complete.json": "published",
+    }})
+    with pytest.raises(RuntimeError, match="Restore the latest stronger OT workspace"):
+        kaggle.execute_strength("a" * 40, {})
+    assert len(publications) == 2
 
 
 def test_initial_checkout_resolves_a_real_branch_and_keeps_source_clean(tmp_path, monkeypatch):

@@ -4,6 +4,8 @@ import torch
 
 from pipeline.data import NUM_CLASSES
 
+STRONG_OT_EXPONENT = 3
+
 
 def class_balanced_weights(labels):
     counts = torch.bincount(labels, minlength=NUM_CLASSES)
@@ -29,16 +31,25 @@ def transform_weights(ot_weights, labels, condition, shuffle_seed=None):
         return 0.5 * balanced + 0.5 * ot_weights
     if condition == "uniform":
         return torch.full_like(ot_weights, 1 / len(labels))
-    if condition != "shuffled_ot":
+    if condition not in ("strong_ot", "shuffled_ot", "shuffled_strong_ot"):
         raise ValueError(f"Unknown ablation condition: {condition}")
-    if type(shuffle_seed) is not int or not 0 <= shuffle_seed < 2**32:
+    is_strong = condition in ("strong_ot", "shuffled_strong_ot")
+    is_shuffled = condition in ("shuffled_ot", "shuffled_strong_ot")
+    if is_shuffled and (type(shuffle_seed) is not int or not 0 <= shuffle_seed < 2**32):
         raise ValueError("Shuffled OT requires a shuffle seed in [0, 2**32)")
-    generator = torch.Generator().manual_seed(shuffle_seed)
+    generator = torch.Generator().manual_seed(shuffle_seed) if is_shuffled else None
     weights = ot_weights.clone()
     for c in range(NUM_CLASSES):
         positions = torch.where(labels == c)[0]
-        order = torch.randperm(len(positions), generator=generator).to(positions.device)
-        weights[positions] = ot_weights[positions[order]]
+        values = ot_weights[positions]
+        if is_strong:
+            # Cube relative weights, then restore the original 1/100 class total.
+            amplified = (values.double() / values.max().double()).pow(STRONG_OT_EXPONENT)
+            values = (amplified / amplified.sum() / NUM_CLASSES).to(values.dtype)
+        if generator is not None:
+            order = torch.randperm(len(positions), generator=generator).to(positions.device)
+            values = values[order]
+        weights[positions] = values
     return weights
 
 

@@ -17,19 +17,20 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-RESULTS_BRANCH = "ablation-study-results"
+# Run development first. For the follow-up use ("strength",) on saved artifacts.
+STAGES = ("prepare", "pilot", "study")
+IS_STRENGTH_STUDY = STAGES == ("strength",)
+RESULTS_BRANCH = "ablation-strength-results" if IS_STRENGTH_STUDY else "ablation-study-results"
 GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
-CODE_ROOT = Path("/kaggle/working/ot-ablation-code")
-RESULTS_ROOT = Path("/kaggle/working/ot-ablation-results")
+CODE_ROOT = Path("/kaggle/working") / ("ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code")
+RESULTS_ROOT = Path("/kaggle/working") / ("ot-strength-results" if IS_STRENGTH_STUDY else "ot-ablation-results")
 WORK_ROOT = Path("/kaggle/working/ot-ablation")
 RAW_CIFAR_ROOT = Path("/kaggle/input/datasets/dzzz833/cifar100")
 # Attach a previous saved WORK_ROOT as a Kaggle dataset, then point here at its
-# root containing study/ and data/. GitHub reports alone cannot restore training.
+# root containing study/. The original stages also need data/train.npz.
 RESTORE_ROOT = None
-# Run development first. After reviewing results, use ("freeze", "final").
-STAGES = ("prepare", "pilot", "study")
 ALLOW_DOWNLOAD = False
 RESTART_INTERRUPTED_RUNS = True
 # Optional overrides to configs/ablation_study.json, e.g. {"num_workers": 2}.
@@ -109,8 +110,10 @@ def restore_workspace():
     if RESTORE_ROOT is None:
         return
     source = Path(RESTORE_ROOT)
-    if not (source / "study/study_config.json").is_file() or not (source / "data/train.npz").is_file():
-        raise ValueError("RESTORE_ROOT must contain the saved study/ and data/train.npz")
+    if not (source / "study/study_config.json").is_file():
+        raise ValueError("RESTORE_ROOT must contain the saved study/ directory")
+    if not IS_STRENGTH_STUDY and not (source / "data/train.npz").is_file():
+        raise ValueError("RESTORE_ROOT must also contain data/train.npz for the original stages")
     if WORK_ROOT.exists():
         # Re-running the cell should not overwrite its current local artifacts.
         print(f"Using existing local workspace {WORK_ROOT}; restore skipped", flush=True)
@@ -188,11 +191,14 @@ def publish_reports(study_root, source_commit, message, auth_env):
         "report_hashes": files,
         "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts",
     })
+    is_strength_study = "strength_config.json" in files
+    title = "Stronger OT ablation results" if is_strength_study else "OT reweighting ablation results"
+    final_location = "" if is_strength_study else "Final test reports, when explicitly run: `reports/final/`.\n"
     (RESULTS_ROOT / "README.md").write_text(
-        "# OT reweighting ablation results\n\n"
+        f"# {title}\n\n"
         f"Source commit: `{source_commit}`.\n\n"
         "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
-        "Final test reports, when explicitly run: `reports/final/`.\n\n"
+        f"{final_location}\n"
         "The manifest lists current report files and their hashes. Scores are fractions.\n"
         "Datasets, cached features, and checkpoints are kept in Kaggle outputs, not Git.\n"
     )
@@ -242,12 +248,39 @@ def execute_stages(config, source_commit, raw_root, auth_env):
         publish(f"complete {stage}")
 
 
+def execute_strength(source_commit, auth_env):
+    from pipeline.run_ablation import run_strength_study
+    from pipeline.runtime import resolve_device
+
+    original = WORK_ROOT / "study"
+    if not (original / "study_summary.json").is_file():
+        raise RuntimeError("Restore the completed Kaggle development study using RESTORE_ROOT")
+    output = original / "strength"
+    manifest = RESULTS_ROOT / "manifest.json"
+    if manifest.exists():
+        previous = json.loads(manifest.read_text())["report_hashes"]
+        required = ["strength_config.json", *(path for path in previous if path.endswith("/complete.json"))]
+        for path in required:
+            relative = report_path(path).relative_to(RESULTS_ROOT / "reports")
+            local = output / relative
+            if not local.is_file() or sha256(local) != previous.get(path):
+                raise RuntimeError("Restore the latest stronger OT workspace to continue publishing")
+    archive_interrupted_runs(output)
+
+    def publish(message):
+        publish_reports(output, source_commit, message, auth_env)
+
+    run_strength_study(original, resolve_device("cuda"), on_progress=publish)
+    publish("complete stronger OT study")
+
+
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
-    if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-        raise ValueError("STAGES must contain distinct prepare/pilot/study/freeze/final stage names")
-    if list(STAGES) != sorted(STAGES, key=allowed.index):
-        raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
+    if not IS_STRENGTH_STUDY:
+        if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
+            raise ValueError('Use ("strength",) alone, or distinct prepare/pilot/study/freeze/final stages')
+        if list(STAGES) != sorted(STAGES, key=allowed.index):
+            raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     from kaggle_secrets import UserSecretsClient
 
     token = UserSecretsClient().get_secret("GITHUB_TOKEN")
@@ -281,10 +314,13 @@ def main():
         if not torch.cuda.is_available():
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
         restore_workspace()
-        prepared, raw_root = prepare_data()
-        config = json.loads((CODE_ROOT / "configs/ablation_study.json").read_text()) | CONFIG_OVERRIDES
-        config["train_data"] = str(prepared)
-        execute_stages(config, source_commit, raw_root, auth_env)
+        if IS_STRENGTH_STUDY:
+            execute_strength(source_commit, auth_env)
+        else:
+            prepared, raw_root = prepare_data()
+            config = json.loads((CODE_ROOT / "configs/ablation_study.json").read_text()) | CONFIG_OVERRIDES
+            config["train_data"] = str(prepared)
+            execute_stages(config, source_commit, raw_root, auth_env)
         print(f"Reports pushed to {RESULTS_BRANCH}. Preserve {WORK_ROOT} in Kaggle outputs.", flush=True)
 
 

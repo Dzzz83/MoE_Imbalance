@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as functional
 
 from pipeline.ablation_data import prepare_split
-from pipeline.ablation_weights import transform_weights, weight_diagnostics
+from pipeline.ablation_weights import STRONG_OT_EXPONENT, transform_weights, weight_diagnostics
 from pipeline.data import load_training_data
 from pipeline.evaluate import compute_metrics, evaluate_checkpoint
 from pipeline.extract_features import extract_features
@@ -235,6 +235,8 @@ def _continuation(config, data_path, baseline_path, bundle, original_counts, see
         "method_options": {"pretrained_checkpoint": str(baseline_path), "classifier": classifier,
                            "condition": condition, "shuffle_seed": shuffle_seed},
     }
+    if condition in ("strong_ot", "shuffled_strong_ot"):
+        training_config["method_options"]["weight_exponent"] = STRONG_OT_EXPONENT
     identity = {"config": training_config, "cache_inputs": bundle["inputs"],
                 "cache_sha256": bundle["cache_sha256"],
                 "original_counts": original_counts}
@@ -353,13 +355,13 @@ def _condition_name(condition, shuffle_seed):
     return condition if shuffle_seed is None else f"{condition}_{shuffle_seed}"
 
 
-def summarize_results(records):
+def summarize_results(records, reference_condition="class_balanced"):
     """Average shuffles within training seed before calculating paired effects."""
     metric_names = ("balanced_accuracy", "accuracy", "head_recall", "medium_recall", "tail_recall")
     by_condition = {}
     for row in records:
         by_condition.setdefault(row["condition"], {}).setdefault(row["seed"], []).append(row["metrics"])
-    references = by_condition["class_balanced"]
+    references = by_condition[reference_condition]
     summary = {}
     for condition, seeds in by_condition.items():
         summary[condition] = {}
@@ -367,15 +369,16 @@ def summarize_results(records):
             means, differences, per_seed = [], [], []
             for seed, metrics in sorted(seeds.items()):
                 values = [m[metric] for m in metrics]
-                reference = references[seed][0][metric]
-                if reference is None or any(value is None for value in values):
+                reference_values = [m[metric] for m in references[seed]]
+                if None in reference_values or None in values:
                     per_seed.append({"seed": seed, "mean": None, "paired_difference": None})
                     continue
                 mean = float(np.mean(values))
                 means.append(mean)
-                differences.append(mean - reference)
+                difference = mean - float(np.mean(reference_values))
+                differences.append(difference)
                 per_seed.append({
-                    "seed": seed, "mean": mean, "paired_difference": mean - reference,
+                    "seed": seed, "mean": mean, "paired_difference": difference,
                     "shuffle_sd": float(np.std(values, ddof=1)) if len(values) > 1 else None,
                     "individual_values": values,
                 })
@@ -433,6 +436,101 @@ def run_study(config, root, split, device, on_progress=None):
                 on_progress(f"save development seed {seed} {name}")
     write_json(root / "study_results.json", records)
     write_json(root / "study_summary.json", summarize_results(records))
+    return records
+
+
+def run_strength_study(root, device, on_progress=None):
+    """Train stronger OT and matched shuffles from an existing development study."""
+    root = Path(root).resolve()
+    config = _read(root / "study_config.json")
+    split = _read(root / "split/split.json")
+    rate = _selected_schedule(root)["learning_rate"]
+    classifier = config["classifier"] | {"learning_rate": rate}
+    original_records = _read(root / "study_results.json")
+    expected = {(seed, condition, shuffle) for seed in config["seeds"]
+                for condition, shuffle in [("baseline", None)] + _conditions(config)}
+    if (
+        len(original_records) != len(expected)
+        or {(r["seed"], r["condition"], r["shuffle_seed"]) for r in original_records} != expected
+        or not (root / "study_summary.json").is_file()
+    ):
+        raise ValueError("Complete the original development study before running stronger OT")
+    implementation = _read(root / "implementation.json")
+    pipeline_dir = Path(__file__).parent
+    for name, digest in implementation.items():
+        # This follow-up extends the driver and its weight transforms.
+        if name not in ("run_ablation.py", "ablation_weights.py") and file_sha256(pipeline_dir / name) != digest:
+            raise ValueError(f"The original study used a different training implementation: {name}")
+
+    fitting, development = root / "split/fitting.npz", root / "split/development.npz"
+    for path in (fitting, development):
+        if file_sha256(path) != split["file_hashes"][path.stem]:
+            raise ValueError(f"The saved development split changed: {path}")
+    original_by_seed = {}
+    for seed in config["seeds"]:
+        baseline = root / f"baselines/seed{seed}/final.pt"
+        cache_dir = root / f"caches/seed{seed}"
+        if not baseline.is_file() or not (cache_dir / "features_weights.pt").is_file():
+            raise FileNotFoundError(f"Restore the original baseline and feature cache for seed {seed}")
+        bundle = _seed_inputs(config, cache_dir, fitting, development, baseline, seed, device)
+        controls = [row for row in original_records
+                    if row["seed"] == seed and row["condition"] in ("class_balanced", "ot")]
+        for row in controls:
+            control = (root / "pilot" / f"lr_{rate}" if seed == 0 and row["condition"] == "class_balanced"
+                       else root / f"study/seed{seed}" / row["condition"])
+            receipt = _read(control / "complete.json")
+            control_config = receipt["inputs"]["config"]
+            control_options = control_config["method_options"]
+            if (
+                receipt["inputs"]["cache_sha256"] != bundle["cache_sha256"]
+                or receipt["inputs"]["original_counts"] != split["original_class_counts"]
+                or control_config["seed"] != seed
+                or any(control_config[name] != config[name] for name in ("batch_size", "num_workers"))
+                or control_options["condition"] != row["condition"]
+                or control_options["classifier"] != classifier
+                or receipt["files"]["metrics.json"] != file_sha256(control / "metrics.json")
+                or _read(control / "metrics.json") != row["metrics"]
+            ):
+                raise ValueError(f"Original run no longer matches the saved inputs: {control}")
+        original_by_seed[seed] = baseline, bundle, controls
+
+    output = root / "strength"
+    provenance = {
+        "weight_exponent": STRONG_OT_EXPONENT, "learning_rate": rate,
+        "original_reports": {name: file_sha256(root / name) for name in (
+            "study_config.json", "split/split.json", "selected_schedule.json", "study_results.json",
+        )},
+        "feature_caches": {str(seed): bundle["cache_sha256"]
+                           for seed, (_, bundle, _) in original_by_seed.items()},
+        "implementation": {name: file_sha256(pipeline_dir / name)
+                           for name in ("run_ablation.py", "ablation_weights.py")},
+    }
+    config_path = output / "strength_config.json"
+    if config_path.exists() and _read(config_path) != provenance:
+        raise ValueError("Stronger OT inputs changed; preserve the previous strength folder before continuing")
+    if not config_path.exists():
+        output.mkdir(exist_ok=True)
+        atomic_write_json(config_path, provenance)
+    if on_progress is not None:
+        on_progress("initialize stronger OT study")
+
+    conditions = [("strong_ot", None)] + [("shuffled_strong_ot", seed) for seed in config["shuffle_seeds"]]
+    records = []
+    for seed, (baseline, bundle, controls) in original_by_seed.items():
+        records.extend(controls)
+        for condition, shuffle_seed in conditions:
+            name = _condition_name(condition, shuffle_seed)
+            run_dir = output / f"study/seed{seed}" / name
+            metrics = _continuation(config, fitting, baseline, bundle, split["original_class_counts"],
+                                    seed, condition, rate, run_dir, device, shuffle_seed)
+            records.append({"seed": seed, "condition": condition, "shuffle_seed": shuffle_seed,
+                            "metrics": metrics, "output_dir": str(run_dir)})
+            if on_progress is not None:
+                on_progress(f"save stronger OT seed {seed} {name}")
+    summary = summarize_results(records)
+    summary["strong_ot_vs_shuffled_strong_ot"] = summarize_results(records, "shuffled_strong_ot")["strong_ot"]
+    atomic_write_json(output / "study_results.json", records)
+    atomic_write_json(output / "study_summary.json", summary)
     return records
 
 
@@ -520,7 +618,7 @@ def run_final(config, root, split, device, data_root, download=False, on_progres
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("stage", choices=("prepare", "pilot", "study", "freeze", "final"))
+    parser.add_argument("stage", choices=("prepare", "pilot", "study", "strength", "freeze", "final"))
     parser.add_argument("--config", type=Path, default=Path("configs/ablation_study.json"))
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/ablation_study"))
     parser.add_argument("--device", default="cpu")
@@ -528,16 +626,20 @@ def main():
     parser.add_argument("--download", action="store_true", help="Allow CIFAR test download for final evaluation only")
     args = parser.parse_args()
     try:
-        config, root, split = prepare_study(_read(args.config), args.output_dir)
-        device = resolve_device(args.device)
-        if args.stage == "pilot":
-            run_pilot(config, root, split, device)
-        elif args.stage == "study":
-            run_study(config, root, split, device)
-        elif args.stage == "freeze":
-            freeze_recipe(config, root)
-        elif args.stage == "final":
-            run_final(config, root, split, device, args.data_root, args.download)
+        if args.stage == "strength":
+            root = args.output_dir.resolve()
+            run_strength_study(root, resolve_device(args.device))
+        else:
+            config, root, split = prepare_study(_read(args.config), args.output_dir)
+            device = resolve_device(args.device)
+            if args.stage == "pilot":
+                run_pilot(config, root, split, device)
+            elif args.stage == "study":
+                run_study(config, root, split, device)
+            elif args.stage == "freeze":
+                freeze_recipe(config, root)
+            elif args.stage == "final":
+                run_final(config, root, split, device, args.data_root, args.download)
     except (OSError, ValueError, RuntimeError, KeyError) as error:
         parser.exit(2, f"error: {error}\n")
     print(f"Completed ablation stage '{args.stage}' in {root}")

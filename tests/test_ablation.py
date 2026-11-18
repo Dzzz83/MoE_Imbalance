@@ -74,12 +74,19 @@ def test_weight_controls_preserve_class_masses_and_shuffle_is_isolated():
     assert not torch.equal(shuffled, transform_weights(ot, labels, "shuffled_ot", 8))
     balanced = class_balanced_weights(labels)
     half = transform_weights(ot, labels, "half_ot")
+    strong = transform_weights(ot, labels, "strong_ot")
+    shuffled_strong = transform_weights(ot, labels, "shuffled_strong_ot", 7)
     torch.testing.assert_close(half, (ot + balanced) / 2)
     torch.testing.assert_close(transform_weights(balanced, labels, "half_ot"), balanced)
+    torch.testing.assert_close(transform_weights(balanced, labels, "strong_ot"), balanced)
+    assert torch.equal(torch.random.get_rng_state(), rng_state)
     for c in range(100):
-        torch.testing.assert_close(shuffled[labels == c].sort().values, ot[labels == c].sort().values)
-        for weights in (balanced, ot, shuffled, half):
-            assert weights[labels == c].sum().item() == pytest.approx(0.01)
+        members = labels == c
+        torch.testing.assert_close(shuffled[members].sort().values, ot[members].sort().values)
+        torch.testing.assert_close(shuffled_strong[members].sort().values, strong[members].sort().values)
+        torch.testing.assert_close(strong[members][::4] / strong[members][0], torch.tensor([1., 8., 27.]))
+        for weights in (balanced, ot, shuffled, half, strong, shuffled_strong):
+            assert weights[members].sum().item() == pytest.approx(0.01)
     diagnostics = weight_diagnostics(balanced, labels, [12] * 100, prototype)
     assert all(r["effective_sample_fraction"] == pytest.approx(1) for r in diagnostics["classes"])
     with pytest.raises(ValueError, match="shuffle seed"):
@@ -212,6 +219,27 @@ def test_cpu_ablation_all_stages_and_completed_run_reuse(tmp_path, retained_pool
         assert history[0]["classifier_parameter_delta_l2"] > 0
         assert history[0]["development"]["development_support"] == split["development_class_counts"]
         assert len(json.loads((path / "weight_diagnostics.json").read_text())["classes"]) == 100
+    original_report_hash = file_sha256(root / "study_results.json")
+
+    def forbidden_feature_extraction(*args, **kwargs):
+        raise AssertionError("Stronger OT must reuse the original feature caches")
+
+    with monkeypatch.context() as followup:
+        followup.setattr(run_ablation, "extract_features", forbidden_feature_extraction)
+        followup.setattr(run_ablation, "run_training", forbidden_feature_extraction)
+        strength = run_ablation.run_strength_study(root, device)
+        assert run_ablation.run_strength_study(root, device) == strength
+    assert file_sha256(root / "study_results.json") == original_report_hash
+    old_controls = [row for row in rows if row["condition"] in ("class_balanced", "ot")]
+    assert strength[:2] == old_controls
+    strong, *shuffles = strength[2:]
+    assert strong["condition"] == "strong_ot"
+    assert [row["shuffle_seed"] for row in shuffles] == [0, 1]
+    summary = json.loads((root / "strength/study_summary.json").read_text())
+    strong_delta = strong["metrics"]["balanced_accuracy"] - np.mean([
+        row["metrics"]["balanced_accuracy"] for row in shuffles
+    ])
+    assert summary["strong_ot_vs_shuffled_strong_ot"]["balanced_accuracy"]["paired_difference_mean"] == strong_delta
     frozen = run_ablation.freeze_recipe(config, root)
     assert len(frozen["final_conditions"]) == 6
     with pytest.raises(ValueError, match="frozen"):

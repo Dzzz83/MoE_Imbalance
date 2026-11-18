@@ -302,6 +302,35 @@ full-pool training and final test evaluation. Existing historical full-pool
 baselines can be supplied through `CONFIG_OVERRIDES["final_baselines"]` before
 starting the study; they cannot replace the fitting-only development baselines.
 
+### Stronger OT follow-up
+
+The first study found little difference between class-balanced, OT, and shuffled
+OT weights. To test whether the original weight differences were too small,
+cube the saved OT weights within each class and normalize them back to the same
+class total. Cubing preserves the example ranking and leaves equal weights
+equal, including in the fallback classes.
+
+Reuse the saved fitting baselines, feature caches, development split, and
+selected classifier schedule. Train one classifier with stronger OT and three
+with the stronger weights shuffled within their classes, for each of the
+three training seeds. This is 12 new classifier runs. The original OT and
+class-balanced results are the references. Use development balanced accuracy
+and the paired comparison to the mean of the shuffles for each seed. Review
+weight spread and Head/Medium/Tail recall alongside the primary score.
+
+```bash
+python -m pipeline.run_ablation strength --output-dir outputs/ablation_study --device cuda
+```
+
+On Kaggle, paste the updated runner into a new notebook session and set
+`STAGES = ("strength",)`. Use the completed development workspace from the
+first run, or attach its saved output and point `RESTORE_ROOT` to the directory
+containing `study/`. This stage uses the saved study settings directly and can
+run without `data/train.npz`. The updated source must be
+published on `ablation_study`. The runner saves the follow-up in
+`study/strength/` and pushes its JSON reports to `ablation-strength-results`.
+Keep the updated workspace to resume a partially published follow-up.
+
 Implementation checks use artificial images and do not download CIFAR:
 
 ```bash
