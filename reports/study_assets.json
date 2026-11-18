@@ -1,9 +1,9 @@
 {
   "seeds": {
     "0": {
-      "asset_id": 764113740,
-      "sha256": "a5e00b4dd9ebf4485129c15da26ef0b4abadae988b4a4bd49a699f3360cfe893",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed0-a5e00b4dd9ebf4485129c15da26ef0b4abadae988b4a4bd49a699f3360cfe893/ot-assignment-seed0.zip",
+      "asset_id": 764114257,
+      "sha256": "16a8cdce4661d0717141e74e02abd70716366f645aa751a25704a7ba8b46af43",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed0-16a8cdce4661d0717141e74e02abd70716366f645aa751a25704a7ba8b46af43/ot-assignment-seed0.zip",
       "paths": [
         "diagnostics/seed0/assignment_audit.json",
         "diagnostics/seed0/scores.pt",
@@ -27,6 +27,16 @@
         "runs/seed0/ot/starting_metrics.json",
         "runs/seed0/ot/weight_diagnostics.json",
         "runs/seed0/ot/weights.pt",
+        "runs/seed0/shuffled_strong_ot_shuffle0/assignment_finetuning_diagnostics.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/complete.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/config.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/final.pt",
+        "runs/seed0/shuffled_strong_ot_shuffle0/history.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/metrics.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/prototype_weight_diagnostics.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/starting_metrics.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/weight_diagnostics.json",
+        "runs/seed0/shuffled_strong_ot_shuffle0/weights.pt",
         "runs/seed0/strong_ot/assignment_finetuning_diagnostics.json",
         "runs/seed0/strong_ot/complete.json",
         "runs/seed0/strong_ot/config.json",
