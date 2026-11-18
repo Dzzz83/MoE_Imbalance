@@ -28,9 +28,11 @@ GIT_USER_EMAIL = "phattuan43@gmail.com"
 CODE_ROOT = Path("/kaggle/working") / ("ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code")
 RESULTS_ROOT = Path("/kaggle/working") / ("ot-strength-results" if IS_STRENGTH_STUDY else "ot-ablation-results")
 WORK_ROOT = Path("/kaggle/working/ot-ablation")
-RAW_CIFAR_ROOT = Path("/kaggle/input/datasets/dzzz833/cifar100")
-# Attach a previous saved WORK_ROOT as a Kaggle dataset, then point here at its
-# root containing study/. The original stages also need data/train.npz.
+INPUT_ROOT = Path("/kaggle/input")
+RAW_CIFAR_ROOT = INPUT_ROOT / "datasets/dzzz833/cifar100"
+# Stronger OT finds a single complete study among the attached Kaggle inputs.
+# Set this to its saved workspace or study folder to choose one explicitly.
+# The original stages expect a workspace with study/ and data/train.npz.
 RESTORE_ROOT = None
 ALLOW_DOWNLOAD = False
 RESTART_INTERRUPTED_RUNS = True
@@ -107,33 +109,108 @@ def prepare_repositories(auth_env):
     return commit
 
 
+def missing_strength_artifacts(study):
+    required = [
+        "study_config.json", "study_summary.json", "study_results.json",
+        "implementation.json", "selected_schedule.json", "pilot_results.json",
+        "split/split.json", "split/fitting.npz", "split/development.npz",
+    ]
+    config_path = study / "study_config.json"
+    seeds = []
+    if config_path.is_file():
+        try:
+            seeds = json.loads(config_path.read_text())["seeds"]
+            if not isinstance(seeds, list) or not seeds or any(type(seed) is not int for seed in seeds):
+                raise ValueError("Invalid seed list")
+        except (OSError, ValueError, KeyError, TypeError):
+            return ["valid study_config.json with training seeds"]
+    schedule_path = study / "selected_schedule.json"
+    rate = None
+    if schedule_path.is_file():
+        try:
+            rate = json.loads(schedule_path.read_text())["learning_rate"]
+            if type(rate) not in (int, float):
+                raise ValueError("Invalid learning rate")
+        except (OSError, ValueError, KeyError, TypeError):
+            return ["valid selected_schedule.json with the pilot learning rate"]
+    for seed in seeds:
+        required.extend((f"baselines/seed{seed}/final.pt", f"caches/seed{seed}/features_weights.pt"))
+        controls = [f"study/seed{seed}/ot"]
+        if seed != 0:
+            controls.append(f"study/seed{seed}/class_balanced")
+        elif rate is not None:
+            controls.append(f"pilot/lr_{rate}")
+        for control in controls:
+            required.extend((f"{control}/complete.json", f"{control}/metrics.json"))
+    return [name for name in required if not (study / name).is_file()]
+
+
+def find_strength_study(local_study):
+    if local_study.exists():
+        candidates = [local_study]
+    elif RESTORE_ROOT is not None:
+        source = Path(RESTORE_ROOT)
+        candidates = [source if (source / "study_config.json").is_file() else source / "study"]
+    else:
+        candidates = sorted({path.parent.resolve() for path in INPUT_ROOT.rglob("study_config.json")})
+
+    complete_studies = []
+    incomplete_studies = []
+    for study in candidates:
+        missing = missing_strength_artifacts(study)
+        if missing:
+            incomplete_studies.append(f"{study}: {', '.join(missing)}")
+        else:
+            complete_studies.append(study)
+    if len(complete_studies) == 1:
+        return complete_studies[0]
+    if complete_studies:
+        raise RuntimeError("Set RESTORE_ROOT to one saved study: " + ", ".join(map(str, complete_studies)))
+    details = "\nMissing files by location:\n" + "\n".join(incomplete_studies) if incomplete_studies else ""
+    if local_study.exists():
+        details += "\nThe incomplete local study was preserved. Use an unused WORK_ROOT to restore a complete copy."
+    raise RuntimeError(
+        "No complete development study found. Attach the saved output from the successful development run "
+        f"under {INPUT_ROOT}. It must include the split, baseline checkpoints, and feature caches. "
+        f"GitHub reports alone cannot restore these files.{details}"
+    )
+
+
 def restore_workspace():
-    if RESTORE_ROOT is None:
-        return
-    source = Path(RESTORE_ROOT)
-    if not (source / "study/study_config.json").is_file():
-        raise ValueError("RESTORE_ROOT must contain the saved study/ directory")
-    if not IS_STRENGTH_STUDY and not (source / "data/train.npz").is_file():
-        raise ValueError("RESTORE_ROOT must also contain data/train.npz for the original stages")
-    if not WORK_ROOT.exists():
-        shutil.copytree(source, WORK_ROOT, symlinks=True)
-        return
-    study_root = WORK_ROOT / "study"
-    if study_root.exists():
-        print(f"Using existing local study {study_root}; restore skipped", flush=True)
-        return
+    local_study = WORK_ROOT / "study"
+    if IS_STRENGTH_STUDY:
+        source_study = find_strength_study(local_study)
+        if source_study == local_study:
+            return
+        print(f"Restoring stronger OT inputs from {source_study}", flush=True)
+        WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    else:
+        if RESTORE_ROOT is None:
+            return
+        source = Path(RESTORE_ROOT)
+        source_study = source / "study"
+        if not (source_study / "study_config.json").is_file():
+            raise ValueError("RESTORE_ROOT must contain the saved study/ directory")
+        if not (source / "data/train.npz").is_file():
+            raise ValueError("RESTORE_ROOT must also contain data/train.npz for the original stages")
+        if not WORK_ROOT.exists():
+            shutil.copytree(source, WORK_ROOT, symlinks=True)
+            return
+        if local_study.exists():
+            print(f"Using existing local study {local_study}; restore skipped", flush=True)
+            return
 
     # A failed startup can leave prepared data behind without a study directory.
     with tempfile.TemporaryDirectory(dir=WORK_ROOT) as staging_dir:
         staged_study = Path(staging_dir) / "study"
-        shutil.copytree(source / "study", staged_study, symlinks=True)
+        shutil.copytree(source_study, staged_study, symlinks=True)
         prepared = WORK_ROOT / "data/train.npz"
         if not IS_STRENGTH_STUDY and not prepared.exists():
             prepared.parent.mkdir(exist_ok=True)
             staged_data = Path(staging_dir) / "train.npz"
-            shutil.copy2(source / "data/train.npz", staged_data)
+            shutil.copy2(source_study.parent / "data/train.npz", staged_data)
             staged_data.rename(prepared)
-        staged_study.rename(study_root)
+        staged_study.rename(local_study)
 
 
 def prepare_data():
@@ -302,6 +379,8 @@ def main():
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
+    if IS_STRENGTH_STUDY:
+        restore_workspace()
     from kaggle_secrets import UserSecretsClient
 
     token = UserSecretsClient().get_secret("GITHUB_TOKEN")
@@ -334,10 +413,10 @@ def main():
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
         if not torch.cuda.is_available():
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        restore_workspace()
         if IS_STRENGTH_STUDY:
             execute_strength(source_commit, auth_env)
         else:
+            restore_workspace()
             prepared, raw_root = prepare_data()
             config = json.loads((CODE_ROOT / "configs/ablation_study.json").read_text()) | CONFIG_OVERRIDES
             config["train_data"] = str(prepared)

@@ -107,17 +107,49 @@ def test_restore_preserves_artifacts_and_does_not_overwrite_local_workspace(tmp_
     kaggle.restore_workspace()
     assert (working / "data/train.npz").read_bytes() == b"local edits"
 
-    (source / "data/train.npz").unlink()
-    strength_working = tmp_path / "strength-working"
-    (strength_working / "data").mkdir(parents=True)
-    (strength_working / "data/train.npz").write_bytes(b"data from an earlier attempt")
-    monkeypatch.setattr(kaggle, "WORK_ROOT", strength_working)
-    with pytest.raises(ValueError, match="data/train.npz"):
-        kaggle.restore_workspace()
+
+def test_strength_restores_complete_attached_study_and_preserves_prepared_data(tmp_path, monkeypatch):
+    inputs = tmp_path / "input"
+    attached = inputs / "notebooks" / "saved-output" / "ot-ablation" / "study"
+    incomplete = inputs / "incomplete-output"
+    working = tmp_path / "working"
+    (working / "data").mkdir(parents=True)
+    (working / "data/train.npz").write_bytes(b"data from an earlier attempt")
+    for folder in (attached, incomplete):
+        kaggle.write_json(folder / "study_config.json", {"seeds": [0]})
+        kaggle.write_json(folder / "selected_schedule.json", {"learning_rate": 0.002})
+        for name in ("study_summary.json", "study_results.json", "implementation.json",
+                     "pilot_results.json", "split/split.json"):
+            kaggle.write_json(folder / name, {})
+        for name in ("split/fitting.npz", "split/development.npz",
+                     "baselines/seed0/final.pt", "caches/seed0/features_weights.pt"):
+            path = folder / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"saved artifact")
+    for control in ("study/seed0/ot", "pilot/lr_0.002"):
+        kaggle.write_json(attached / control / "complete.json", {})
+        kaggle.write_json(attached / control / "metrics.json", {})
+    monkeypatch.setattr(kaggle, "INPUT_ROOT", inputs)
+    monkeypatch.setattr(kaggle, "WORK_ROOT", working)
+    monkeypatch.setattr(kaggle, "RESTORE_ROOT", None)
     monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
     kaggle.restore_workspace()
-    assert (strength_working / "study/study_config.json").is_file()
-    assert (strength_working / "data/train.npz").read_bytes() == b"data from an earlier attempt"
+    assert (working / "study/baselines/seed0/final.pt").read_bytes() == b"saved artifact"
+    assert (working / "data/train.npz").read_bytes() == b"data from an earlier attempt"
+
+
+def test_strength_missing_artifacts_stops_before_git_setup(tmp_path, monkeypatch):
+    inputs = tmp_path / "input"
+    reports = inputs / "github-reports"
+    kaggle.write_json(reports / "study_config.json", {"seeds": [0]})
+    monkeypatch.setattr(kaggle, "INPUT_ROOT", inputs)
+    monkeypatch.setattr(kaggle, "WORK_ROOT", tmp_path / "working")
+    monkeypatch.setattr(kaggle, "RESTORE_ROOT", None)
+    monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
+    with pytest.raises(RuntimeError, match="GitHub reports alone cannot restore") as failure:
+        kaggle.main()
+    assert "caches/seed0/features_weights.pt" in str(failure.value)
+    assert not kaggle.WORK_ROOT.exists()
 
 
 def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):

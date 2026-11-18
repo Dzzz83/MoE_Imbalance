@@ -322,16 +322,22 @@ python -m pipeline.run_ablation strength --output-dir outputs/ablation_study --d
 ```
 
 On Kaggle, paste `scripts/kaggle_ablation_study.py` into a new notebook session.
-The runner already selects `STAGES = ("strength",)`. Attach the output from
-the successful development run and set `RESTORE_ROOT`:
+The runner already selects `STAGES = ("strength",)`. Attach the saved output
+from the successful development run. The runner searches `/kaggle/input` for
+the study and checks that it has the split, baselines, and feature caches
+before cloning the repo. The published GitHub reports don't include those
+training artifacts.
+
+If more than one complete study is attached, set `RESTORE_ROOT` to the one you
+want:
 
 ```python
 RESTORE_ROOT = Path("/kaggle/input/<attached-output-path>/ot-ablation")
 ```
 
-Use the exact directory that contains `study/study_config.json`. The follow-up
-reads the saved study settings and can run without `data/train.npz`. If the
-completed workspace is already under `WORK_ROOT`, leave `RESTORE_ROOT = None`.
+Use the saved workspace or the study folder itself. The follow-up reads the
+saved study settings and can run without `data/train.npz`. If the completed
+workspace is already under `WORK_ROOT`, it uses that copy.
 Use source from `ablation_study` that contains the stronger OT stage. The
 follow-up checks out code in `ot-strength-code`, saves runs in
 `study/strength/`, and publishes JSON to `ablation-strength-results`. Keep the
