@@ -22,11 +22,19 @@
     "runs/seed0/ot/prototype_weight_diagnostics.json": "cf45ac0cd87e2514a0db5dfd7ae19c27b80997b1324061835ad7d5e7368d5ed0",
     "runs/seed0/ot/starting_metrics.json": "231f24ff69722ecdadfd5ac57fa40b1e7688eb235306a7ece8cb5d2a98ff0c1f",
     "runs/seed0/ot/weight_diagnostics.json": "b727c4165988af5573564790052b61c4df9e0c1344633c4699762d32612bb15a",
-    "study_assets.json": "17e1ce6305130717a149c6225ab9aa1f354e0be57286ffdcd2d9bb78daaa56e2",
+    "runs/seed0/strong_ot/assignment_finetuning_diagnostics.json": "fbe50b1b8107c7932b6be10310ca50de170266a96e8ecbf13397cc13db64b6d0",
+    "runs/seed0/strong_ot/complete.json": "854b8dec8218e40863fd9bd8dad8719f28b1701fa5e9f1006ef620056270cdf5",
+    "runs/seed0/strong_ot/config.json": "4cb5ed2b978043e4c16b91affc10d27ceaf880f7ad226904cd6fb473bebca0e8",
+    "runs/seed0/strong_ot/history.json": "3ca4a3fadbd6a8405dde674cfdc4c37427f7f98ff8f6f9bca31f36def5385a11",
+    "runs/seed0/strong_ot/metrics.json": "6a7766c511225f5ef0ddeade9fdd37154c5c793c6272b2180aaceae17393f2ca",
+    "runs/seed0/strong_ot/prototype_weight_diagnostics.json": "cf45ac0cd87e2514a0db5dfd7ae19c27b80997b1324061835ad7d5e7368d5ed0",
+    "runs/seed0/strong_ot/starting_metrics.json": "231f24ff69722ecdadfd5ac57fa40b1e7688eb235306a7ece8cb5d2a98ff0c1f",
+    "runs/seed0/strong_ot/weight_diagnostics.json": "8365d7b6856936a0672aedb96ca0c7bee24392b9fa085f7849ccfeff7a5fb631",
+    "study_assets.json": "1b3138ce006fbf51c4c08054cb318a902b024a2f2f545643bb7034ff299ca39c",
     "study_config.json": "5d0c4393af26dd7babe52301b371d10ece43c2e71d3f50de652dab4f338189b8",
-    "study_results.json": "17f3a4afde307119a09371b38c1cbe4bb5406c7c79f1f69404634bdf2dd629ad",
-    "study_status.json": "65f826f8f1344c04c910fe01e44b7ee00edb5a86757453640a9185e352374ea7",
-    "study_summary.json": "283788f1aa492a927e119015bf63f00d29fafb44b9119da0bebafe14e9f9f546"
+    "study_results.json": "6560d84df99ef5b9a3b7f8550ef6e78cb2962611d31db6b900f95df046aba1a0",
+    "study_status.json": "92a8e0715900c1ec0759a06a8016806f45452900bd1d00a66055fe641f65d028",
+    "study_summary.json": "27483851bf3158cece75a401074220661573a2cac4670d0f26f69d246bcdf486"
   },
   "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available"
 }
