@@ -1,12 +1,22 @@
 {
   "seeds": {
     "0": {
-      "asset_id": 764116182,
-      "sha256": "6fd07cad53228477a95e9796b3a738172a3edb61c9b128f630fbf2c053bc26ca",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed0-6fd07cad53228477a95e9796b3a738172a3edb61c9b128f630fbf2c053bc26ca/ot-assignment-seed0.zip",
+      "asset_id": 764116837,
+      "sha256": "e713eb6d724f9e5cc2cc82d9a163d6bf03bd6e7c53abe7d6b8cd9ac0f6d95d93",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed0-e713eb6d724f9e5cc2cc82d9a163d6bf03bd6e7c53abe7d6b8cd9ac0f6d95d93/ot-assignment-seed0.zip",
       "paths": [
         "diagnostics/seed0/assignment_audit.json",
         "diagnostics/seed0/scores.pt",
+        "runs/seed0/boundary_strong/assignment_finetuning_diagnostics.json",
+        "runs/seed0/boundary_strong/complete.json",
+        "runs/seed0/boundary_strong/config.json",
+        "runs/seed0/boundary_strong/final.pt",
+        "runs/seed0/boundary_strong/history.json",
+        "runs/seed0/boundary_strong/metrics.json",
+        "runs/seed0/boundary_strong/prototype_weight_diagnostics.json",
+        "runs/seed0/boundary_strong/starting_metrics.json",
+        "runs/seed0/boundary_strong/weight_diagnostics.json",
+        "runs/seed0/boundary_strong/weights.pt",
         "runs/seed0/class_balanced/assignment_finetuning_diagnostics.json",
         "runs/seed0/class_balanced/complete.json",
         "runs/seed0/class_balanced/config.json",
