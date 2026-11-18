@@ -959,7 +959,10 @@ def main():
             config = json.loads((CODE_ROOT / "configs/ablation_study.json").read_text()) | CONFIG_OVERRIDES
             config["train_data"] = str(prepared)
             execute_stages(config, source_commit, raw_root, auth_env)
-        print(f"Reports pushed to {RESULTS_BRANCH}. Preserve {WORK_ROOT} in Kaggle outputs.", flush=True)
+        if is_assignment and ASSIGNMENT_PREFLIGHT_ONLY:
+            print("Preflight complete; no training or report publication was performed.", flush=True)
+        else:
+            print(f"Reports pushed to {RESULTS_BRANCH}. Preserve {WORK_ROOT} in Kaggle outputs.", flush=True)
 
 
 if __name__ == "__main__":
