@@ -103,6 +103,14 @@
     "runs/seed1/shuffled_strong_ot_shuffle0/prototype_weight_diagnostics.json": "76a28d4ab07b24dfda3b373418d9ef4d0417fd5ab4d21d3a03c784a7fb00f455",
     "runs/seed1/shuffled_strong_ot_shuffle0/starting_metrics.json": "38e946e02795e58240d3d49883336c584bfd30219167427b155300b1244ad9fc",
     "runs/seed1/shuffled_strong_ot_shuffle0/weight_diagnostics.json": "7eef4748aa90f7a154e25d8485bf8ba998369306426604ba5f641718685d53c1",
+    "runs/seed1/shuffled_strong_ot_shuffle1/assignment_finetuning_diagnostics.json": "19b16ba20591a0dda139e1f9cbf5af739618d92ff069953f5667795e7a2471ca",
+    "runs/seed1/shuffled_strong_ot_shuffle1/complete.json": "9187640169ae39fb00db2c6164159456a4aa72a63a59b5606d42017b74134a90",
+    "runs/seed1/shuffled_strong_ot_shuffle1/config.json": "388e182d54c2962186ba6baddf36739f72097acaf7a02f7eafceca68b49c1b14",
+    "runs/seed1/shuffled_strong_ot_shuffle1/history.json": "35865ccf7d75d3d6ffcc0caa206a7ae9c88078806ed736f0862de9f3eec21283",
+    "runs/seed1/shuffled_strong_ot_shuffle1/metrics.json": "50ae0b5511cfa0ba7669a637efb1601cdffd922f4ed6bf44a6ca17b3bb80b160",
+    "runs/seed1/shuffled_strong_ot_shuffle1/prototype_weight_diagnostics.json": "76a28d4ab07b24dfda3b373418d9ef4d0417fd5ab4d21d3a03c784a7fb00f455",
+    "runs/seed1/shuffled_strong_ot_shuffle1/starting_metrics.json": "38e946e02795e58240d3d49883336c584bfd30219167427b155300b1244ad9fc",
+    "runs/seed1/shuffled_strong_ot_shuffle1/weight_diagnostics.json": "464f0c455c76e5d4f76a7743ffa31461a2692eb6ed125d2f980cad4f812e8864",
     "runs/seed1/strong_ot/assignment_finetuning_diagnostics.json": "bd6506a0fafc9cbfc28a8ba5a5a657d18106daced6219b3473b3a6fefb03c55b",
     "runs/seed1/strong_ot/complete.json": "3d20221e89bc2dab370674fb7485464d555123c8de7d0c11bd8442a05265c3df",
     "runs/seed1/strong_ot/config.json": "41d3446c126ba4376009d5a89eaa501d6a3333c8aba409cecec3a59417a72336",
@@ -111,11 +119,11 @@
     "runs/seed1/strong_ot/prototype_weight_diagnostics.json": "76a28d4ab07b24dfda3b373418d9ef4d0417fd5ab4d21d3a03c784a7fb00f455",
     "runs/seed1/strong_ot/starting_metrics.json": "38e946e02795e58240d3d49883336c584bfd30219167427b155300b1244ad9fc",
     "runs/seed1/strong_ot/weight_diagnostics.json": "92e8dbb8eebb0796329c7d4318d4f54efa70c8b25c6bf2947b50f163fa607b87",
-    "study_assets.json": "b7cd80974e7d41aa54b385fc760276ee04b1457f74ce4dda2fa1b43f60838421",
+    "study_assets.json": "39ca9ce3979fb69460a6cb89039311e39dc17657d963334be487ca7cb6725f14",
     "study_config.json": "5d0c4393af26dd7babe52301b371d10ece43c2e71d3f50de652dab4f338189b8",
-    "study_results.json": "e3110edf126f1fb51056a7b3e81801e9b94fef7e8e621d46c50232631fc0f390",
-    "study_status.json": "5f73acd9c49b0bfa475dd36599b01bdc98c38708f431a3dcdb382aa830649f0e",
-    "study_summary.json": "9d0982ce5eea8458c9dcd30c79457e56b683a9f2716ac698e30199459d8a70f8"
+    "study_results.json": "2d7e45f9cd880db892c3c91247152c8b21bcc01252457cbb5d57fc4f32699b93",
+    "study_status.json": "6d92ec6adc880b09a70223fd03379736bfb8b9e0414c6589e657e856c7bf629a",
+    "study_summary.json": "9f848962183b51242ac3a1e74ad99e7e6b590223c009d68bb6761a3990425a42"
   },
   "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available"
 }
