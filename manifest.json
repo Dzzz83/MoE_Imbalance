@@ -1,0 +1,25 @@
+{
+  "source_commit": "0167e39faa450a148e6b8e5b250075b432200d11",
+  "source_ref": "ablation_study",
+  "runner_version": 1,
+  "report_hashes": {
+    "baselines/seed0/complete.json": "52eb639433a897a118a5999fba19d7ccfbe01c69b6d4c759b37ea06e13e5f733",
+    "baselines/seed0/config.json": "1552e5fcaaa024f5013c20cad4fcaf13bf7abafbae6dfe7c96e2089ef0c7119d",
+    "baselines/seed0/history.json": "dcd0162e099dd1e311c7f11c3cf84e9ba9b56f7cf764f19ca51b4b55cadc3ef4",
+    "baselines/seed1/complete.json": "79512a926989d3cee074d424e84a76935b833211aa607199c30945770cfc1601",
+    "baselines/seed1/config.json": "317d97b87c4d90d89f1d560301aef3e231bf5339bdb1eb6c6500bf3d038ee008",
+    "baselines/seed1/history.json": "0630e976f95eb20a6afa111f87d6ff838f14aec99410be913aad58b8ef457c80",
+    "baselines/seed2/complete.json": "4215da4676de8c44a77f949d6f5454c9ecc005d39fe8d8836973dc7c0bc61cb5",
+    "baselines/seed2/config.json": "8aa47736b8f7e68db27b7b506653d925b345932fcbff4840761e0337b585d555",
+    "baselines/seed2/history.json": "80f848f554be60d2d8af5e805e7d9dd347fcb28845863b6beca3c411176c99d7",
+    "implementation.json": "0669ec16c96773672114109e6a65a16ac0a7982d2a937a4399947aec8b2e03a8",
+    "pilot_results.json": "6fdef4631089c5ac582572e644d77016dd85f896021d5ad103ab4920690ff01b",
+    "rebuild.json": "2ee2480788a02fb5a3e537332ace29ad3fa1fd0808ed3f7859053ab3491f3508",
+    "selected_schedule.json": "cae64e080a9faa5226dfa6dc0141bd8d4e7e3f10292b1270309e5c13c0c0743b",
+    "split/split.json": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00",
+    "study_config.json": "69e4eac1ca6eea210d5dfc1db44ca37993e090bf3953ed4865e98d65febe4f41",
+    "weight_artifacts.json": "fd002a8478ab3f72df558d29b1914978c783b9029193b1bd71cfe78e869313e2",
+    "weight_audit.json": "e3b32935fd8749a71437a8f7d359f4850134f3ffb0f6394977f49503c555fadf"
+  },
+  "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available"
+}

@@ -1,0 +1,30 @@
+{
+  "inputs": {
+    "config": {
+      "seed": 2,
+      "batch_size": 128,
+      "num_workers": 2,
+      "method_options": {
+        "epochs": 200,
+        "learning_rate": 0.1,
+        "momentum": 0.9,
+        "weight_decay": 0.0002,
+        "scheduler": "multistep",
+        "warmup_epochs": 5,
+        "decay_epochs": [
+          160,
+          180
+        ],
+        "decay_factor": 0.01
+      },
+      "method": "baseline",
+      "train_data": "/kaggle/working/ot-ablation-audit-rebuild/study/split/fitting.npz"
+    },
+    "data_sha256": "7a4a9a6ac9f8739a90c489aecf7283b9bb4a84568eb3996c6351cd708104491b"
+  },
+  "files": {
+    "config.json": "8aa47736b8f7e68db27b7b506653d925b345932fcbff4840761e0337b585d555",
+    "final.pt": "b05629bf46d2ccfb8c78fe9cfeca33db43779ac0ca4e10ac83f508db3a78543d",
+    "history.json": "80f848f554be60d2d8af5e805e7d9dd347fcb28845863b6beca3c411176c99d7"
+  }
+}

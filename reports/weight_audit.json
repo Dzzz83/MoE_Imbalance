@@ -1,0 +1,1565 @@
+{
+  "strength_results_commit": null,
+  "feature_caches": {
+    "0": "eecab020b75cd7739b254fe2db59eb06740b409a9f85df4b9318d482193309f8",
+    "1": "f7dd52508b82280c559837dccf6a4cc8f84d700bcca719fcb921d4cf8c6315ff",
+    "2": "d060150d190a96d36a3f6258527b34624b1ef746d56e7af331e5b85a1f2d999a"
+  },
+  "comparison": "Top quarter by original OT weight versus the full class, among OT-active fitting classes.",
+  "confidence": "Correct-class score minus the highest score for another class.",
+  "seeds": [
+    {
+      "seed": 0,
+      "ot_active_class_count": 75,
+      "confidence_percentile_shift": 0.1452506436787631,
+      "correct_class_margin_shift": 1.5398154282639982,
+      "baseline_accuracy_shift": 0.011803369108983223,
+      "classes": [
+        {
+          "class_index": 0,
+          "fitting_count": 400,
+          "confidence_percentile_shift": 0.23957499999999998,
+          "correct_class_margin_shift": 3.248402534723281,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 1,
+          "fitting_count": 382,
+          "confidence_percentile_shift": 0.2252672338568935,
+          "correct_class_margin_shift": 3.873681897840367,
+          "baseline_accuracy_shift": 0.005235602094240788
+        },
+        {
+          "class_index": 2,
+          "fitting_count": 364,
+          "confidence_percentile_shift": 0.15147627098176542,
+          "correct_class_margin_shift": 1.5131472794564225,
+          "baseline_accuracy_shift": 0.005494505494505475
+        },
+        {
+          "class_index": 3,
+          "fitting_count": 348,
+          "confidence_percentile_shift": 0.12017769850706828,
+          "correct_class_margin_shift": 1.2108361775847687,
+          "baseline_accuracy_shift": 0.011494252873563204
+        },
+        {
+          "class_index": 4,
+          "fitting_count": 332,
+          "confidence_percentile_shift": 0.16553563652199166,
+          "correct_class_margin_shift": 1.6707955584468612,
+          "baseline_accuracy_shift": 0.012048192771084376
+        },
+        {
+          "class_index": 5,
+          "fitting_count": 317,
+          "confidence_percentile_shift": 0.06991324921135644,
+          "correct_class_margin_shift": 0.6694256655801354,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 6,
+          "fitting_count": 303,
+          "confidence_percentile_shift": 0.18933472294597886,
+          "correct_class_margin_shift": 2.4025280438758267,
+          "baseline_accuracy_shift": 0.00990099009900991
+        },
+        {
+          "class_index": 7,
+          "fitting_count": 289,
+          "confidence_percentile_shift": 0.17865099303218468,
+          "correct_class_margin_shift": 2.779882713895943,
+          "baseline_accuracy_shift": 0.01038062283737029
+        },
+        {
+          "class_index": 8,
+          "fitting_count": 276,
+          "confidence_percentile_shift": 0.2323303927746272,
+          "correct_class_margin_shift": 3.5187580015348345,
+          "baseline_accuracy_shift": 0.0036231884057971175
+        },
+        {
+          "class_index": 9,
+          "fitting_count": 263,
+          "confidence_percentile_shift": 0.22957714022352793,
+          "correct_class_margin_shift": 2.87845942902392,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 10,
+          "fitting_count": 252,
+          "confidence_percentile_shift": 0.15309271856890905,
+          "correct_class_margin_shift": 1.5998169259419512,
+          "baseline_accuracy_shift": 0.003968253968253954
+        },
+        {
+          "class_index": 11,
+          "fitting_count": 240,
+          "confidence_percentile_shift": 0.09201388888888884,
+          "correct_class_margin_shift": 0.9904510637124382,
+          "baseline_accuracy_shift": 0.01666666666666672
+        },
+        {
+          "class_index": 12,
+          "fitting_count": 229,
+          "confidence_percentile_shift": 0.1541936455353109,
+          "correct_class_margin_shift": 2.3482524426007476,
+          "baseline_accuracy_shift": 0.017467248908296984
+        },
+        {
+          "class_index": 13,
+          "fitting_count": 219,
+          "confidence_percentile_shift": 0.20489829804898296,
+          "correct_class_margin_shift": 2.5055052923532664,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 14,
+          "fitting_count": 208,
+          "confidence_percentile_shift": 0.20025887573964485,
+          "correct_class_margin_shift": 2.6068434463097496,
+          "baseline_accuracy_shift": 0.004807692307692291
+        },
+        {
+          "class_index": 15,
+          "fitting_count": 199,
+          "confidence_percentile_shift": 0.1925628140703517,
+          "correct_class_margin_shift": 2.9622987906297844,
+          "baseline_accuracy_shift": 0.015075376884422065
+        },
+        {
+          "class_index": 16,
+          "fitting_count": 190,
+          "confidence_percentile_shift": 0.17214912280701755,
+          "correct_class_margin_shift": 2.1455602878018434,
+          "baseline_accuracy_shift": 0.010526315789473717
+        },
+        {
+          "class_index": 17,
+          "fitting_count": 181,
+          "confidence_percentile_shift": 0.2100648570742254,
+          "correct_class_margin_shift": 2.8907072939839527,
+          "baseline_accuracy_shift": 0.011049723756906049
+        },
+        {
+          "class_index": 18,
+          "fitting_count": 173,
+          "confidence_percentile_shift": 0.13859695218076729,
+          "correct_class_margin_shift": 1.496215155484233,
+          "baseline_accuracy_shift": 0.005780346820809301
+        },
+        {
+          "class_index": 19,
+          "fitting_count": 165,
+          "confidence_percentile_shift": 0.19696969696969702,
+          "correct_class_margin_shift": 2.7131917747068197,
+          "baseline_accuracy_shift": 0.030303030303030276
+        },
+        {
+          "class_index": 20,
+          "fitting_count": 158,
+          "confidence_percentile_shift": 0.23544303797468358,
+          "correct_class_margin_shift": 3.175483239753337,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 21,
+          "fitting_count": 151,
+          "confidence_percentile_shift": 0.1563262460787731,
+          "correct_class_margin_shift": 2.3438806608604947,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 22,
+          "fitting_count": 144,
+          "confidence_percentile_shift": 0.1464120370370371,
+          "correct_class_margin_shift": 2.003224651018778,
+          "baseline_accuracy_shift": 0.01388888888888884
+        },
+        {
+          "class_index": 23,
+          "fitting_count": 137,
+          "confidence_percentile_shift": 0.13305526590198113,
+          "correct_class_margin_shift": 1.3911795645983291,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 24,
+          "fitting_count": 131,
+          "confidence_percentile_shift": 0.1859819569743233,
+          "correct_class_margin_shift": 1.8481937027242266,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 25,
+          "fitting_count": 125,
+          "confidence_percentile_shift": 0.13749999999999996,
+          "correct_class_margin_shift": 1.1759626655578614,
+          "baseline_accuracy_shift": 0.016000000000000014
+        },
+        {
+          "class_index": 26,
+          "fitting_count": 120,
+          "confidence_percentile_shift": 0.11722222222222234,
+          "correct_class_margin_shift": 1.0912531852722172,
+          "baseline_accuracy_shift": 0.025000000000000022
+        },
+        {
+          "class_index": 27,
+          "fitting_count": 114,
+          "confidence_percentile_shift": 0.1898064125831821,
+          "correct_class_margin_shift": 1.7164052137085264,
+          "baseline_accuracy_shift": 0.00877192982456143
+        },
+        {
+          "class_index": 28,
+          "fitting_count": 108,
+          "confidence_percentile_shift": 0.16580932784636504,
+          "correct_class_margin_shift": 2.0415399118706024,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 29,
+          "fitting_count": 104,
+          "confidence_percentile_shift": 0.12832840236686394,
+          "correct_class_margin_shift": 2.007989599154545,
+          "baseline_accuracy_shift": 0.009615384615384581
+        },
+        {
+          "class_index": 30,
+          "fitting_count": 99,
+          "confidence_percentile_shift": 0.1765656565656566,
+          "correct_class_margin_shift": 1.9709788728964455,
+          "baseline_accuracy_shift": 0.030303030303030276
+        },
+        {
+          "class_index": 31,
+          "fitting_count": 95,
+          "confidence_percentile_shift": 0.1539473684210526,
+          "correct_class_margin_shift": 1.4790116243195115,
+          "baseline_accuracy_shift": 0.03157894736842104
+        },
+        {
+          "class_index": 32,
+          "fitting_count": 90,
+          "confidence_percentile_shift": 0.1166666666666667,
+          "correct_class_margin_shift": 1.6062200398836737,
+          "baseline_accuracy_shift": 0.011111111111111072
+        },
+        {
+          "class_index": 33,
+          "fitting_count": 86,
+          "confidence_percentile_shift": 0.18446088794926008,
+          "correct_class_margin_shift": 2.3945400533414043,
+          "baseline_accuracy_shift": 0.011627906976744207
+        },
+        {
+          "class_index": 34,
+          "fitting_count": 82,
+          "confidence_percentile_shift": 0.20934959349593485,
+          "correct_class_margin_shift": 2.071693981150718,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 35,
+          "fitting_count": 79,
+          "confidence_percentile_shift": 0.11708860759493667,
+          "correct_class_margin_shift": 0.9386480548713783,
+          "baseline_accuracy_shift": -0.02468354430379749
+        },
+        {
+          "class_index": 36,
+          "fitting_count": 75,
+          "confidence_percentile_shift": 0.17333333333333334,
+          "correct_class_margin_shift": 1.7684843618827948,
+          "baseline_accuracy_shift": 0.013333333333333308
+        },
+        {
+          "class_index": 37,
+          "fitting_count": 72,
+          "confidence_percentile_shift": 0.1743827160493827,
+          "correct_class_margin_shift": 1.5962408648596869,
+          "baseline_accuracy_shift": 0.01388888888888884
+        },
+        {
+          "class_index": 38,
+          "fitting_count": 68,
+          "confidence_percentile_shift": 0.17430795847750868,
+          "correct_class_margin_shift": 1.3124274927027084,
+          "baseline_accuracy_shift": 0.014705882352941124
+        },
+        {
+          "class_index": 39,
+          "fitting_count": 65,
+          "confidence_percentile_shift": 0.2633484162895927,
+          "correct_class_margin_shift": 3.7094063379106483,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 40,
+          "fitting_count": 62,
+          "confidence_percentile_shift": -0.03729838709677413,
+          "correct_class_margin_shift": -0.293617116828119,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 41,
+          "fitting_count": 60,
+          "confidence_percentile_shift": 0.245,
+          "correct_class_margin_shift": 2.675761906305949,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 42,
+          "fitting_count": 56,
+          "confidence_percentile_shift": 0.12755102040816335,
+          "correct_class_margin_shift": 0.9434602090290616,
+          "baseline_accuracy_shift": 0.017857142857142905
+        },
+        {
+          "class_index": 43,
+          "fitting_count": 54,
+          "confidence_percentile_shift": 0.1679894179894179,
+          "correct_class_margin_shift": 1.523247619154592,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 44,
+          "fitting_count": 52,
+          "confidence_percentile_shift": 0.2566568047337279,
+          "correct_class_margin_shift": 2.5724345812430753,
+          "baseline_accuracy_shift": 0.038461538461538436
+        },
+        {
+          "class_index": 45,
+          "fitting_count": 49,
+          "confidence_percentile_shift": 0.16640502354788067,
+          "correct_class_margin_shift": 1.3414983434991514,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 46,
+          "fitting_count": 47,
+          "confidence_percentile_shift": 0.04964539007092206,
+          "correct_class_margin_shift": 0.5586286352035845,
+          "baseline_accuracy_shift": 0.08510638297872342
+        },
+        {
+          "class_index": 47,
+          "fitting_count": 45,
+          "confidence_percentile_shift": 0.02777777777777779,
+          "correct_class_margin_shift": 0.3429785516526964,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 48,
+          "fitting_count": 43,
+          "confidence_percentile_shift": 0.11416490486257935,
+          "correct_class_margin_shift": 1.3254405539837242,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 49,
+          "fitting_count": 41,
+          "confidence_percentile_shift": 0.2549889135254989,
+          "correct_class_margin_shift": 2.639218677173961,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 50,
+          "fitting_count": 39,
+          "confidence_percentile_shift": 0.07179487179487176,
+          "correct_class_margin_shift": 0.5966192025404711,
+          "baseline_accuracy_shift": 0.05128205128205132
+        },
+        {
+          "class_index": 51,
+          "fitting_count": 37,
+          "confidence_percentile_shift": 0.1351351351351351,
+          "correct_class_margin_shift": 0.8273918267842886,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 52,
+          "fitting_count": 36,
+          "confidence_percentile_shift": -0.016975308641975273,
+          "correct_class_margin_shift": -0.17265033721923828,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 53,
+          "fitting_count": 34,
+          "confidence_percentile_shift": 0.1519607843137254,
+          "correct_class_margin_shift": 1.0795321776196847,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 54,
+          "fitting_count": 32,
+          "confidence_percentile_shift": -0.04296875,
+          "correct_class_margin_shift": -0.09324392676353455,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 55,
+          "fitting_count": 31,
+          "confidence_percentile_shift": 0.19758064516129037,
+          "correct_class_margin_shift": 1.6621130666425152,
+          "baseline_accuracy_shift": 0.032258064516129004
+        },
+        {
+          "class_index": 56,
+          "fitting_count": 29,
+          "confidence_percentile_shift": 0.20258620689655182,
+          "correct_class_margin_shift": 2.017623029906174,
+          "baseline_accuracy_shift": 0.10344827586206895
+        },
+        {
+          "class_index": 57,
+          "fitting_count": 28,
+          "confidence_percentile_shift": 0.03826530612244905,
+          "correct_class_margin_shift": 0.30270845549447234,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 58,
+          "fitting_count": 27,
+          "confidence_percentile_shift": 0.16402116402116407,
+          "correct_class_margin_shift": 1.3054687661468662,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 60,
+          "fitting_count": 24,
+          "confidence_percentile_shift": 0.11111111111111105,
+          "correct_class_margin_shift": 0.5936105251312256,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 61,
+          "fitting_count": 24,
+          "confidence_percentile_shift": -0.04166666666666674,
+          "correct_class_margin_shift": -0.37710078557332327,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 62,
+          "fitting_count": 22,
+          "confidence_percentile_shift": 0.030303030303030387,
+          "correct_class_margin_shift": 0.13812050674900833,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 63,
+          "fitting_count": 21,
+          "confidence_percentile_shift": 0.06349206349206349,
+          "correct_class_margin_shift": 0.5873854273841497,
+          "baseline_accuracy_shift": 0.04761904761904767
+        },
+        {
+          "class_index": 64,
+          "fitting_count": 20,
+          "confidence_percentile_shift": 0.06500000000000006,
+          "correct_class_margin_shift": 0.5048069477081292,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 66,
+          "fitting_count": 19,
+          "confidence_percentile_shift": 0.2210526315789474,
+          "correct_class_margin_shift": 1.8555000957689787,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 67,
+          "fitting_count": 18,
+          "confidence_percentile_shift": 0.11666666666666659,
+          "correct_class_margin_shift": 0.8421711232927116,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 68,
+          "fitting_count": 17,
+          "confidence_percentile_shift": 0.2823529411764706,
+          "correct_class_margin_shift": 1.8766410603242756,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 69,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.09375,
+          "correct_class_margin_shift": 0.32131683826446533,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 70,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.015625,
+          "correct_class_margin_shift": 0.06646648049354553,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 71,
+          "fitting_count": 15,
+          "confidence_percentile_shift": 0.1333333333333333,
+          "correct_class_margin_shift": 0.41406127611796073,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 72,
+          "fitting_count": 14,
+          "confidence_percentile_shift": -0.0357142857142857,
+          "correct_class_margin_shift": -0.07180414881025055,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 73,
+          "fitting_count": 13,
+          "confidence_percentile_shift": 0.07692307692307698,
+          "correct_class_margin_shift": 0.7161426910987267,
+          "baseline_accuracy_shift": 0.07692307692307687
+        },
+        {
+          "class_index": 74,
+          "fitting_count": 12,
+          "confidence_percentile_shift": 0.20833333333333337,
+          "correct_class_margin_shift": 1.0974099238713584,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 75,
+          "fitting_count": 12,
+          "confidence_percentile_shift": 0.18055555555555547,
+          "correct_class_margin_shift": 1.3174620866775513,
+          "baseline_accuracy_shift": 0.08333333333333337
+        },
+        {
+          "class_index": 77,
+          "fitting_count": 11,
+          "confidence_percentile_shift": 0.24242424242424254,
+          "correct_class_margin_shift": 0.7818289959069458,
+          "baseline_accuracy_shift": 0.0
+        }
+      ]
+    },
+    {
+      "seed": 1,
+      "ot_active_class_count": 70,
+      "confidence_percentile_shift": 0.16935500519813612,
+      "correct_class_margin_shift": 1.8793055229633187,
+      "baseline_accuracy_shift": 0.016808025079456446,
+      "classes": [
+        {
+          "class_index": 0,
+          "fitting_count": 400,
+          "confidence_percentile_shift": 0.24935000000000007,
+          "correct_class_margin_shift": 3.195242799520493,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 1,
+          "fitting_count": 382,
+          "confidence_percentile_shift": 0.2793411867364748,
+          "correct_class_margin_shift": 4.779566874626834,
+          "baseline_accuracy_shift": 0.002617801047120394
+        },
+        {
+          "class_index": 2,
+          "fitting_count": 364,
+          "confidence_percentile_shift": 0.16334078009902187,
+          "correct_class_margin_shift": 1.743887250240033,
+          "baseline_accuracy_shift": 0.005494505494505475
+        },
+        {
+          "class_index": 3,
+          "fitting_count": 348,
+          "confidence_percentile_shift": 0.11492601400449198,
+          "correct_class_margin_shift": 1.1449828545252476,
+          "baseline_accuracy_shift": 0.014367816091954033
+        },
+        {
+          "class_index": 4,
+          "fitting_count": 332,
+          "confidence_percentile_shift": 0.21318406154739433,
+          "correct_class_margin_shift": 2.371135937162192,
+          "baseline_accuracy_shift": 0.01807228915662651
+        },
+        {
+          "class_index": 5,
+          "fitting_count": 317,
+          "confidence_percentile_shift": 0.1554416403785488,
+          "correct_class_margin_shift": 2.3124484539784103,
+          "baseline_accuracy_shift": 0.012618296529968487
+        },
+        {
+          "class_index": 6,
+          "fitting_count": 303,
+          "confidence_percentile_shift": 0.18525273579989576,
+          "correct_class_margin_shift": 2.2497259173642554,
+          "baseline_accuracy_shift": 0.01320132013201325
+        },
+        {
+          "class_index": 7,
+          "fitting_count": 289,
+          "confidence_percentile_shift": 0.1698819737403422,
+          "correct_class_margin_shift": 2.0951800395873175,
+          "baseline_accuracy_shift": 0.02422145328719727
+        },
+        {
+          "class_index": 8,
+          "fitting_count": 276,
+          "confidence_percentile_shift": 0.27045263600084013,
+          "correct_class_margin_shift": 5.918934951657835,
+          "baseline_accuracy_shift": 0.01449275362318836
+        },
+        {
+          "class_index": 9,
+          "fitting_count": 263,
+          "confidence_percentile_shift": 0.24991358451434498,
+          "correct_class_margin_shift": 3.5731043379377407,
+          "baseline_accuracy_shift": 0.011406844106463865
+        },
+        {
+          "class_index": 10,
+          "fitting_count": 252,
+          "confidence_percentile_shift": 0.10648148148148151,
+          "correct_class_margin_shift": 1.3188578249916203,
+          "baseline_accuracy_shift": -0.003968253968254065
+        },
+        {
+          "class_index": 11,
+          "fitting_count": 240,
+          "confidence_percentile_shift": 0.07638888888888895,
+          "correct_class_margin_shift": 0.6649413883686073,
+          "baseline_accuracy_shift": 0.004166666666666652
+        },
+        {
+          "class_index": 12,
+          "fitting_count": 229,
+          "confidence_percentile_shift": 0.2577172112633639,
+          "correct_class_margin_shift": 4.074647801770734,
+          "baseline_accuracy_shift": 0.004366812227074246
+        },
+        {
+          "class_index": 13,
+          "fitting_count": 219,
+          "confidence_percentile_shift": 0.16562889165628902,
+          "correct_class_margin_shift": 1.4595503055688104,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 14,
+          "fitting_count": 208,
+          "confidence_percentile_shift": 0.15911612426035504,
+          "correct_class_margin_shift": 1.8299433634831361,
+          "baseline_accuracy_shift": 0.009615384615384581
+        },
+        {
+          "class_index": 15,
+          "fitting_count": 199,
+          "confidence_percentile_shift": 0.17708542713567832,
+          "correct_class_margin_shift": 2.3621187698421773,
+          "baseline_accuracy_shift": 0.00010050251256277232
+        },
+        {
+          "class_index": 16,
+          "fitting_count": 190,
+          "confidence_percentile_shift": 0.1535087719298246,
+          "correct_class_margin_shift": 1.8166039531691025,
+          "baseline_accuracy_shift": 0.010526315789473717
+        },
+        {
+          "class_index": 17,
+          "fitting_count": 181,
+          "confidence_percentile_shift": 0.2231563776122989,
+          "correct_class_margin_shift": 3.2805501440526097,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 18,
+          "fitting_count": 173,
+          "confidence_percentile_shift": 0.12073042564372038,
+          "correct_class_margin_shift": 1.2936099041654634,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 19,
+          "fitting_count": 165,
+          "confidence_percentile_shift": 0.1828282828282829,
+          "correct_class_margin_shift": 2.6072186358563316,
+          "baseline_accuracy_shift": 0.0060606060606061
+        },
+        {
+          "class_index": 20,
+          "fitting_count": 158,
+          "confidence_percentile_shift": 0.19335443037974687,
+          "correct_class_margin_shift": 2.800388158725786,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 21,
+          "fitting_count": 151,
+          "confidence_percentile_shift": 0.2703032415475777,
+          "correct_class_margin_shift": 3.8330008665332818,
+          "baseline_accuracy_shift": 0.026490066225165587
+        },
+        {
+          "class_index": 22,
+          "fitting_count": 144,
+          "confidence_percentile_shift": 0.15644290123456783,
+          "correct_class_margin_shift": 1.7887943287690486,
+          "baseline_accuracy_shift": 0.01388888888888884
+        },
+        {
+          "class_index": 23,
+          "fitting_count": 137,
+          "confidence_percentile_shift": 0.1301355578727842,
+          "correct_class_margin_shift": 1.4362488420464583,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 24,
+          "fitting_count": 131,
+          "confidence_percentile_shift": 0.18251214434420548,
+          "correct_class_margin_shift": 1.8176538875305406,
+          "baseline_accuracy_shift": 0.007633587786259555
+        },
+        {
+          "class_index": 25,
+          "fitting_count": 125,
+          "confidence_percentile_shift": 0.15474999999999994,
+          "correct_class_margin_shift": 1.4612862119674679,
+          "baseline_accuracy_shift": 0.008750000000000036
+        },
+        {
+          "class_index": 26,
+          "fitting_count": 120,
+          "confidence_percentile_shift": 0.19611111111111112,
+          "correct_class_margin_shift": 1.9117755214373267,
+          "baseline_accuracy_shift": 0.008333333333333304
+        },
+        {
+          "class_index": 27,
+          "fitting_count": 114,
+          "confidence_percentile_shift": 0.18194192377495466,
+          "correct_class_margin_shift": 1.7625439116540846,
+          "baseline_accuracy_shift": 0.03508771929824561
+        },
+        {
+          "class_index": 28,
+          "fitting_count": 108,
+          "confidence_percentile_shift": 0.22205075445816191,
+          "correct_class_margin_shift": 2.4792332296018245,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 29,
+          "fitting_count": 104,
+          "confidence_percentile_shift": 0.23187869822485208,
+          "correct_class_margin_shift": 3.520396076715909,
+          "baseline_accuracy_shift": 0.019230769230769273
+        },
+        {
+          "class_index": 30,
+          "fitting_count": 99,
+          "confidence_percentile_shift": 0.21939393939393936,
+          "correct_class_margin_shift": 2.10607365039864,
+          "baseline_accuracy_shift": 0.010101010101010055
+        },
+        {
+          "class_index": 31,
+          "fitting_count": 95,
+          "confidence_percentile_shift": 0.28596491228070164,
+          "correct_class_margin_shift": 2.998768431261966,
+          "baseline_accuracy_shift": 0.021052631578947323
+        },
+        {
+          "class_index": 32,
+          "fitting_count": 90,
+          "confidence_percentile_shift": 0.16352657004830906,
+          "correct_class_margin_shift": 2.427470841384741,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 33,
+          "fitting_count": 86,
+          "confidence_percentile_shift": 0.2584566596194503,
+          "correct_class_margin_shift": 2.6802769050033604,
+          "baseline_accuracy_shift": 0.011627906976744207
+        },
+        {
+          "class_index": 34,
+          "fitting_count": 82,
+          "confidence_percentile_shift": 0.23141695702671305,
+          "correct_class_margin_shift": 2.262299007378113,
+          "baseline_accuracy_shift": 0.024390243902439046
+        },
+        {
+          "class_index": 35,
+          "fitting_count": 79,
+          "confidence_percentile_shift": -0.0075949367088608,
+          "correct_class_margin_shift": 0.018734633771678944,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 36,
+          "fitting_count": 75,
+          "confidence_percentile_shift": 0.24350877192982445,
+          "correct_class_margin_shift": 2.6655828288563512,
+          "baseline_accuracy_shift": 0.013333333333333308
+        },
+        {
+          "class_index": 37,
+          "fitting_count": 72,
+          "confidence_percentile_shift": 0.1450617283950617,
+          "correct_class_margin_shift": 1.5220828652381897,
+          "baseline_accuracy_shift": 0.01388888888888884
+        },
+        {
+          "class_index": 38,
+          "fitting_count": 68,
+          "confidence_percentile_shift": 0.11721453287197225,
+          "correct_class_margin_shift": 0.9177846487830665,
+          "baseline_accuracy_shift": 0.014705882352941124
+        },
+        {
+          "class_index": 39,
+          "fitting_count": 65,
+          "confidence_percentile_shift": 0.2751131221719457,
+          "correct_class_margin_shift": 4.48712685183702,
+          "baseline_accuracy_shift": 0.01538461538461533
+        },
+        {
+          "class_index": 40,
+          "fitting_count": 62,
+          "confidence_percentile_shift": 0.09979838709677413,
+          "correct_class_margin_shift": 0.7689571957434378,
+          "baseline_accuracy_shift": 0.016129032258064502
+        },
+        {
+          "class_index": 41,
+          "fitting_count": 60,
+          "confidence_percentile_shift": 0.3061111111111111,
+          "correct_class_margin_shift": 3.5089649836222323,
+          "baseline_accuracy_shift": 0.050000000000000044
+        },
+        {
+          "class_index": 42,
+          "fitting_count": 56,
+          "confidence_percentile_shift": 0.20918367346938782,
+          "correct_class_margin_shift": 2.0820984584944586,
+          "baseline_accuracy_shift": 0.0357142857142857
+        },
+        {
+          "class_index": 43,
+          "fitting_count": 54,
+          "confidence_percentile_shift": 0.06216931216931221,
+          "correct_class_margin_shift": 0.8034752739800348,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 44,
+          "fitting_count": 52,
+          "confidence_percentile_shift": 0.19600591715976334,
+          "correct_class_margin_shift": 1.6520751164509697,
+          "baseline_accuracy_shift": 0.019230769230769273
+        },
+        {
+          "class_index": 45,
+          "fitting_count": 49,
+          "confidence_percentile_shift": 0.050235478806907485,
+          "correct_class_margin_shift": 0.42104299476419893,
+          "baseline_accuracy_shift": 0.04081632653061229
+        },
+        {
+          "class_index": 46,
+          "fitting_count": 47,
+          "confidence_percentile_shift": 0.0017730496453900457,
+          "correct_class_margin_shift": 0.26171107664175963,
+          "baseline_accuracy_shift": 0.021276595744680882
+        },
+        {
+          "class_index": 47,
+          "fitting_count": 45,
+          "confidence_percentile_shift": 0.04814814814814816,
+          "correct_class_margin_shift": 0.8351732889811192,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 48,
+          "fitting_count": 43,
+          "confidence_percentile_shift": 0.18604651162790697,
+          "correct_class_margin_shift": 2.2310392266852146,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 49,
+          "fitting_count": 41,
+          "confidence_percentile_shift": 0.05099778270509969,
+          "correct_class_margin_shift": 0.9524553567501499,
+          "baseline_accuracy_shift": 0.07317073170731703
+        },
+        {
+          "class_index": 50,
+          "fitting_count": 39,
+          "confidence_percentile_shift": 0.2333333333333334,
+          "correct_class_margin_shift": 1.4296758187122833,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 51,
+          "fitting_count": 37,
+          "confidence_percentile_shift": 0.16486486486486496,
+          "correct_class_margin_shift": 1.6311392552143813,
+          "baseline_accuracy_shift": 0.027027027027026973
+        },
+        {
+          "class_index": 53,
+          "fitting_count": 34,
+          "confidence_percentile_shift": 0.13235294117647056,
+          "correct_class_margin_shift": 1.110628343095967,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 54,
+          "fitting_count": 32,
+          "confidence_percentile_shift": 0.203125,
+          "correct_class_margin_shift": 1.8602842390537262,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 55,
+          "fitting_count": 31,
+          "confidence_percentile_shift": 0.10483870967741926,
+          "correct_class_margin_shift": 0.9107147839761547,
+          "baseline_accuracy_shift": 0.032258064516129004
+        },
+        {
+          "class_index": 56,
+          "fitting_count": 29,
+          "confidence_percentile_shift": 0.15517241379310343,
+          "correct_class_margin_shift": 1.2766113157930041,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 58,
+          "fitting_count": 27,
+          "confidence_percentile_shift": -0.10582010582010576,
+          "correct_class_margin_shift": -0.9791757240497247,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 59,
+          "fitting_count": 26,
+          "confidence_percentile_shift": -0.013736263736263687,
+          "correct_class_margin_shift": -0.15402691180889416,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 60,
+          "fitting_count": 24,
+          "confidence_percentile_shift": 0.125,
+          "correct_class_margin_shift": 1.5262906948725377,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 61,
+          "fitting_count": 24,
+          "confidence_percentile_shift": 0.1944444444444443,
+          "correct_class_margin_shift": 1.2043465375900269,
+          "baseline_accuracy_shift": 0.04166666666666663
+        },
+        {
+          "class_index": 63,
+          "fitting_count": 21,
+          "confidence_percentile_shift": 0.2777777777777778,
+          "correct_class_margin_shift": 2.245582603272938,
+          "baseline_accuracy_shift": 0.04761904761904767
+        },
+        {
+          "class_index": 64,
+          "fitting_count": 20,
+          "confidence_percentile_shift": 0.06500000000000006,
+          "correct_class_margin_shift": 0.6597942590713499,
+          "baseline_accuracy_shift": 0.050000000000000044
+        },
+        {
+          "class_index": 65,
+          "fitting_count": 20,
+          "confidence_percentile_shift": 0.09500000000000008,
+          "correct_class_margin_shift": 0.331177067756653,
+          "baseline_accuracy_shift": 0.050000000000000044
+        },
+        {
+          "class_index": 67,
+          "fitting_count": 18,
+          "confidence_percentile_shift": 0.27222222222222237,
+          "correct_class_margin_shift": 1.7425171958075625,
+          "baseline_accuracy_shift": 0.05555555555555558
+        },
+        {
+          "class_index": 68,
+          "fitting_count": 17,
+          "confidence_percentile_shift": 0.14117647058823535,
+          "correct_class_margin_shift": 1.0855465945075542,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 69,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.03125,
+          "correct_class_margin_shift": 0.14409518241882324,
+          "baseline_accuracy_shift": 0.0625
+        },
+        {
+          "class_index": 70,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.25,
+          "correct_class_margin_shift": 2.3343587815761566,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 72,
+          "fitting_count": 14,
+          "confidence_percentile_shift": 0.1428571428571428,
+          "correct_class_margin_shift": 0.9741383961268832,
+          "baseline_accuracy_shift": 0.0714285714285714
+        },
+        {
+          "class_index": 75,
+          "fitting_count": 12,
+          "confidence_percentile_shift": 0.3472222222222223,
+          "correct_class_margin_shift": 1.9434749285380049,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 77,
+          "fitting_count": 11,
+          "confidence_percentile_shift": 0.3030303030303031,
+          "correct_class_margin_shift": 1.7674470670295488,
+          "baseline_accuracy_shift": 0.09090909090909094
+        }
+      ]
+    },
+    {
+      "seed": 2,
+      "ot_active_class_count": 73,
+      "confidence_percentile_shift": 0.14950663432258013,
+      "correct_class_margin_shift": 1.6360503153026105,
+      "baseline_accuracy_shift": 0.015871208484901485,
+      "classes": [
+        {
+          "class_index": 0,
+          "fitting_count": 400,
+          "confidence_percentile_shift": 0.2558750000000001,
+          "correct_class_margin_shift": 3.6883418869972218,
+          "baseline_accuracy_shift": 0.007499999999999951
+        },
+        {
+          "class_index": 1,
+          "fitting_count": 382,
+          "confidence_percentile_shift": 0.22763961605584637,
+          "correct_class_margin_shift": 3.2576822675959605,
+          "baseline_accuracy_shift": 0.005235602094240788
+        },
+        {
+          "class_index": 2,
+          "fitting_count": 364,
+          "confidence_percentile_shift": 0.14809503683130054,
+          "correct_class_margin_shift": 1.4347906073371135,
+          "baseline_accuracy_shift": 0.01098901098901095
+        },
+        {
+          "class_index": 3,
+          "fitting_count": 348,
+          "confidence_percentile_shift": 0.12810476945435334,
+          "correct_class_margin_shift": 1.2718222168670303,
+          "baseline_accuracy_shift": 0.014367816091954033
+        },
+        {
+          "class_index": 4,
+          "fitting_count": 332,
+          "confidence_percentile_shift": 0.16916461024822183,
+          "correct_class_margin_shift": 1.5904396542583603,
+          "baseline_accuracy_shift": 0.012048192771084376
+        },
+        {
+          "class_index": 5,
+          "fitting_count": 317,
+          "confidence_percentile_shift": 0.2155362776025237,
+          "correct_class_margin_shift": 2.788402629049042,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 6,
+          "fitting_count": 303,
+          "confidence_percentile_shift": 0.2064877540385618,
+          "correct_class_margin_shift": 2.7362516540733095,
+          "baseline_accuracy_shift": 0.00990099009900991
+        },
+        {
+          "class_index": 7,
+          "fitting_count": 289,
+          "confidence_percentile_shift": 0.21235246717542777,
+          "correct_class_margin_shift": 3.089515473258695,
+          "baseline_accuracy_shift": 0.02422145328719727
+        },
+        {
+          "class_index": 8,
+          "fitting_count": 276,
+          "confidence_percentile_shift": 0.2654116782188616,
+          "correct_class_margin_shift": 3.75077397754227,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 9,
+          "fitting_count": 263,
+          "confidence_percentile_shift": 0.29859430810001153,
+          "correct_class_margin_shift": 5.154983448204817,
+          "baseline_accuracy_shift": 0.0076045627376425395
+        },
+        {
+          "class_index": 10,
+          "fitting_count": 252,
+          "confidence_percentile_shift": 0.143896447467876,
+          "correct_class_margin_shift": 1.2906199144938633,
+          "baseline_accuracy_shift": 0.007936507936507908
+        },
+        {
+          "class_index": 11,
+          "fitting_count": 240,
+          "confidence_percentile_shift": 0.11152777777777767,
+          "correct_class_margin_shift": 1.1973316291968032,
+          "baseline_accuracy_shift": 0.025000000000000022
+        },
+        {
+          "class_index": 12,
+          "fitting_count": 229,
+          "confidence_percentile_shift": 0.2623851829543743,
+          "correct_class_margin_shift": 3.774340160566897,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 13,
+          "fitting_count": 219,
+          "confidence_percentile_shift": 0.16388542963885433,
+          "correct_class_margin_shift": 1.758761891926805,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 14,
+          "fitting_count": 208,
+          "confidence_percentile_shift": 0.16466346153846156,
+          "correct_class_margin_shift": 1.9779036113849058,
+          "baseline_accuracy_shift": 0.019230769230769273
+        },
+        {
+          "class_index": 15,
+          "fitting_count": 199,
+          "confidence_percentile_shift": 0.19708542713567834,
+          "correct_class_margin_shift": 2.830765779246038,
+          "baseline_accuracy_shift": 0.005025125628140725
+        },
+        {
+          "class_index": 16,
+          "fitting_count": 190,
+          "confidence_percentile_shift": 0.1183114035087719,
+          "correct_class_margin_shift": 1.2060450090650923,
+          "baseline_accuracy_shift": 0.021052631578947323
+        },
+        {
+          "class_index": 17,
+          "fitting_count": 181,
+          "confidence_percentile_shift": 0.17715589718952685,
+          "correct_class_margin_shift": 2.623517957926083,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 18,
+          "fitting_count": 173,
+          "confidence_percentile_shift": 0.1999474513925381,
+          "correct_class_margin_shift": 2.697105483575301,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 19,
+          "fitting_count": 165,
+          "confidence_percentile_shift": 0.20245310245310244,
+          "correct_class_margin_shift": 2.764778673081172,
+          "baseline_accuracy_shift": 0.018181818181818188
+        },
+        {
+          "class_index": 20,
+          "fitting_count": 158,
+          "confidence_percentile_shift": 0.21693037974683538,
+          "correct_class_margin_shift": 3.084334876869299,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 21,
+          "fitting_count": 151,
+          "confidence_percentile_shift": 0.1849076333217149,
+          "correct_class_margin_shift": 2.4579956966146197,
+          "baseline_accuracy_shift": 0.019867549668874163
+        },
+        {
+          "class_index": 22,
+          "fitting_count": 144,
+          "confidence_percentile_shift": 0.09027777777777779,
+          "correct_class_margin_shift": 1.0548945797814264,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 23,
+          "fitting_count": 137,
+          "confidence_percentile_shift": 0.25401459854014596,
+          "correct_class_margin_shift": 2.833495273033199,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 24,
+          "fitting_count": 131,
+          "confidence_percentile_shift": 0.1945408281286144,
+          "correct_class_margin_shift": 2.01968040483957,
+          "baseline_accuracy_shift": 0.007633587786259555
+        },
+        {
+          "class_index": 25,
+          "fitting_count": 125,
+          "confidence_percentile_shift": 0.09975,
+          "correct_class_margin_shift": 0.8018543512821195,
+          "baseline_accuracy_shift": 0.016000000000000014
+        },
+        {
+          "class_index": 26,
+          "fitting_count": 120,
+          "confidence_percentile_shift": 0.19638888888888884,
+          "correct_class_margin_shift": 2.23856854836146,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 27,
+          "fitting_count": 114,
+          "confidence_percentile_shift": 0.20553539019963696,
+          "correct_class_margin_shift": 1.9276722465510527,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 28,
+          "fitting_count": 108,
+          "confidence_percentile_shift": 0.19838820301783266,
+          "correct_class_margin_shift": 2.317938455828914,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 29,
+          "fitting_count": 104,
+          "confidence_percentile_shift": 0.16900887573964496,
+          "correct_class_margin_shift": 1.6377390806491556,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 30,
+          "fitting_count": 99,
+          "confidence_percentile_shift": 0.2468686868686868,
+          "correct_class_margin_shift": 2.2062970754835334,
+          "baseline_accuracy_shift": 0.010101010101010055
+        },
+        {
+          "class_index": 31,
+          "fitting_count": 95,
+          "confidence_percentile_shift": 0.26491228070175443,
+          "correct_class_margin_shift": 2.629469416434305,
+          "baseline_accuracy_shift": 0.010526315789473717
+        },
+        {
+          "class_index": 32,
+          "fitting_count": 90,
+          "confidence_percentile_shift": 0.1524154589371981,
+          "correct_class_margin_shift": 2.073118760389983,
+          "baseline_accuracy_shift": 0.011111111111111072
+        },
+        {
+          "class_index": 33,
+          "fitting_count": 86,
+          "confidence_percentile_shift": 0.3155391120507399,
+          "correct_class_margin_shift": 3.3932065298390945,
+          "baseline_accuracy_shift": 0.011627906976744207
+        },
+        {
+          "class_index": 34,
+          "fitting_count": 82,
+          "confidence_percentile_shift": 0.20180023228803723,
+          "correct_class_margin_shift": 2.0762294615325745,
+          "baseline_accuracy_shift": 0.024390243902439046
+        },
+        {
+          "class_index": 35,
+          "fitting_count": 79,
+          "confidence_percentile_shift": 0.05696202531645567,
+          "correct_class_margin_shift": 0.4933962725385834,
+          "baseline_accuracy_shift": 0.012658227848101222
+        },
+        {
+          "class_index": 36,
+          "fitting_count": 75,
+          "confidence_percentile_shift": 0.16701754385964918,
+          "correct_class_margin_shift": 1.671542675955254,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 37,
+          "fitting_count": 72,
+          "confidence_percentile_shift": 0.18827160493827166,
+          "correct_class_margin_shift": 2.0000095168749485,
+          "baseline_accuracy_shift": 0.02777777777777779
+        },
+        {
+          "class_index": 38,
+          "fitting_count": 68,
+          "confidence_percentile_shift": 0.20544982698961933,
+          "correct_class_margin_shift": 1.7615950317943803,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 39,
+          "fitting_count": 65,
+          "confidence_percentile_shift": 0.1357466063348417,
+          "correct_class_margin_shift": 2.314880331824808,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 40,
+          "fitting_count": 62,
+          "confidence_percentile_shift": 0.13608870967741926,
+          "correct_class_margin_shift": 1.3082726655467862,
+          "baseline_accuracy_shift": 0.048387096774193505
+        },
+        {
+          "class_index": 41,
+          "fitting_count": 60,
+          "confidence_percentile_shift": 0.2583333333333333,
+          "correct_class_margin_shift": 2.5311695973078416,
+          "baseline_accuracy_shift": 0.01666666666666672
+        },
+        {
+          "class_index": 42,
+          "fitting_count": 56,
+          "confidence_percentile_shift": 0.15051020408163274,
+          "correct_class_margin_shift": 1.0164258224623541,
+          "baseline_accuracy_shift": 0.017857142857142905
+        },
+        {
+          "class_index": 43,
+          "fitting_count": 54,
+          "confidence_percentile_shift": 0.060846560846560815,
+          "correct_class_margin_shift": 0.5860284648875078,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 44,
+          "fitting_count": 52,
+          "confidence_percentile_shift": -0.009615384615384637,
+          "correct_class_margin_shift": -0.04187209789569568,
+          "baseline_accuracy_shift": -0.038461538461538436
+        },
+        {
+          "class_index": 45,
+          "fitting_count": 49,
+          "confidence_percentile_shift": -0.039246467817896424,
+          "correct_class_margin_shift": -0.1905225472323,
+          "baseline_accuracy_shift": 0.04081632653061229
+        },
+        {
+          "class_index": 46,
+          "fitting_count": 47,
+          "confidence_percentile_shift": 0.14893617021276606,
+          "correct_class_margin_shift": 1.3192622035953168,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 47,
+          "fitting_count": 45,
+          "confidence_percentile_shift": -0.037037037037037035,
+          "correct_class_margin_shift": -0.3512079768710663,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 48,
+          "fitting_count": 43,
+          "confidence_percentile_shift": 0.10147991543340384,
+          "correct_class_margin_shift": 1.1097836454121301,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 49,
+          "fitting_count": 41,
+          "confidence_percentile_shift": 0.22394678492239461,
+          "correct_class_margin_shift": 2.0124116884895544,
+          "baseline_accuracy_shift": 0.024390243902439046
+        },
+        {
+          "class_index": 50,
+          "fitting_count": 39,
+          "confidence_percentile_shift": 0.1461538461538462,
+          "correct_class_margin_shift": 1.1210185955732301,
+          "baseline_accuracy_shift": 0.02564102564102566
+        },
+        {
+          "class_index": 51,
+          "fitting_count": 37,
+          "confidence_percentile_shift": 0.16486486486486496,
+          "correct_class_margin_shift": 1.58644479545387,
+          "baseline_accuracy_shift": 0.05405405405405406
+        },
+        {
+          "class_index": 53,
+          "fitting_count": 34,
+          "confidence_percentile_shift": 0.1683006535947712,
+          "correct_class_margin_shift": 1.3100626920562943,
+          "baseline_accuracy_shift": 0.02941176470588236
+        },
+        {
+          "class_index": 54,
+          "fitting_count": 32,
+          "confidence_percentile_shift": 0.171875,
+          "correct_class_margin_shift": 1.2851814776659012,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 55,
+          "fitting_count": 31,
+          "confidence_percentile_shift": 0.13709677419354838,
+          "correct_class_margin_shift": 1.2135954787654262,
+          "baseline_accuracy_shift": 0.06451612903225812
+        },
+        {
+          "class_index": 56,
+          "fitting_count": 29,
+          "confidence_percentile_shift": 0.2543103448275863,
+          "correct_class_margin_shift": 2.946576545978415,
+          "baseline_accuracy_shift": 0.06896551724137934
+        },
+        {
+          "class_index": 57,
+          "fitting_count": 28,
+          "confidence_percentile_shift": 0.14540816326530603,
+          "correct_class_margin_shift": 0.8969017778124124,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 58,
+          "fitting_count": 27,
+          "confidence_percentile_shift": -0.15873015873015872,
+          "correct_class_margin_shift": -1.286271640232631,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 59,
+          "fitting_count": 26,
+          "confidence_percentile_shift": 0.18406593406593408,
+          "correct_class_margin_shift": 1.1996437638670532,
+          "baseline_accuracy_shift": 0.038461538461538436
+        },
+        {
+          "class_index": 60,
+          "fitting_count": 24,
+          "confidence_percentile_shift": 0.09722222222222221,
+          "correct_class_margin_shift": 0.7193406025568647,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 61,
+          "fitting_count": 24,
+          "confidence_percentile_shift": 0.04166666666666663,
+          "correct_class_margin_shift": 0.1884326537450156,
+          "baseline_accuracy_shift": 0.04166666666666663
+        },
+        {
+          "class_index": 62,
+          "fitting_count": 22,
+          "confidence_percentile_shift": 0.09090909090909094,
+          "correct_class_margin_shift": 0.7170649297309644,
+          "baseline_accuracy_shift": 0.13636363636363635
+        },
+        {
+          "class_index": 63,
+          "fitting_count": 21,
+          "confidence_percentile_shift": 0.08730158730158732,
+          "correct_class_margin_shift": 0.5323466573442737,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 64,
+          "fitting_count": 20,
+          "confidence_percentile_shift": 0.135,
+          "correct_class_margin_shift": 0.8595088243484499,
+          "baseline_accuracy_shift": 0.15000000000000002
+        },
+        {
+          "class_index": 65,
+          "fitting_count": 20,
+          "confidence_percentile_shift": 0.135,
+          "correct_class_margin_shift": 0.8288700580596919,
+          "baseline_accuracy_shift": 0.050000000000000044
+        },
+        {
+          "class_index": 67,
+          "fitting_count": 18,
+          "confidence_percentile_shift": 0.1166666666666667,
+          "correct_class_margin_shift": 0.8520265473259823,
+          "baseline_accuracy_shift": 0.05555555555555558
+        },
+        {
+          "class_index": 69,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.171875,
+          "correct_class_margin_shift": 0.8461683690547943,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 70,
+          "fitting_count": 16,
+          "confidence_percentile_shift": 0.109375,
+          "correct_class_margin_shift": 1.409626305103302,
+          "baseline_accuracy_shift": 0.0625
+        },
+        {
+          "class_index": 74,
+          "fitting_count": 12,
+          "confidence_percentile_shift": 0.09722222222222221,
+          "correct_class_margin_shift": 0.05609238147735596,
+          "baseline_accuracy_shift": 0.08333333333333337
+        },
+        {
+          "class_index": 75,
+          "fitting_count": 12,
+          "confidence_percentile_shift": 0.09722222222222221,
+          "correct_class_margin_shift": 0.927683194478353,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 77,
+          "fitting_count": 11,
+          "confidence_percentile_shift": -0.030303030303030276,
+          "correct_class_margin_shift": 0.06574835921778854,
+          "baseline_accuracy_shift": 0.0
+        },
+        {
+          "class_index": 78,
+          "fitting_count": 11,
+          "confidence_percentile_shift": 0.06060606060606055,
+          "correct_class_margin_shift": 0.2363450021454785,
+          "baseline_accuracy_shift": -0.1515151515151516
+        },
+        {
+          "class_index": 79,
+          "fitting_count": 10,
+          "confidence_percentile_shift": -0.1166666666666667,
+          "correct_class_margin_shift": -0.2585783322652184,
+          "baseline_accuracy_shift": 0.0
+        }
+      ]
+    }
+  ]
+}

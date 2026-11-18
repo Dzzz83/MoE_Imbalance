@@ -1,0 +1,43 @@
+{
+  "train_data": "/kaggle/working/ot-ablation-audit-rebuild/data/train.npz",
+  "split_seed": 43,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "shuffle_seeds": [
+    0,
+    1,
+    2
+  ],
+  "learning_rates": [
+    2e-05,
+    0.0002,
+    0.002,
+    0.02
+  ],
+  "batch_size": 128,
+  "num_workers": 2,
+  "baseline": {
+    "epochs": 200,
+    "learning_rate": 0.1,
+    "momentum": 0.9,
+    "weight_decay": 0.0002,
+    "scheduler": "multistep",
+    "warmup_epochs": 5,
+    "decay_epochs": [
+      160,
+      180
+    ],
+    "decay_factor": 0.01
+  },
+  "classifier": {
+    "epochs": 40,
+    "momentum": 0.9,
+    "weight_decay": 0.0005,
+    "nesterov": true,
+    "scheduler": "constant"
+  },
+  "final_baselines": {}
+}
