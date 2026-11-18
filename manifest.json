@@ -4,7 +4,15 @@
   "runner_version": 1,
   "report_hashes": {
     "rebuild.json": "67c716952a12a9289e45b345db4eabc4181faabf949fd0c4f9f5c862407a0822",
-    "strength_config.json": "e6972a2d4c32d17d40cac76e0968699db56c7d5616ac86ff1e4e3e9886ebd259"
+    "strength_config.json": "e6972a2d4c32d17d40cac76e0968699db56c7d5616ac86ff1e4e3e9886ebd259",
+    "study/seed0/strong_ot/ablation_finetuning_diagnostics.json": "6a363360f5be634112119213d115c8b7493e054daa3a316c2b6c064226099ad8",
+    "study/seed0/strong_ot/complete.json": "3c825dd71260ce6f492088e98f49bd1472658275a66f097640e13638c55db28d",
+    "study/seed0/strong_ot/config.json": "884b29d3ecb006653d87e4d154316b40603be11cf2f8dfb966cdfe3d0e268463",
+    "study/seed0/strong_ot/history.json": "f387fdb538d5c072ddede97d77239dad32f3925a6cf0c83bafffc868198c066f",
+    "study/seed0/strong_ot/metrics.json": "b976ac1e2c11ff73ee43623207f099e770e3b339e808ef1703604dce0e5d05d1",
+    "study/seed0/strong_ot/prototype_weight_diagnostics.json": "489124613b9bf66950381bc6cf8e34acfdbf53a47f76b86d2cf3f80e97c1bf44",
+    "study/seed0/strong_ot/starting_metrics.json": "b2fc7c873c1bc57b1c99499c7461698633708550bcdb98ba92d286cf3d2a05d0",
+    "study/seed0/strong_ot/weight_diagnostics.json": "4fb0208469e15c5abd2bfeac426644e31f4c2766f3b7e12f6e6660f63f4868d6"
   },
   "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
 }
