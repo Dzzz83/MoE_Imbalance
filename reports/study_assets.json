@@ -100,9 +100,9 @@
       ]
     },
     "1": {
-      "asset_id": 764118068,
-      "sha256": "ecd77d77ca8c5ebb888461bfb59fb632fe0244addf56c8019d209651c0d25d66",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed1-ecd77d77ca8c5ebb888461bfb59fb632fe0244addf56c8019d209651c0d25d66/ot-assignment-seed1.zip",
+      "asset_id": 764118746,
+      "sha256": "36c66b2c5e8605e92359b735e33dfc7f6beb2a058f716611b4dc25e241f20875",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed1-36c66b2c5e8605e92359b735e33dfc7f6beb2a058f716611b4dc25e241f20875/ot-assignment-seed1.zip",
       "paths": [
         "diagnostics/seed1/assignment_audit.json",
         "diagnostics/seed1/scores.pt",
@@ -115,7 +115,17 @@
         "runs/seed1/class_balanced/prototype_weight_diagnostics.json",
         "runs/seed1/class_balanced/starting_metrics.json",
         "runs/seed1/class_balanced/weight_diagnostics.json",
-        "runs/seed1/class_balanced/weights.pt"
+        "runs/seed1/class_balanced/weights.pt",
+        "runs/seed1/ot/assignment_finetuning_diagnostics.json",
+        "runs/seed1/ot/complete.json",
+        "runs/seed1/ot/config.json",
+        "runs/seed1/ot/final.pt",
+        "runs/seed1/ot/history.json",
+        "runs/seed1/ot/metrics.json",
+        "runs/seed1/ot/prototype_weight_diagnostics.json",
+        "runs/seed1/ot/starting_metrics.json",
+        "runs/seed1/ot/weight_diagnostics.json",
+        "runs/seed1/ot/weights.pt"
       ]
     }
   }
