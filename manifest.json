@@ -100,7 +100,9 @@
     "study/seed2/strong_ot/metrics.json": "f38529a5925f91dbafe728541383f1f19ba6cb557ba7a0fd16aa4c3ebf216880",
     "study/seed2/strong_ot/prototype_weight_diagnostics.json": "1f3b03bd1036c1a091e7fa437e366c0892b3db57f2c30f41f35d4fd111b6c803",
     "study/seed2/strong_ot/starting_metrics.json": "af80fb558c7fef4b0efb8319e30b6f74a77862ce51a053b2d029bde43b60630d",
-    "study/seed2/strong_ot/weight_diagnostics.json": "d44ac035b4a2ec553bf55bbf759a7fa04c157fccaa3002f18237bc9e9f62b2a6"
+    "study/seed2/strong_ot/weight_diagnostics.json": "d44ac035b4a2ec553bf55bbf759a7fa04c157fccaa3002f18237bc9e9f62b2a6",
+    "study_results.json": "78e99a1fe98c6e610a38b19c2f340cfeeba44f3f150c412f9976c8ac4dbde1f2",
+    "study_summary.json": "4b4c46d527b5abecb3cc59575b2a788dd2a871e8c1dca90ff3e2dddaa54d0e24"
   },
   "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
 }
