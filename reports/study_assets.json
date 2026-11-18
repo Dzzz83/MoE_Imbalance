@@ -1,0 +1,23 @@
+{
+  "seeds": {
+    "0": {
+      "asset_id": 764112670,
+      "sha256": "5beb8143b07dd190c3127d7d463811a6969d6b8fc935982cfaa445d6297fb89d",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-assignment-seed0-5beb8143b07dd190c3127d7d463811a6969d6b8fc935982cfaa445d6297fb89d/ot-assignment-seed0.zip",
+      "paths": [
+        "diagnostics/seed0/assignment_audit.json",
+        "diagnostics/seed0/scores.pt",
+        "runs/seed0/class_balanced/assignment_finetuning_diagnostics.json",
+        "runs/seed0/class_balanced/complete.json",
+        "runs/seed0/class_balanced/config.json",
+        "runs/seed0/class_balanced/final.pt",
+        "runs/seed0/class_balanced/history.json",
+        "runs/seed0/class_balanced/metrics.json",
+        "runs/seed0/class_balanced/prototype_weight_diagnostics.json",
+        "runs/seed0/class_balanced/starting_metrics.json",
+        "runs/seed0/class_balanced/weight_diagnostics.json",
+        "runs/seed0/class_balanced/weights.pt"
+      ]
+    }
+  }
+}

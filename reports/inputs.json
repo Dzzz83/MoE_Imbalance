@@ -1,0 +1,32 @@
+{
+  "input_results_commit": "51c7829d505143bd556ff1f3038b6559751e3428",
+  "archive": {
+    "asset_id": 763166137,
+    "sha256": "e157e664288bd849a0dc5d6fb5eed2f61269a3452327d9a1407145a02331aeb2",
+    "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-weight-inputs-e157e664288bd849a0dc5d6fb5eed2f61269a3452327d9a1407145a02331aeb2/ot-weight-inputs.zip"
+  },
+  "report_hashes": {
+    "weight_audit.json": "e3b32935fd8749a71437a8f7d359f4850134f3ffb0f6394977f49503c555fadf",
+    "weight_artifacts.json": "fd002a8478ab3f72df558d29b1914978c783b9029193b1bd71cfe78e869313e2",
+    "study_config.json": "69e4eac1ca6eea210d5dfc1db44ca37993e090bf3953ed4865e98d65febe4f41",
+    "implementation.json": "0669ec16c96773672114109e6a65a16ac0a7982d2a937a4399947aec8b2e03a8",
+    "split/split.json": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00"
+  },
+  "seed_files": {
+    "0": {
+      "baseline": "304d3c33c11d07f88ae8e4af2baf94cd562ccf4f387887fde1d2338f062521d8",
+      "cache": "eecab020b75cd7739b254fe2db59eb06740b409a9f85df4b9318d482193309f8"
+    },
+    "1": {
+      "baseline": "970df0e4d6d35e2a36493d43e1e55d05bf8cac896a6d59aece0d146b709beee2",
+      "cache": "f7dd52508b82280c559837dccf6a4cc8f84d700bcca719fcb921d4cf8c6315ff"
+    },
+    "2": {
+      "baseline": "b05629bf46d2ccfb8c78fe9cfeca33db43779ac0ca4e10ac83f508db3a78543d",
+      "cache": "d060150d190a96d36a3f6258527b34624b1ef746d56e7af331e5b85a1f2d999a"
+    }
+  },
+  "split_sha256": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00",
+  "validation": "passed",
+  "image_identity": "Trusted published extraction; images are not reloaded."
+}
