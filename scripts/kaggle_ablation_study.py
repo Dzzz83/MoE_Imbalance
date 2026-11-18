@@ -10,25 +10,41 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+from zipfile import ZipFile, ZipInfo
 
 
-REPOSITORY = "https://github.com/Dzzz83/MoE_Imbalance.git"
+REPOSITORY_SLUG = "Dzzz83/MoE_Imbalance"
+REPOSITORY = f"https://github.com/{REPOSITORY_SLUG}.git"
+RELEASES_API = f"https://api.github.com/repos/{REPOSITORY_SLUG}/releases"
+RELEASE_UPLOADS = f"https://uploads.github.com/repos/{REPOSITORY_SLUG}/releases"
 SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Run the stronger OT follow-up on the saved development study.
-# To start the original development study, use ("prepare", "pilot", "study").
-STAGES = ("strength",)
+# Rebuild the missing baselines and publish the audit inputs and results.
+# Use ("audit",) to audit an existing stronger OT run without training.
+STAGES = ("rebuild_audit",)
+IS_WEIGHT_AUDIT = STAGES == ("audit",)
+IS_AUDIT_REBUILD = STAGES == ("rebuild_audit",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
-RESULTS_BRANCH = "ablation-strength-results" if IS_STRENGTH_STUDY else DEVELOPMENT_RESULTS_BRANCH
+STRENGTH_RESULTS_BRANCH = "ablation-strength-results"
+if IS_WEIGHT_AUDIT:
+    RESULTS_BRANCH, RESULTS_FOLDER = "ablation-weight-audit-results", "ot-weight-audit-results"
+elif IS_AUDIT_REBUILD:
+    RESULTS_BRANCH, RESULTS_FOLDER = "ablation-rebuilt-audit-results", "ot-rebuilt-audit-results"
+elif IS_STRENGTH_STUDY:
+    RESULTS_BRANCH, RESULTS_FOLDER = STRENGTH_RESULTS_BRANCH, "ot-strength-results"
+else:
+    RESULTS_BRANCH, RESULTS_FOLDER = DEVELOPMENT_RESULTS_BRANCH, "ot-ablation-results"
 GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
 CODE_ROOT = Path("/kaggle/working") / ("ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code")
-RESULTS_ROOT = Path("/kaggle/working") / ("ot-strength-results" if IS_STRENGTH_STUDY else "ot-ablation-results")
-WORK_ROOT = Path("/kaggle/working/ot-ablation")
+RESULTS_ROOT = Path("/kaggle/working") / RESULTS_FOLDER
+WORK_ROOT = Path("/kaggle/working") / ("ot-ablation-audit-rebuild" if IS_AUDIT_REBUILD else "ot-ablation")
 INPUT_ROOT = Path("/kaggle/input")
 RAW_CIFAR_ROOT = INPUT_ROOT / "datasets/dzzz833/cifar100"
 # Stronger OT finds a single complete study among the attached Kaggle inputs.
@@ -97,6 +113,8 @@ def prepare_repositories(auth_env):
         raise ValueError("SOURCE_COMMIT must be a full published Git commit hash")
     if previous and previous["source_commit"] != commit:
         raise RuntimeError("Source commit changed; use a new results branch and study folder")
+    if IS_WEIGHT_AUDIT:
+        return commit  # The audit applies the saved linear classifier directly.
     if not CODE_ROOT.exists():
         run(["git", "clone", REPOSITORY, CODE_ROOT], env=auth_env)
     if run(["git", "remote", "get-url", "origin"], cwd=CODE_ROOT, capture=True) != REPOSITORY:
@@ -270,7 +288,7 @@ def report_path(relative):
 
 
 def publish_reports(study_root, source_commit, message, auth_env):
-    """Publish JSON only. Training data, feature caches, and models stay local."""
+    """Publish JSON reports and references to any separately uploaded artifacts."""
     manifest_path = RESULTS_ROOT / "manifest.json"
     previous = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
     if previous and previous["source_commit"] != source_commit:
@@ -293,18 +311,28 @@ def publish_reports(study_root, source_commit, message, auth_env):
     write_json(manifest_path, {
         "source_commit": source_commit, "source_ref": SOURCE_REF, "runner_version": 1,
         "report_hashes": files,
-        "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts",
+        "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available",
     })
     is_strength_study = "strength_config.json" in files
     title = "Stronger OT ablation results" if is_strength_study else "OT reweighting ablation results"
-    final_location = "" if is_strength_study else "Final test reports, when explicitly run: `reports/final/`.\n"
+    report_locations = ""
+    if "study_summary.json" in files or is_strength_study:
+        report_locations += "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
+    if not is_strength_study and "weight_audit.json" not in files:
+        report_locations += "Final test reports, when explicitly run: `reports/final/`.\n"
+    if "weight_audit.json" in files:
+        if not is_strength_study:
+            title = "OT example weight audit"
+        report_locations += "Audit report: `reports/weight_audit.json`.\n"
+    if "weight_artifacts.json" in files:
+        artifacts = json.loads((study_root / "weight_artifacts.json").read_text())
+        report_locations += f"Saved baselines and feature caches: [download ZIP]({artifacts['download_url']}).\n"
     (RESULTS_ROOT / "README.md").write_text(
         f"# {title}\n\n"
         f"Source commit: `{source_commit}`.\n\n"
-        "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
-        f"{final_location}\n"
+        f"{report_locations}\n"
         "The manifest lists current report files and their hashes. Scores are fractions.\n"
-        "Datasets, cached features, and checkpoints are kept in Kaggle outputs, not Git.\n"
+        "Raw training images are kept out of the published artifacts.\n"
     )
     published_paths = ["manifest.json", "README.md"] + [
         report_path(relative).relative_to(RESULTS_ROOT).as_posix()
@@ -355,13 +383,10 @@ def execute_stages(config, source_commit, raw_root, auth_env):
         publish(f"complete {stage}")
 
 
-def rebuild_development_study(source_commit, auth_env):
-    """Recreate the fitting models using the published split and selected schedule."""
+def prepare_rebuilt_study(source_commit, auth_env):
+    """Prepare the original fitting split and schedule from published reports."""
     from pipeline import run_ablation
-    from pipeline.runtime import atomic_write_json, resolve_device
-
-    if (RESULTS_ROOT / "manifest.json").exists():
-        raise RuntimeError("Stronger OT results already exist. Restore their saved workspace to resume.")
+    from pipeline.runtime import atomic_write_json
 
     marker_path = WORK_ROOT / "rebuild.json"
     saved = json.loads(marker_path.read_text()) if marker_path.exists() else None
@@ -390,9 +415,19 @@ def rebuild_development_study(source_commit, auth_env):
     schedule = published["selected_schedule.json"] | {"pilot_results_sha256": sha256(pilot_path)}
     atomic_write_json(root / "selected_schedule.json", schedule)
     atomic_write_json(root / "rebuild.json", recovery)
+    return config, root, split
+
+
+def rebuild_development_study(source_commit, auth_env):
+    """Recreate the fitting models and the original classifier comparisons."""
+    from pipeline import run_ablation
+    from pipeline.runtime import resolve_device
+
+    if (RESULTS_ROOT / "manifest.json").exists():
+        raise RuntimeError("Stronger OT results already exist. Restore their saved workspace to resume.")
+    config, root, split = prepare_rebuilt_study(source_commit, auth_env)
     archive_interrupted_runs(root)
-    print(f"Rebuilding the development baselines and controls at the published rate {schedule['learning_rate']}.",
-          flush=True)
+    print("Rebuilding the development baselines and controls.", flush=True)
     run_ablation.run_study(config, root, split, resolve_device("cuda"),
                            on_progress=lambda message: print(message, flush=True))
 
@@ -424,18 +459,281 @@ def execute_strength(source_commit, auth_env, *, rebuild=False):
         output.mkdir(exist_ok=True)
         shutil.copyfile(recovery, output / recovery.name)
 
+    handoff_saved = False
+
     def publish(message):
+        nonlocal handoff_saved
+        if not handoff_saved:
+            config = json.loads((output / "strength_config.json").read_text())
+            expected = {int(seed): digest for seed, digest in config["feature_caches"].items()}
+            bundles = read_weight_audit_inputs(original, expected)
+            if bundles is None:
+                raise RuntimeError("The exact stronger OT inputs are missing or have changed.")
+            save_weight_audit(original, bundles, expected, output, source_commit, auth_env)
+            handoff_saved = True
         publish_reports(output, source_commit, message, auth_env)
 
     run_ablation.run_strength_study(original, resolve_device("cuda"), on_progress=publish)
     publish("complete stronger OT study")
 
 
+def read_weight_audit_inputs(study, expected_caches):
+    import torch
+
+    bundles = {}
+    for seed, digest in expected_caches.items():
+        cache = study / f"caches/seed{seed}/features_weights.pt"
+        baseline = study / f"baselines/seed{seed}/final.pt"
+        if not baseline.is_file() or not cache.is_file() or sha256(cache) != digest:
+            return None
+        bundle = torch.load(cache, map_location="cpu", weights_only=True)
+        if bundle["inputs"]["seed"] != seed or sha256(baseline) != bundle["inputs"]["baseline_sha256"]:
+            return None
+        bundles[seed] = bundle
+    return bundles
+
+
+def find_weight_audit_inputs(expected_caches):
+    local = WORK_ROOT / "study"
+    if RESTORE_ROOT is not None:
+        root = Path(RESTORE_ROOT)
+        candidates = [root if (root / "caches").is_dir() else root / "study"]
+    else:
+        mounted = {p.parents[2] for p in INPUT_ROOT.glob("**/caches/seed*/features_weights.pt")}
+        candidates = [local, *sorted(mounted)]
+    for study in candidates:
+        bundles = read_weight_audit_inputs(study, expected_caches)
+        if bundles is not None:
+            return study, bundles
+    raise RuntimeError(
+        "The exact baseline checkpoints and feature caches from the completed stronger OT run "
+        "aren't available on GitHub or in this session. If the run's files are still on Kaggle, "
+        "run this audit once in that workspace to publish them."
+    )
+
+
+def audit_seed_weights(study, seed, bundle):
+    import torch
+    from torch.nn.functional import linear
+
+    baseline = study / f"baselines/seed{seed}/final.pt"
+    state = torch.load(baseline, map_location="cpu", weights_only=True)["model_state_dict"]
+    labels = bundle["labels"]
+    with torch.inference_mode():
+        logits = linear(bundle["features"], state["fc.weight"], state["fc.bias"])
+        if not torch.isfinite(logits).all():
+            raise ValueError(f"Nonfinite baseline scores for seed {seed}")
+        correct = logits.argmax(dim=1) == labels
+        true_scores = logits.gather(1, labels[:, None]).squeeze(1)
+        logits.scatter_(1, labels[:, None], -torch.inf)
+        margins = true_scores - logits.amax(dim=1)
+
+    classes = []
+    for diagnostic in bundle["prototype_diagnostics"]:
+        if not diagnostic["used_ot"]:
+            continue
+        class_index = diagnostic["class_index"]
+        members = labels == class_index
+        weights = bundle["ot_weights"][members]
+        class_margins = margins[members].double()
+        top_count = (len(weights) + 3) // 4
+        cutoff = weights.topk(top_count).values[-1]
+        above, tied = weights > cutoff, weights == cutoff
+        # Give tied examples an equal share of the remaining top-quarter places.
+        in_top = above.double() + tied.double() * (top_count - above.sum()) / tied.sum()
+        _, ranks, counts = torch.unique(class_margins, return_inverse=True, return_counts=True)
+        percentiles = (counts.cumsum(0) - counts.double() / 2)[ranks] / len(weights)
+        accuracy = correct[members].double()
+        classes.append({
+            "class_index": class_index, "fitting_count": len(weights),
+            "confidence_percentile_shift": (in_top @ percentiles / top_count).item() - 0.5,
+            "correct_class_margin_shift": (in_top @ class_margins / top_count - class_margins.mean()).item(),
+            "baseline_accuracy_shift": (in_top @ accuracy / top_count - accuracy.mean()).item(),
+        })
+    shifts = ("confidence_percentile_shift", "correct_class_margin_shift", "baseline_accuracy_shift")
+    return {
+        "seed": seed, "ot_active_class_count": len(classes),
+        **{name: sum(c[name] for c in classes) / len(classes) if classes else None for name in shifts},
+        "classes": classes,
+    }
+
+
+def github_release_request(url, auth_env, *, data=None, content_type=None, binary=False, method=None):
+    request = Request(url, data=data, method=method, headers={
+        "Accept": "application/octet-stream" if binary else "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
+    # An asset download can redirect to signed storage. Keep the token on GitHub.
+    request.add_unredirected_header("Authorization", f"Bearer {auth_env['GITHUB_TOKEN']}")
+    if content_type:
+        request.add_header("Content-Type", content_type)
+    return urlopen(request, timeout=120)
+
+
+def weight_artifact_paths(seeds):
+    return [path for seed in sorted(seeds) for path in (
+        f"baselines/seed{seed}/final.pt", f"caches/seed{seed}/features_weights.pt",
+    )]
+
+
+def upload_weight_artifacts(study, expected_caches, source_commit, auth_env):
+    with tempfile.TemporaryDirectory(prefix="ot-artifacts-") as temporary:
+        bundle = Path(temporary) / "ot-weight-inputs.zip"
+        with ZipFile(bundle, "w") as archive:
+            for relative in weight_artifact_paths(expected_caches):
+                archive.writestr(ZipInfo(relative), (study / relative).read_bytes())
+        digest = sha256(bundle)
+        tag = f"ot-weight-inputs-{digest}"
+        try:
+            with github_release_request(f"{RELEASES_API}/tags/{tag}", auth_env) as response:
+                release = json.load(response)
+        except HTTPError as error:
+            if error.code != 404:
+                raise
+            error.close()
+            request = json.dumps({
+                "tag_name": tag, "target_commitish": source_commit,
+                "name": "OT audit inputs " + digest[:12], "prerelease": True, "make_latest": "false",
+            }).encode()
+            with github_release_request(RELEASES_API, auth_env, data=request,
+                                        content_type="application/json") as response:
+                release = json.load(response)
+        asset = next((entry for entry in release["assets"] if entry["name"] == bundle.name), None)
+        if asset is not None and asset["state"] == "starter" and asset["size"] == 0:
+            # GitHub can leave an empty placeholder after a failed upload.
+            with github_release_request(f"{RELEASES_API}/assets/{int(asset['id'])}", auth_env, method="DELETE"):
+                pass
+            asset = None
+        if asset is None:
+            upload_url = f"{RELEASE_UPLOADS}/{int(release['id'])}/assets?name={bundle.name}"
+            with github_release_request(upload_url, auth_env, data=bundle.read_bytes(),
+                                        content_type="application/zip") as response:
+                asset = json.load(response)
+        if (asset["state"] != "uploaded" or asset["size"] != bundle.stat().st_size
+                or asset.get("digest") not in (None, f"sha256:{digest}")):
+            raise RuntimeError("GitHub did not save the expected OT artifact archive")
+        return {"asset_id": asset["id"], "sha256": digest, "download_url": asset["browser_download_url"]}
+
+
+def download_weight_artifacts(artifacts, expected_caches, destination, auth_env):
+    bundle = destination / "ot-weight-inputs.zip"
+    url = f"{RELEASES_API}/assets/{int(artifacts['asset_id'])}"
+    with github_release_request(url, auth_env, binary=True) as response, bundle.open("wb") as target:
+        shutil.copyfileobj(response, target)
+    if sha256(bundle) != artifacts["sha256"]:
+        raise ValueError("The published OT artifact archive did not match its checksum")
+    paths = weight_artifact_paths(expected_caches)
+    with ZipFile(bundle) as archive:
+        if sorted(archive.namelist()) != sorted(paths):
+            raise ValueError("The published OT artifact archive contains unexpected files")
+        for relative in paths:
+            target = destination / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(relative) as source, target.open("wb") as file:
+                shutil.copyfileobj(source, file)
+    return destination
+
+
+def save_weight_audit(study, bundles, expected, output, source_commit, auth_env,
+                      *, strength_commit=None, artifacts=None):
+    seeds = [audit_seed_weights(study, seed, bundles[seed]) for seed in sorted(expected)]
+    if artifacts is None:
+        artifacts = upload_weight_artifacts(study, expected, source_commit, auth_env)
+    write_json(output / "weight_artifacts.json", artifacts)
+    write_json(output / "weight_audit.json", {
+        "strength_results_commit": strength_commit, "feature_caches": expected,
+        "comparison": "Top quarter by original OT weight versus the full class, among OT-active fitting classes.",
+        "confidence": "Correct-class score minus the highest score for another class.",
+        "seeds": seeds,
+    })
+    for result in seeds:
+        shift = result["confidence_percentile_shift"]
+        if shift is not None:
+            print(f"Seed {result['seed']}: top-weight confidence rank changed by {100 * shift:+.2f} percentile points.",
+                  flush=True)
+
+
+def execute_weight_audit(source_commit, auth_env):
+    run(["git", "fetch", "--no-tags", "origin", f"refs/heads/{STRENGTH_RESULTS_BRANCH}"],
+        cwd=RESULTS_ROOT, env=auth_env)
+    strength_commit = run(["git", "rev-parse", "FETCH_HEAD"], cwd=RESULTS_ROOT, capture=True)
+    strength = json.loads(run(["git", "show", f"{strength_commit}:reports/strength_config.json"],
+                              cwd=RESULTS_ROOT, capture=True))
+    expected = {int(seed): digest for seed, digest in strength["feature_caches"].items()}
+    if not expected:
+        raise RuntimeError("The stronger OT results do not list any feature caches")
+    manifest = json.loads(run(["git", "show", f"{strength_commit}:manifest.json"],
+                              cwd=RESULTS_ROOT, capture=True))
+    artifacts = None
+    if "weight_artifacts.json" in manifest["report_hashes"]:
+        artifacts = json.loads(run(["git", "show", f"{strength_commit}:reports/weight_artifacts.json"],
+                                   cwd=RESULTS_ROOT, capture=True))
+    else:
+        previous_report = report_path("weight_audit.json")
+        previous_artifacts = report_path("weight_artifacts.json")
+        if previous_report.is_file() and previous_artifacts.is_file():
+            previous = json.loads(previous_report.read_text())
+            if previous["feature_caches"] == strength["feature_caches"]:
+                artifacts = json.loads(previous_artifacts.read_text())
+    output = WORK_ROOT / "weight-audit"
+    with tempfile.TemporaryDirectory(prefix="ot-audit-inputs-") as temporary:
+        if artifacts is not None:
+            study = download_weight_artifacts(artifacts, expected, Path(temporary), auth_env)
+            bundles = read_weight_audit_inputs(study, expected)
+            if bundles is None:
+                raise ValueError("The published baselines and feature caches do not match the stronger OT run")
+        else:
+            study, bundles = find_weight_audit_inputs(expected)
+        save_weight_audit(study, bundles, expected, output, source_commit, auth_env,
+                          strength_commit=strength_commit, artifacts=artifacts)
+    publish_reports(output, source_commit, "complete OT example weight audit", auth_env)
+
+
+def execute_rebuilt_weight_audit(source_commit, auth_env):
+    from pipeline import run_ablation
+    from pipeline.runtime import resolve_device
+
+    has_reports = all(report_path(name).is_file() for name in ("weight_audit.json", "weight_artifacts.json"))
+    if has_reports and not run(["git", "status", "--porcelain", "--", "manifest.json", "reports"],
+                               cwd=RESULTS_ROOT, capture=True):
+        run(["git", "push", "origin", f"HEAD:refs/heads/{RESULTS_BRANCH}"], cwd=RESULTS_ROOT, env=auth_env)
+        print("The rebuilt audit and its inputs are already on GitHub.", flush=True)
+        return
+
+    config, root, _ = prepare_rebuilt_study(source_commit, auth_env)
+    archive_interrupted_runs(root)
+    device = resolve_device("cuda")
+    fitting, development = root / "split/fitting.npz", root / "split/development.npz"
+    expected, bundles = {}, {}
+    for seed in config["seeds"]:
+        checkpoint = run_ablation._baseline(config, fitting, seed, root / f"baselines/seed{seed}", device)
+        bundle = run_ablation._seed_inputs(
+            config, root / f"caches/seed{seed}", fitting, development, checkpoint, seed, device,
+        )
+        expected[seed] = bundle["cache_sha256"]
+        bundles[seed] = bundle
+        print(f"Baseline and feature cache ready for seed {seed}.", flush=True)
+
+    output = WORK_ROOT / "weight-audit"
+    reports = [
+        "study_config.json", "implementation.json", "split/split.json", "pilot_results.json",
+        "selected_schedule.json", "rebuild.json",
+    ]
+    for seed in config["seeds"]:
+        reports.extend(f"baselines/seed{seed}/{name}" for name in ("config.json", "history.json", "complete.json"))
+    for relative in reports:
+        destination = output / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / relative, destination)
+    save_weight_audit(root, bundles, expected, output, source_commit, auth_env)
+    publish_reports(output, source_commit, "complete rebuilt OT weight audit", auth_env)
+
+
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
-    if not IS_STRENGTH_STUDY:
+    if not (IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
         if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-            raise ValueError('Use ("strength",) alone, or distinct prepare/pilot/study/freeze/final stages')
+            raise ValueError('Use ("rebuild_audit",), ("audit",), ("strength",), or original development stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
@@ -461,6 +759,10 @@ def main():
             "GIT_AUTH_USER": GIT_USER_NAME, "GITHUB_TOKEN": token,
         }
         source_commit = prepare_repositories(auth_env)
+        if IS_WEIGHT_AUDIT:
+            execute_weight_audit(source_commit, auth_env)
+            print(f"Report pushed to {RESULTS_BRANCH}.", flush=True)
+            return
         sys.path.insert(0, str(CODE_ROOT))
         import pipeline
 
@@ -472,7 +774,9 @@ def main():
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
         if not torch.cuda.is_available():
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        if IS_STRENGTH_STUDY:
+        if IS_AUDIT_REBUILD:
+            execute_rebuilt_weight_audit(source_commit, auth_env)
+        elif IS_STRENGTH_STUDY:
             execute_strength(source_commit, auth_env, rebuild=rebuild)
         else:
             restore_workspace()

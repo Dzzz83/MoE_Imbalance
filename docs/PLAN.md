@@ -277,16 +277,19 @@ study and results branch: change `WORK_ROOT`, `RESULTS_ROOT`, and
 `RESULTS_BRANCH` together. Existing results are not force-pushed over.
 
 GitHub receives JSON reports under `reports/`: split positions, settings,
-histories, weight diagnostics, metrics, summaries, and provenance. It does not
-receive images, cached features, or model checkpoints. Git authentication uses
-a temporary askpass helper; the token is passed only to authenticated Git
-subprocesses and is not embedded in URLs or saved reports.
+histories, weight diagnostics, metrics, summaries, and provenance. The stronger
+OT runner also publishes its audit and stores the matching baseline checkpoints
+and feature caches in a GitHub release. The results branch links to the archive
+and records its checksum. Raw dataset images are kept out of publication.
+Authentication uses the Kaggle `GITHUB_TOKEN` secret for Git and the GitHub
+release API. The token is never saved in URLs or reports.
 
 Preserve `/kaggle/working/ot-ablation/` in Kaggle outputs. It contains `study/`
 and `data/`, including the prepared pool, caches, and checkpoints needed for
 reuse. For another session, attach those saved artifacts as a Kaggle dataset
-and set `RESTORE_ROOT` to the directory containing `study/` and `data/`. GitHub
-reports alone cannot restore training. The script rejects starting a fresh
+and set `RESTORE_ROOT` to the directory containing `study/` and `data/`. The
+release archive is for the weight audit and reuse of the model inputs. Resuming
+the entire training study still requires its saved workspace. The script rejects starting a fresh
 local study over an existing results branch without those artifacts.
 
 Interrupted runs have no epoch resume. By default, the script moves their
@@ -322,11 +325,11 @@ python -m pipeline.run_ablation strength --output-dir outputs/ablation_study --d
 ```
 
 On Kaggle, paste `scripts/kaggle_ablation_study.py` into a new notebook session.
-The runner already selects `STAGES = ("strength",)`. Attach the saved output
+Set `STAGES = ("strength",)`. Attach the saved output
 from the successful development run if available. The runner searches `/kaggle/input` for
 the study and checks that it has the split, baselines, and feature caches
-before cloning the repo. The published GitHub reports don't include those
-training artifacts.
+before cloning the repo. Full training workspaces remain separate from the
+published report and weight audit archive.
 
 If there is no complete saved workspace, the runner rebuilds the three fitting
 baselines and their classifier comparisons using CIFAR-100, the published
@@ -350,6 +353,29 @@ Use source from `ablation_study` that contains the stronger OT stage. The
 follow-up checks out code in `ot-strength-code`, saves runs in
 `study/strength/`, and publishes JSON to `ablation-strength-results`. Keep the
 updated workspace to resume a partially published follow-up.
+
+### Audit which examples OT favors
+
+The Kaggle runner currently defaults to `STAGES = ("rebuild_audit",)`. Use this
+when the original audit inputs are missing. With CIFAR-100 attached, it
+recreates the published fitting split and trains only the three fitting
+baselines. It pushes the audit report, baseline logs, and split metadata to
+`ablation-rebuilt-audit-results` and links to the GitHub release containing
+the rebuilt checkpoints and feature caches. This is an audit of the rebuilt
+baselines. The previous stronger OT results remain on their own branch.
+
+Stronger OT training publishes the weight audit automatically. The standalone
+`STAGES = ("audit",)` mode downloads the inputs from GitHub for verification
+and scores the cached fitting examples on CPU. Runs completed before this
+publication change can be backfilled by running the audit once where the
+matching files are available. The script uploads them and publishes the
+report to `ablation-weight-audit-results`.
+
+Within each OT-active class, compare the top quarter by OT weight with the
+whole class. The main report gives their difference in average confidence
+percentile. Confidence is the correct-class score minus the strongest rival
+score. The report also gives the difference in baseline accuracy, by class
+and training seed. No additional training is needed.
 
 Implementation checks use artificial images and do not download CIFAR:
 

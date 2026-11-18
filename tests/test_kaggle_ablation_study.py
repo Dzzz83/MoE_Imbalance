@@ -1,3 +1,5 @@
+import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -150,6 +152,7 @@ def test_strength_missing_artifacts_stops_before_git_setup(tmp_path, monkeypatch
     monkeypatch.setattr(kaggle, "WORK_ROOT", tmp_path / "working")
     monkeypatch.setattr(kaggle, "RESTORE_ROOT", None)
     monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
+    monkeypatch.setattr(kaggle, "IS_WEIGHT_AUDIT", False)
     assert kaggle.restore_workspace() is False
     monkeypatch.setattr(kaggle, "REBUILD_MISSING_STUDY", False)
     with pytest.raises(RuntimeError, match="GitHub reports alone cannot restore") as failure:
@@ -158,10 +161,11 @@ def test_strength_missing_artifacts_stops_before_git_setup(tmp_path, monkeypatch
     assert not kaggle.WORK_ROOT.exists()
 
 
-def test_strength_rebuilds_with_published_split_and_schedule_then_publishes_followup(tmp_path, monkeypatch):
+@pytest.mark.parametrize("audit_only", [False, True])
+def test_rebuild_uses_published_split_and_schedule_and_pushes_results(tmp_path, monkeypatch, audit_only):
     work = tmp_path / "working"
     original = work / "study"
-    output = original / "strength"
+    output = work / "weight-audit" if audit_only else original / "strength"
     prepared = work / "data/train.npz"
     labels = np.repeat(np.arange(100, dtype=np.int64), 5)
     images = np.random.default_rng(3).integers(0, 256, (len(labels), 32, 32, 3), dtype=np.uint8)
@@ -195,10 +199,32 @@ def test_strength_rebuilds_with_published_split_and_schedule_then_publishes_foll
     monkeypatch.setattr(kaggle, "run", read_results)
     monkeypatch.setattr(kaggle, "prepare_data", lambda: (prepared, prepared.parent))
     monkeypatch.setattr("pipeline.runtime.resolve_device", lambda device: torch.device("cpu"))
-    monkeypatch.setattr(kaggle, "publish_reports",
-                        lambda root, commit, message, auth: publications.append((root, message)))
-    kaggle.execute_strength("a" * 40, {}, rebuild=True)
-    assert publications[-1] == (output, "complete stronger OT study")
+    archive_calls = []
+
+    def upload(study, caches, *_):
+        archive_calls.append(study)
+        assert caches[0] == kaggle.sha256(study / "caches/seed0/features_weights.pt")
+        return {"asset_id": 11, "sha256": "archive", "download_url": "https://example.invalid/ot.zip"}
+
+    def publish(root, commit, message, auth):
+        assert (root / "weight_audit.json").is_file() and (root / "weight_artifacts.json").is_file()
+        publications.append((root, message))
+
+    monkeypatch.setattr(kaggle, "upload_weight_artifacts", upload)
+    monkeypatch.setattr(kaggle, "publish_reports", publish)
+    if audit_only:
+        kaggle.execute_rebuilt_weight_audit("a" * 40, {})
+        assert publications[-1] == (output, "complete rebuilt OT weight audit")
+        assert not (original / "study").exists()
+        assert (output / "baselines/seed0/complete.json").is_file()
+        assert (output / "split/split.json").is_file()
+    else:
+        kaggle.execute_strength("a" * 40, {}, rebuild=True)
+        assert publications[-1] == (output, "complete stronger OT study")
+        summary = json.loads((output / "study_summary.json").read_text())
+        assert set(summary) == {"class_balanced", "ot", "strong_ot", "shuffled_strong_ot",
+                                "strong_ot_vs_shuffled_strong_ot"}
+    assert archive_calls == [original]
     assert {root for root, _ in publications} == {output}
     assert all(command[1] in ("fetch", "rev-parse", "show") for command in commands)
     schedule = json.loads((original / "selected_schedule.json").read_text())
@@ -206,9 +232,6 @@ def test_strength_rebuilds_with_published_split_and_schedule_then_publishes_foll
     assert schedule["pilot_results_sha256"] == kaggle.sha256(original / "pilot_results.json")
     assert json.loads((output / "rebuild.json").read_text())["development_results_commit"] == reports_commit
     assert json.loads((original / "study_config.json").read_text()) == config | {"train_data": str(prepared)}
-    summary = json.loads((output / "study_summary.json").read_text())
-    assert set(summary) == {"class_balanced", "ot", "strong_ot", "shuffled_strong_ot",
-                            "strong_ot_vs_shuffled_strong_ot"}
 
 
 def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):
@@ -218,6 +241,7 @@ def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):
     results = tmp_path / "results"
     kaggle.write_json(results / "manifest.json", {"source_commit": "a" * 40})
     monkeypatch.setattr(kaggle, "CODE_ROOT", code)
+    monkeypatch.setattr(kaggle, "IS_WEIGHT_AUDIT", False)
     monkeypatch.setattr(kaggle, "RESULTS_ROOT", results)
     monkeypatch.setattr(kaggle, "SOURCE_COMMIT", None)
     commands = []
@@ -299,10 +323,12 @@ def test_strength_stage_publishes_separately_and_rejects_an_older_restore(tmp_pa
 
     def run_strength(root, device, *, on_progress):
         assert root == original and device == "cpu"
-        kaggle.write_json(strength / "strength_config.json", {"weight_exponent": 3})
+        kaggle.write_json(strength / "strength_config.json", {"weight_exponent": 3, "feature_caches": {"0": "abc"}})
         on_progress("save stronger OT run")
 
     monkeypatch.setattr(run_ablation, "run_strength_study", run_strength)
+    monkeypatch.setattr(kaggle, "read_weight_audit_inputs", lambda *args: {})
+    monkeypatch.setattr(kaggle, "save_weight_audit", lambda *args: None)
     monkeypatch.setattr(kaggle, "publish_reports",
                         lambda root, commit, message, auth: publications.append((root, message)))
     kaggle.execute_strength("a" * 40, {})
@@ -316,6 +342,119 @@ def test_strength_stage_publishes_separately_and_rejects_an_older_restore(tmp_pa
     assert len(publications) == 2
 
 
+def test_weight_audit_uses_matching_artifacts_and_handles_weight_ties(tmp_path, monkeypatch):
+    work = tmp_path / "working"
+    inputs = tmp_path / "input"
+    study = inputs / "saved-notebook" / "study"
+    baseline = study / "baselines/seed0/final.pt"
+    baseline.parent.mkdir(parents=True)
+    torch.save({"model_state_dict": {"fc.weight": torch.tensor([[1.], [-1.]]),
+                                    "fc.bias": torch.zeros(2)}}, baseline)
+    cache = study / "caches/seed0/features_weights.pt"
+    cache.parent.mkdir(parents=True)
+    torch.save({
+        "inputs": {"seed": 0, "baseline_sha256": kaggle.sha256(baseline)},
+        "labels": torch.tensor([0] * 4 + [1] * 4),
+        "features": torch.tensor([[-2.], [-1.], [1.], [2.], [2.], [-2.], [1.], [-1.]]),
+        "ot_weights": torch.tensor([1., 1., 1., 4., 4., 4., 1., 1.]),
+        "prototype_diagnostics": [{"class_index": i, "used_ot": True} for i in range(2)],
+    }, cache)
+    local_study = work / "study"
+    local_cache = local_study / "caches/seed0/features_weights.pt"
+    local_baseline = local_study / "baselines/seed0/final.pt"
+    local_cache.parent.mkdir(parents=True)
+    local_baseline.parent.mkdir(parents=True)
+    local_cache.write_bytes(cache.read_bytes())
+    local_baseline.write_bytes(b"unrelated baseline")
+    expected = {"0": kaggle.sha256(cache)}
+    publications = []
+    manifest = {"report_hashes": {}}
+    release = None
+    uploaded_zip = None
+    interrupted_uploads = []
+    asset_downloads = []
+
+    def read_results(command, **kwargs):
+        if command[1] == "fetch":
+            assert command[-1] == "refs/heads/ablation-strength-results"
+        elif command[1] == "rev-parse":
+            return "a" * 40
+        elif command[1] == "show":
+            if command[-1].endswith("strength_config.json"):
+                return json.dumps({"feature_caches": expected})
+            if command[-1].endswith(":manifest.json"):
+                return json.dumps(manifest)
+            return (work / "weight-audit/weight_artifacts.json").read_text()
+        else:
+            pytest.fail(f"Unexpected command: {command}")
+
+    def release_request(url, auth, *, data=None, content_type=None, binary=False, method=None):
+        nonlocal release, uploaded_zip
+        if url.startswith(kaggle.RELEASES_API + "/tags/"):
+            if release is None:
+                raise kaggle.HTTPError(url, 404, "Not found", None, None)
+            return io.BytesIO(json.dumps(release).encode())
+        if url == kaggle.RELEASES_API:
+            assert content_type == "application/json"
+            assert json.loads(data)["target_commitish"] == "b" * 40
+            release = {"id": 7, "assets": []}
+            return io.BytesIO(json.dumps(release).encode())
+        if method == "DELETE":
+            assert url == kaggle.RELEASES_API + "/assets/9"
+            assert release["assets"] == [{"id": 9, "name": "ot-weight-inputs.zip", "state": "starter", "size": 0}]
+            release["assets"].clear()
+            return io.BytesIO()
+        if url.startswith(kaggle.RELEASE_UPLOADS + "/7/assets?"):
+            assert content_type == "application/zip" and uploaded_zip is None
+            if not interrupted_uploads:
+                interrupted_uploads.append(url)
+                release["assets"].append({"id": 9, "name": "ot-weight-inputs.zip", "state": "starter", "size": 0})
+                raise kaggle.HTTPError(url, 502, "Simulated upload failure", None, None)
+            uploaded_zip = data
+            asset = {
+                "id": 11, "name": "ot-weight-inputs.zip", "state": "uploaded", "size": len(data),
+                "digest": "sha256:" + hashlib.sha256(data).hexdigest(),
+                "browser_download_url": "https://example.invalid/ot.zip",
+            }
+            release["assets"].append(asset)
+            return io.BytesIO(json.dumps(asset).encode())
+        assert binary and url == kaggle.RELEASES_API + "/assets/11"
+        asset_downloads.append(url)
+        return io.BytesIO(uploaded_zip)
+
+    monkeypatch.setattr(kaggle, "WORK_ROOT", work)
+    monkeypatch.setattr(kaggle, "INPUT_ROOT", inputs)
+    monkeypatch.setattr(kaggle, "RESTORE_ROOT", None)
+    monkeypatch.setattr(kaggle, "run", read_results)
+    monkeypatch.setattr(kaggle, "github_release_request", release_request)
+    monkeypatch.setattr(kaggle, "publish_reports",
+                        lambda root, *_: publications.append(root))
+    with pytest.raises(kaggle.HTTPError, match="Simulated upload failure"):
+        kaggle.execute_weight_audit("b" * 40, {})
+    assert publications == []
+    kaggle.execute_weight_audit("b" * 40, {})
+    report = json.loads((work / "weight-audit/weight_audit.json").read_text())
+    assert report["strength_results_commit"] == "a" * 40
+    assert report["seeds"][0]["confidence_percentile_shift"] == pytest.approx(0.1875)
+    assert report["seeds"][0]["classes"][0]["baseline_accuracy_shift"] == pytest.approx(0.5)
+    assert report["seeds"][0]["classes"][1]["confidence_percentile_shift"] == pytest.approx(0)
+    assert publications == [work / "weight-audit"]
+    assert json.loads((work / "weight-audit/weight_artifacts.json").read_text())["asset_id"] == 11
+    assert kaggle.upload_weight_artifacts(study, {0: expected["0"]}, "b" * 40, {})["asset_id"] == 11
+    good_digest = expected["0"]
+    expected["0"] = "invalid-cache-hash"
+    with pytest.raises(RuntimeError, match="completed stronger OT run"):
+        kaggle.execute_weight_audit("b" * 40, {})
+    assert publications == [work / "weight-audit"]
+    expected["0"] = good_digest
+    manifest["report_hashes"]["weight_artifacts.json"] = "published"
+    cache.unlink()
+    local_cache.unlink()
+    kaggle.execute_weight_audit("b" * 40, {})
+    assert len(asset_downloads) == 1
+    assert json.loads((work / "weight-audit/weight_audit.json").read_text()) == report
+
+
 def test_initial_checkout_resolves_a_real_branch_and_keeps_source_clean(tmp_path, monkeypatch):
     source = tmp_path / "source"
     (source / "pipeline").mkdir(parents=True)
@@ -327,6 +466,7 @@ def test_initial_checkout_resolves_a_real_branch_and_keeps_source_clean(tmp_path
     git("commit", "-m", "test: create source", cwd=source)
     commit = git("rev-parse", "HEAD", cwd=source)
     monkeypatch.setattr(kaggle, "REPOSITORY", str(source))
+    monkeypatch.setattr(kaggle, "IS_WEIGHT_AUDIT", False)
     monkeypatch.setattr(kaggle, "CODE_ROOT", tmp_path / "checkout")
     monkeypatch.setattr(kaggle, "RESULTS_ROOT", tmp_path / "results")
     monkeypatch.setattr(kaggle, "SOURCE_COMMIT", None)
