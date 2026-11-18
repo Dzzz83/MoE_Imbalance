@@ -21,7 +21,8 @@ SOURCE_COMMIT = None
 # To start the original development study, use ("prepare", "pilot", "study").
 STAGES = ("strength",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
-RESULTS_BRANCH = "ablation-strength-results" if IS_STRENGTH_STUDY else "ablation-study-results"
+DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
+RESULTS_BRANCH = "ablation-strength-results" if IS_STRENGTH_STUDY else DEVELOPMENT_RESULTS_BRANCH
 GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
@@ -34,6 +35,8 @@ RAW_CIFAR_ROOT = INPUT_ROOT / "datasets/dzzz833/cifar100"
 # Set this to its saved workspace or study folder to choose one explicitly.
 # The original stages expect a workspace with study/ and data/train.npz.
 RESTORE_ROOT = None
+# If there is no saved workspace, rebuild the fitting baselines and controls.
+REBUILD_MISSING_STUDY = True
 ALLOW_DOWNLOAD = False
 RESTART_INTERRUPTED_RUNS = True
 # Optional overrides to configs/ablation_study.json, e.g. {"num_workers": 2}.
@@ -167,6 +170,10 @@ def find_strength_study(local_study):
     if complete_studies:
         raise RuntimeError("Set RESTORE_ROOT to one saved study: " + ", ".join(map(str, complete_studies)))
     details = "\nMissing files by location:\n" + "\n".join(incomplete_studies) if incomplete_studies else ""
+    can_rebuild = not local_study.exists() or (local_study.parent / "rebuild.json").is_file()
+    if REBUILD_MISSING_STUDY and RESTORE_ROOT is None and can_rebuild:
+        print(f"No saved development workspace available. Rebuilding from CIFAR-100.{details}", flush=True)
+        return None
     if local_study.exists():
         details += "\nThe incomplete local study was preserved. Use an unused WORK_ROOT to restore a complete copy."
     raise RuntimeError(
@@ -180,8 +187,10 @@ def restore_workspace():
     local_study = WORK_ROOT / "study"
     if IS_STRENGTH_STUDY:
         source_study = find_strength_study(local_study)
+        if source_study is None:
+            return False
         if source_study == local_study:
-            return
+            return True
         print(f"Restoring stronger OT inputs from {source_study}", flush=True)
         WORK_ROOT.mkdir(parents=True, exist_ok=True)
     else:
@@ -211,6 +220,7 @@ def restore_workspace():
             shutil.copy2(source_study.parent / "data/train.npz", staged_data)
             staged_data.rename(prepared)
         staged_study.rename(local_study)
+    return True
 
 
 def prepare_data():
@@ -230,6 +240,8 @@ def prepare_data():
             link.symlink_to(attached, target_is_directory=True)
     prepared = data_root / "train.npz"
     if not prepared.exists():
+        if not ALLOW_DOWNLOAD and not (raw_root / "cifar-100-python/train").is_file():
+            raise RuntimeError(f"Attach CIFAR-100 at {RAW_CIFAR_ROOT} or set ALLOW_DOWNLOAD = True.")
         prepare_retained_data(raw_root, prepared, imbalance_factor=0.01, seed=42, download=ALLOW_DOWNLOAD)
     return prepared, raw_root
 
@@ -343,12 +355,56 @@ def execute_stages(config, source_commit, raw_root, auth_env):
         publish(f"complete {stage}")
 
 
-def execute_strength(source_commit, auth_env):
+def rebuild_development_study(source_commit, auth_env):
+    """Recreate the fitting models using the published split and selected schedule."""
+    from pipeline import run_ablation
+    from pipeline.runtime import atomic_write_json, resolve_device
+
+    if (RESULTS_ROOT / "manifest.json").exists():
+        raise RuntimeError("Stronger OT results already exist. Restore their saved workspace to resume.")
+
+    marker_path = WORK_ROOT / "rebuild.json"
+    saved = json.loads(marker_path.read_text()) if marker_path.exists() else None
+    reports_ref = saved["development_results_commit"] if saved else f"refs/heads/{DEVELOPMENT_RESULTS_BRANCH}"
+    run(["git", "fetch", "--no-tags", "origin", reports_ref], cwd=CODE_ROOT, env=auth_env)
+    reports_commit = run(["git", "rev-parse", "FETCH_HEAD"], cwd=CODE_ROOT, capture=True)
+    recovery = {"development_results_commit": reports_commit, "training_source_commit": source_commit}
+    if saved is not None and recovery != saved:
+        raise RuntimeError("Rebuild inputs changed. Resume with the original source commit.")
+
+    published = {}
+    for name in ("study_config.json", "split/split.json", "pilot_results.json", "selected_schedule.json"):
+        published[name] = json.loads(run(["git", "show", f"{reports_commit}:reports/{name}"],
+                                         cwd=CODE_ROOT, capture=True))
+    prepared, _ = prepare_data()
+    atomic_write_json(marker_path, recovery)
+    config = published["study_config.json"] | {"train_data": str(prepared)}
+    config, root, split = run_ablation.prepare_study(config, WORK_ROOT / "study")
+    previous_split = published["split/split.json"]
+    for name in ("split_seed", "original_class_counts", "fitting_positions", "development_positions"):
+        if split[name] != previous_split[name]:
+            raise RuntimeError("Rebuilt data does not match the published development split.")
+
+    pilot_path = root / "pilot_results.json"
+    atomic_write_json(pilot_path, published["pilot_results.json"])
+    schedule = published["selected_schedule.json"] | {"pilot_results_sha256": sha256(pilot_path)}
+    atomic_write_json(root / "selected_schedule.json", schedule)
+    atomic_write_json(root / "rebuild.json", recovery)
+    archive_interrupted_runs(root)
+    print(f"Rebuilding the development baselines and controls at the published rate {schedule['learning_rate']}.",
+          flush=True)
+    run_ablation.run_study(config, root, split, resolve_device("cuda"),
+                           on_progress=lambda message: print(message, flush=True))
+
+
+def execute_strength(source_commit, auth_env, *, rebuild=False):
     from pipeline import run_ablation
     from pipeline.runtime import resolve_device
 
     if not hasattr(run_ablation, "run_strength_study"):
         raise RuntimeError(f"Source commit {source_commit} lacks the stronger OT stage. Use the updated source branch.")
+    if rebuild:
+        rebuild_development_study(source_commit, auth_env)
     original = WORK_ROOT / "study"
     if not (original / "study_summary.json").is_file():
         raise RuntimeError("Restore the completed Kaggle development study using RESTORE_ROOT")
@@ -363,6 +419,10 @@ def execute_strength(source_commit, auth_env):
             if not local.is_file() or sha256(local) != previous.get(path):
                 raise RuntimeError("Restore the latest stronger OT workspace to continue publishing")
     archive_interrupted_runs(output)
+    recovery = original / "rebuild.json"
+    if recovery.is_file():
+        output.mkdir(exist_ok=True)
+        shutil.copyfile(recovery, output / recovery.name)
 
     def publish(message):
         publish_reports(output, source_commit, message, auth_env)
@@ -379,8 +439,7 @@ def main():
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
-    if IS_STRENGTH_STUDY:
-        restore_workspace()
+    rebuild = IS_STRENGTH_STUDY and not restore_workspace()
     from kaggle_secrets import UserSecretsClient
 
     token = UserSecretsClient().get_secret("GITHUB_TOKEN")
@@ -414,7 +473,7 @@ def main():
         if not torch.cuda.is_available():
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
         if IS_STRENGTH_STUDY:
-            execute_strength(source_commit, auth_env)
+            execute_strength(source_commit, auth_env, rebuild=rebuild)
         else:
             restore_workspace()
             prepared, raw_root = prepare_data()

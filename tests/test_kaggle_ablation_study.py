@@ -3,9 +3,13 @@ import os
 from pathlib import Path
 import subprocess
 
+import numpy as np
 import pytest
+import torch
 
 from pipeline import run_ablation
+from pipeline.ablation_data import prepare_split
+from pipeline.data import TrainingData, save_training_data
 from scripts import kaggle_ablation_study as kaggle
 
 
@@ -146,10 +150,65 @@ def test_strength_missing_artifacts_stops_before_git_setup(tmp_path, monkeypatch
     monkeypatch.setattr(kaggle, "WORK_ROOT", tmp_path / "working")
     monkeypatch.setattr(kaggle, "RESTORE_ROOT", None)
     monkeypatch.setattr(kaggle, "IS_STRENGTH_STUDY", True)
+    assert kaggle.restore_workspace() is False
+    monkeypatch.setattr(kaggle, "REBUILD_MISSING_STUDY", False)
     with pytest.raises(RuntimeError, match="GitHub reports alone cannot restore") as failure:
         kaggle.main()
     assert "caches/seed0/features_weights.pt" in str(failure.value)
     assert not kaggle.WORK_ROOT.exists()
+
+
+def test_strength_rebuilds_with_published_split_and_schedule_then_publishes_followup(tmp_path, monkeypatch):
+    work = tmp_path / "working"
+    original = work / "study"
+    output = original / "strength"
+    prepared = work / "data/train.npz"
+    labels = np.repeat(np.arange(100, dtype=np.int64), 5)
+    images = np.random.default_rng(3).integers(0, 256, (len(labels), 32, 32, 3), dtype=np.uint8)
+    save_training_data(prepared, TrainingData(images, labels, np.bincount(labels),
+                                              {"imbalance_factor": 0.01, "data_seed": 42}))
+    config = run_ablation.resolve_study_config({
+        "train_data": "/original/train.npz", "seeds": [0], "shuffle_seeds": [0],
+        "num_workers": 0, "learning_rates": [0.002],
+        "baseline": {"epochs": 1}, "classifier": {"epochs": 1},
+    })
+    split = prepare_split(prepared, tmp_path / "published-split")
+    published = {
+        "study_config.json": config,
+        "split/split.json": split,
+        "pilot_results.json": [{"learning_rate": 0.002, "status": "completed"}],
+        "selected_schedule.json": {"learning_rate": 0.002, "pilot_results_sha256": "original"},
+    }
+    reports_commit = "b" * 40
+    commands, publications = [], []
+
+    def read_results(command, **kwargs):
+        commands.append(command)
+        if command[1] == "rev-parse":
+            return reports_commit
+        if command[1] == "show":
+            return json.dumps(published[command[2].split(":reports/")[1]])
+        assert command == ["git", "fetch", "--no-tags", "origin", "refs/heads/ablation-study-results"]
+
+    monkeypatch.setattr(kaggle, "WORK_ROOT", work)
+    monkeypatch.setattr(kaggle, "RESULTS_ROOT", tmp_path / "results")
+    monkeypatch.setattr(kaggle, "run", read_results)
+    monkeypatch.setattr(kaggle, "prepare_data", lambda: (prepared, prepared.parent))
+    monkeypatch.setattr("pipeline.runtime.resolve_device", lambda device: torch.device("cpu"))
+    monkeypatch.setattr(kaggle, "publish_reports",
+                        lambda root, commit, message, auth: publications.append((root, message)))
+    kaggle.execute_strength("a" * 40, {}, rebuild=True)
+    assert publications[-1] == (output, "complete stronger OT study")
+    assert {root for root, _ in publications} == {output}
+    assert all(command[1] in ("fetch", "rev-parse", "show") for command in commands)
+    schedule = json.loads((original / "selected_schedule.json").read_text())
+    assert schedule["learning_rate"] == 0.002
+    assert schedule["pilot_results_sha256"] == kaggle.sha256(original / "pilot_results.json")
+    assert json.loads((output / "rebuild.json").read_text())["development_results_commit"] == reports_commit
+    assert json.loads((original / "study_config.json").read_text()) == config | {"train_data": str(prepared)}
+    summary = json.loads((output / "study_summary.json").read_text())
+    assert set(summary) == {"class_balanced", "ot", "strong_ot", "shuffled_strong_ot",
+                            "strong_ot_vs_shuffled_strong_ot"}
 
 
 def test_repository_checkout_reuses_published_source_pin(tmp_path, monkeypatch):

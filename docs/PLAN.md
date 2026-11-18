@@ -323,10 +323,18 @@ python -m pipeline.run_ablation strength --output-dir outputs/ablation_study --d
 
 On Kaggle, paste `scripts/kaggle_ablation_study.py` into a new notebook session.
 The runner already selects `STAGES = ("strength",)`. Attach the saved output
-from the successful development run. The runner searches `/kaggle/input` for
+from the successful development run if available. The runner searches `/kaggle/input` for
 the study and checks that it has the split, baselines, and feature caches
 before cloning the repo. The published GitHub reports don't include those
 training artifacts.
+
+If there is no complete saved workspace, the runner rebuilds the three fitting
+baselines and their classifier comparisons using CIFAR-100, the published
+development split, and the original selected learning rate. It then runs
+stronger OT against the rebuilt controls. This takes longer than reusing the
+saved models. Attach CIFAR-100 for the rebuild or set `ALLOW_DOWNLOAD = True`.
+The rebuild is recorded in the follow-up reports. Set
+`REBUILD_MISSING_STUDY = False` to require saved models.
 
 If more than one complete study is attached, set `RESTORE_ROOT` to the one you
 want:
