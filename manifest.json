@@ -1,0 +1,10 @@
+{
+  "source_commit": "5009a4de4618a17a84f3eef48c29613d91cc9982",
+  "source_ref": "ablation_study",
+  "runner_version": 1,
+  "report_hashes": {
+    "rebuild.json": "67c716952a12a9289e45b345db4eabc4181faabf949fd0c4f9f5c862407a0822",
+    "strength_config.json": "e6972a2d4c32d17d40cac76e0968699db56c7d5616ac86ff1e4e3e9886ebd259"
+  },
+  "artifact_policy": "JSON reports only; preserve Kaggle study/ and data/ to reuse training artifacts"
+}

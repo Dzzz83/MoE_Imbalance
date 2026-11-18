@@ -1,0 +1,19 @@
+{
+  "weight_exponent": 3,
+  "learning_rate": 0.002,
+  "original_reports": {
+    "study_config.json": "11ec52955dc77bc65f3d56f502ed8e1007fb0a23942d7acd1aebaa97897f5260",
+    "split/split.json": "940b63029513b2b6a940ee31b40e94f27adc797a68fc0a7bfa7ab8d8ec93ba00",
+    "selected_schedule.json": "cae64e080a9faa5226dfa6dc0141bd8d4e7e3f10292b1270309e5c13c0c0743b",
+    "study_results.json": "7bf7081cd6a6f123ab3437a36facaa48da4d4f4570076c748205c260220755cb"
+  },
+  "feature_caches": {
+    "0": "29305972f5c2d38e0e4c4f0a2af7904ceef1a1c84edee4bdfac2fb3fda687125",
+    "1": "bca24db1831a3367d357aa1cfc78a719e9e4aa02b6efa02944f58f7de4c1a654",
+    "2": "6e658e7952a69732c2eab8c1663c82a84115cb549021a675749addd258c7e904"
+  },
+  "implementation": {
+    "run_ablation.py": "18de43aaaa3608fff000ac79275c06f21d0616dac94b9944bd980567f6c030d6",
+    "ablation_weights.py": "3103fa077c3380288e501632fa18448a9a244e1e5dc91bafc49639c29cdbcbb6"
+  }
+}
