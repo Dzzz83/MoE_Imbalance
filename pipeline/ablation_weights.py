@@ -79,3 +79,88 @@ def weight_diagnostics(weights, labels, original_counts, prototype_diagnostics):
         active = sum(r["used_ot"] for r in classes)
         coverage[name] = {"class_count": len(classes), "ot_active": active, "fallback": len(classes) - active}
     return {"classes": records, "prototype_ot_coverage": coverage}
+
+
+@torch.inference_mode()
+def baseline_scores(features, labels, state):
+    """Score fitting examples once, without consuming a training generator."""
+    logits = torch.nn.functional.linear(features, state["fc.weight"], state["fc.bias"])
+    if not torch.isfinite(logits).all():
+        raise ValueError("Nonfinite baseline logits")
+    correct = logits.argmax(dim=1) == labels
+    true_scores = logits.gather(1, labels[:, None]).squeeze(1)
+    logits.scatter_(1, labels[:, None], -torch.inf)
+    margins = true_scores - logits.amax(dim=1)
+    if not torch.isfinite(margins).all():
+        raise ValueError("Nonfinite fitting margins")
+    return margins, correct
+
+
+def reassign_weights(strong_weights, labels, margins, condition, tie_order):
+    """Reassign one fixed within-class multiset; larger priority gets larger mass."""
+    priorities = {"easy_strong": margins, "boundary_strong": -margins.abs(), "hard_strong": -margins}
+    if condition not in priorities:
+        raise ValueError(f"Unknown ranked condition: {condition}")
+    if (margins.shape != labels.shape or not torch.isfinite(margins).all()
+            or tie_order.dtype != torch.int64 or tie_order.shape != labels.shape
+            or not torch.equal(tie_order.sort().values, torch.arange(len(labels)))):
+        raise ValueError("Expected finite aligned margins and a complete tie permutation")
+    weights = transform_weights(strong_weights, labels, "ot")
+    priority = priorities[condition]
+    for c in range(NUM_CLASSES):
+        positions = tie_order[labels[tie_order] == c]
+        ordered = positions[torch.argsort(priority[positions], stable=True)]
+        weights[ordered] = strong_weights[positions].sort().values
+        if not torch.equal(weights[positions].sort().values, strong_weights[positions].sort().values):
+            raise RuntimeError("Reassignment changed the class weight multiset")
+    return weights
+
+
+def _midranks(values):
+    _, inverse, counts = torch.unique(values, sorted=True, return_inverse=True, return_counts=True)
+    return (counts.cumsum(0) - counts.double() / 2)[inverse]
+
+
+def _quarter_membership(values, *, largest):
+    count = (len(values) + 3) // 4
+    cutoff = values.topk(count, largest=largest).values[-1]
+    selected = values > cutoff if largest else values < cutoff
+    ties = values == cutoff
+    membership = selected.double() + ties.double() * (count - selected.sum()) / ties.sum()
+    return membership, count, cutoff.item()
+
+
+def assignment_audit(weights, labels, margins, correct, prototype_diagnostics):
+    """Macro class diagnostics; ties share quarter membership and rank positions."""
+    classes = []
+    for c, diagnostic in enumerate(prototype_diagnostics):
+        selected = labels == c
+        values, scores = weights[selected].double(), margins[selected].double()
+        ranks, score_ranks = _midranks(values), _midranks(scores)
+        centered_weights, centered_scores = ranks - ranks.mean(), score_ranks - score_ranks.mean()
+        denominator = centered_weights.norm() * centered_scores.norm()
+        top, count, _ = _quarter_membership(values, largest=True)
+        uncertain, _, cutoff = _quarter_membership(scores.abs(), largest=False)
+        nonconstant = bool((values != values[0]).any())
+        classes.append({
+            "class_index": c, "fitting_count": len(values), "used_ot": diagnostic["used_ot"],
+            "nonconstant_weights": nonconstant,
+            "margin_weight_spearman": (centered_weights @ centered_scores / denominator).item()
+            if denominator > 0 else None,
+            "undefined_correlation_reason": None if denominator > 0 else "constant_weights_or_margins",
+            "top_quarter_confidence_percentile_shift": (top @ score_ranks / len(values) / count).item() - 0.5,
+            "mistake_mass_fraction": (values @ (~correct[selected]).double() / values.sum()).item(),
+            "uncertain_quarter_mass_fraction": (values @ uncertain / values.sum()).item(),
+            "uncertain_quarter_margin_cutoff": cutoff, "quarter_support": count,
+        })
+    summaries = {}
+    metrics = ("margin_weight_spearman", "top_quarter_confidence_percentile_shift",
+               "mistake_mass_fraction", "uncertain_quarter_mass_fraction")
+    for name, members in (("all", classes), ("ot_active", [r for r in classes if r["used_ot"]])):
+        summary = {"class_count": len(members), "nonconstant_class_count": sum(r["nonconstant_weights"] for r in members)}
+        for metric in metrics:
+            values = [r[metric] for r in members if r[metric] is not None]
+            summary[metric] = sum(values) / len(values) if values else None
+            summary[f"{metric}_class_count"] = len(values)
+        summaries[name] = summary
+    return {"classes": classes, "summary": summaries}

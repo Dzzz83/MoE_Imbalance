@@ -23,15 +23,18 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Rebuild the missing baselines and publish the audit inputs and results.
+# Run the matched assignment study from the published audit features.
 # Use ("audit",) to audit an existing stronger OT run without training.
-STAGES = ("rebuild_audit",)
+STAGES = ("assignment",)
+IS_ASSIGNMENT_STUDY = STAGES == ("assignment",)
 IS_WEIGHT_AUDIT = STAGES == ("audit",)
 IS_AUDIT_REBUILD = STAGES == ("rebuild_audit",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
 STRENGTH_RESULTS_BRANCH = "ablation-strength-results"
-if IS_WEIGHT_AUDIT:
+if IS_ASSIGNMENT_STUDY:
+    RESULTS_BRANCH, RESULTS_FOLDER = "ablation-assignment-results", "ot-assignment-results"
+elif IS_WEIGHT_AUDIT:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-weight-audit-results", "ot-weight-audit-results"
 elif IS_AUDIT_REBUILD:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-rebuilt-audit-results", "ot-rebuilt-audit-results"
@@ -42,9 +45,15 @@ else:
 GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
-CODE_ROOT = Path("/kaggle/working") / ("ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code")
+CODE_ROOT = Path("/kaggle/working") / (
+    "ot-assignment-code" if IS_ASSIGNMENT_STUDY else
+    "ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code"
+)
 RESULTS_ROOT = Path("/kaggle/working") / RESULTS_FOLDER
-WORK_ROOT = Path("/kaggle/working") / ("ot-ablation-audit-rebuild" if IS_AUDIT_REBUILD else "ot-ablation")
+WORK_ROOT = Path("/kaggle/working") / (
+    "ot-weight-assignment" if IS_ASSIGNMENT_STUDY else
+    "ot-ablation-audit-rebuild" if IS_AUDIT_REBUILD else "ot-ablation"
+)
 INPUT_ROOT = Path("/kaggle/input")
 RAW_CIFAR_ROOT = INPUT_ROOT / "datasets/dzzz833/cifar100"
 # Stronger OT finds a single complete study among the attached Kaggle inputs.
@@ -58,6 +67,9 @@ RESTART_INTERRUPTED_RUNS = True
 # Optional overrides to configs/ablation_study.json, e.g. {"num_workers": 2}.
 # Keep these fixed across sessions for the same study.
 CONFIG_OVERRIDES = {"num_workers": 2}
+# Assignment settings use their own config; keep research settings fixed.
+ASSIGNMENT_CONFIG_OVERRIDES = {}
+ASSIGNMENT_PREFLIGHT_ONLY = False
 
 
 def run(command, cwd=None, env=None, capture=False):
@@ -265,7 +277,7 @@ def prepare_data():
 
 
 def archive_interrupted_runs(study_root):
-    patterns = ("baselines/*", "pilot/*", "study/*/*", "final/baselines/*",
+    patterns = ("baselines/*", "pilot/*", "study/*/*", "runs/*/*", "final/baselines/*",
                 "final/runs/*/*", "final/evaluation/*/*")
     interrupted = [path for pattern in patterns for path in study_root.glob(pattern)
                    if path.is_dir() and not (path / "complete.json").exists()
@@ -315,10 +327,13 @@ def publish_reports(study_root, source_commit, message, auth_env):
     })
     is_strength_study = "strength_config.json" in files
     title = "Stronger OT ablation results" if is_strength_study else "OT reweighting ablation results"
+    is_assignment = (study_root / "study_assets.json").is_file()
+    if is_assignment:
+        title = "OT assignment ablation results"
     report_locations = ""
     if "study_summary.json" in files or is_strength_study:
         report_locations += "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
-    if not is_strength_study and "weight_audit.json" not in files:
+    if not is_assignment and not is_strength_study and "weight_audit.json" not in files:
         report_locations += "Final test reports, when explicitly run: `reports/final/`.\n"
     if "weight_audit.json" in files:
         if not is_strength_study:
@@ -327,6 +342,8 @@ def publish_reports(study_root, source_commit, message, auth_env):
     if "weight_artifacts.json" in files:
         artifacts = json.loads((study_root / "weight_artifacts.json").read_text())
         report_locations += f"Saved baselines and feature caches: [download ZIP]({artifacts['download_url']}).\n"
+    if is_assignment:
+        report_locations += "Run status: `reports/study_status.json`. Reusable continuation assets: `reports/study_assets.json`.\n"
     (RESULTS_ROOT / "README.md").write_text(
         f"# {title}\n\n"
         f"Source commit: `{source_commit}`.\n\n"
@@ -577,13 +594,18 @@ def weight_artifact_paths(seeds):
 
 
 def upload_weight_artifacts(study, expected_caches, source_commit, auth_env):
+    return upload_artifacts(study, weight_artifact_paths(expected_caches), source_commit, auth_env)
+
+
+def upload_artifacts(study, paths, source_commit, auth_env, prefix="ot-weight-inputs"):
+    """Upload an explicitly enumerated archive; never include data by directory scan."""
     with tempfile.TemporaryDirectory(prefix="ot-artifacts-") as temporary:
-        bundle = Path(temporary) / "ot-weight-inputs.zip"
+        bundle = Path(temporary) / f"{prefix}.zip"
         with ZipFile(bundle, "w") as archive:
-            for relative in weight_artifact_paths(expected_caches):
+            for relative in paths:
                 archive.writestr(ZipInfo(relative), (study / relative).read_bytes())
         digest = sha256(bundle)
-        tag = f"ot-weight-inputs-{digest}"
+        tag = f"{prefix}-{digest}"
         try:
             with github_release_request(f"{RELEASES_API}/tags/{tag}", auth_env) as response:
                 release = json.load(response)
@@ -593,7 +615,8 @@ def upload_weight_artifacts(study, expected_caches, source_commit, auth_env):
             error.close()
             request = json.dumps({
                 "tag_name": tag, "target_commitish": source_commit,
-                "name": "OT audit inputs " + digest[:12], "prerelease": True, "make_latest": "false",
+                "name": ("OT audit inputs " if prefix == "ot-weight-inputs" else "OT assignment files ") + digest[:12],
+                "prerelease": True, "make_latest": "false",
             }).encode()
             with github_release_request(RELEASES_API, auth_env, data=request,
                                         content_type="application/json") as response:
@@ -729,11 +752,161 @@ def execute_rebuilt_weight_audit(source_commit, auth_env):
     publish_reports(output, source_commit, "complete rebuilt OT weight audit", auth_env)
 
 
+ASSIGNMENT_RUN_FILES = {
+    "config.json", "weights.pt", "weight_diagnostics.json", "starting_metrics.json",
+    "history.json", "metrics.json", "final.pt", "complete.json",
+    "prototype_weight_diagnostics.json", "assignment_finetuning_diagnostics.json",
+}
+
+
+def is_assignment_asset_path(relative):
+    parts = PurePosixPath(relative).parts
+    if len(parts) == 3 and parts[0] == "diagnostics" and parts[1] in {"seed0", "seed1", "seed2"}:
+        return parts[2] in {"scores.pt", "assignment_audit.json"}
+    conditions = {"class_balanced", "ot", "strong_ot", "easy_strong", "boundary_strong", "hard_strong"}
+    conditions.update(f"shuffled_strong_ot_shuffle{s}" for s in (0, 1, 2))
+    return (len(parts) == 4 and parts[0] == "runs" and parts[1] in {"seed0", "seed1", "seed2"}
+            and parts[2] in conditions and parts[3] in ASSIGNMENT_RUN_FILES)
+
+
+def assignment_asset_paths(root, seed=None):
+    paths = []
+    for current in ([seed] if seed is not None else (0, 1, 2)):
+        folders = [root / f"diagnostics/seed{current}"]
+        folders.extend(p for p in sorted((root / f"runs/seed{current}").glob("*"))
+                       if (p / "complete.json").is_file())
+        for folder in folders:
+            for path in sorted(folder.glob("*")):
+                relative = path.relative_to(root).as_posix()
+                if path.is_file() and is_assignment_asset_path(relative):
+                    paths.append(relative)
+    return paths
+
+
+def restore_assignment_study(auth_env):
+    """Restore published JSON and its checksum-linked completed continuation files."""
+    local = WORK_ROOT / "study"
+    if local.exists():
+        return local
+    published = report_path("study_config.json")
+    if not published.is_file():
+        return local
+    manifest = json.loads((RESULTS_ROOT / "manifest.json").read_text())
+    for relative, digest in manifest["report_hashes"].items():
+        if sha256(report_path(relative)) != digest:
+            raise ValueError(f"Published assignment report changed: {relative}")
+    asset_report = report_path("study_assets.json")
+    if not asset_report.is_file():
+        raise ValueError("Published assignment study has no reusable continuation assets")
+    assets = json.loads(asset_report.read_text())
+    selected = [assets["complete"]] if "complete" in assets else list(assets["seeds"].values())
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="assignment-restore-", dir=WORK_ROOT) as temporary:
+        staged = Path(temporary) / "study"
+        shutil.copytree(RESULTS_ROOT / "reports", staged)
+        for index, asset in enumerate(selected):
+            archive_path = Path(temporary) / f"asset{index}.zip"
+            url = f"{RELEASES_API}/assets/{int(asset['asset_id'])}"
+            with github_release_request(url, auth_env, binary=True) as response, archive_path.open("wb") as target:
+                shutil.copyfileobj(response, target)
+            if sha256(archive_path) != asset["sha256"]:
+                raise ValueError("Assignment continuation archive checksum mismatch")
+            with ZipFile(archive_path) as archive:
+                names = archive.namelist()
+                if (len(names) != len(set(names)) or sorted(names) != sorted(asset["paths"])
+                        or any(not is_assignment_asset_path(name) for name in names)):
+                    raise ValueError("Unexpected assignment continuation archive entries")
+                for name in names:
+                    contents = archive.read(name)
+                    target = staged / name
+                    if target.suffix == ".json" and (not target.is_file() or target.read_bytes() != contents):
+                        raise ValueError(f"Continuation archive disagrees with published JSON: {name}")
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(contents)
+        # Each completed published run must actually have its binary artifacts.
+        for receipt in staged.glob("runs/*/*/complete.json"):
+            saved = json.loads(receipt.read_text())
+            for name, digest in saved["files"].items():
+                if name not in ASSIGNMENT_RUN_FILES or not (receipt.parent / name).is_file():
+                    raise ValueError("Incomplete published continuation archive")
+                if sha256(receipt.parent / name) != digest:
+                    raise ValueError("Changed published continuation artifact")
+        staged.rename(local)
+    return local
+
+
+def prepare_assignment_inputs(config, auth_env):
+    from pipeline.ablation_inputs import AUDIT_REPORT_HASHES, load_audit_inputs
+
+    destination = WORK_ROOT / "inputs"
+    if destination.exists():
+        load_audit_inputs(destination, config)
+        return destination
+    if RESTORE_ROOT is not None:
+        source = Path(RESTORE_ROOT)
+        if (source / "inputs").is_dir():
+            source = source / "inputs"
+        load_audit_inputs(source, config)
+        return source
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    commit = config["input_results_commit"]
+    run(["git", "fetch", "origin", commit], cwd=RESULTS_ROOT, env=auth_env)
+    with tempfile.TemporaryDirectory(prefix="assignment-inputs-", dir=WORK_ROOT) as temporary:
+        staged = Path(temporary) / "inputs"
+        staged.mkdir()
+        for relative, digest in AUDIT_REPORT_HASHES.items():
+            response = subprocess.run(["git", "show", f"{commit}:reports/{relative}"],
+                                      cwd=RESULTS_ROOT, env=auth_env, check=True, stdout=subprocess.PIPE)
+            target = staged / "audit" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(response.stdout)
+            if sha256(target) != digest:
+                raise ValueError(f"Pinned input report checksum mismatch: {relative}")
+        audit = json.loads((staged / "audit/weight_audit.json").read_text())
+        artifacts = json.loads((staged / "audit/weight_artifacts.json").read_text())
+        download_weight_artifacts(artifacts, {int(s): h for s, h in audit["feature_caches"].items()}, staged, auth_env)
+        (staged / "ot-weight-inputs.zip").unlink()
+        verified = load_audit_inputs(staged, config)
+        write_json(staged / "inputs.json", verified["provenance"])
+        staged.rename(destination)
+    return destination
+
+
+def execute_assignment(source_commit, auth_env):
+    from pipeline.run_weight_study import resolve_config, run_study
+    from pipeline.runtime import resolve_device
+
+    config = resolve_config(json.loads((CODE_ROOT / "configs/weight_assignment.json").read_text())
+                            | ASSIGNMENT_CONFIG_OVERRIDES)
+    inputs = prepare_assignment_inputs(config, auth_env)
+    if ASSIGNMENT_PREFLIGHT_ONLY:
+        print("Assignment preflight passed: three verified baselines; 27 planned continuations.", flush=True)
+        return
+    root = restore_assignment_study(auth_env)
+    archive_interrupted_runs(root)
+
+    def publish(study, seed, message):
+        path = study / "study_assets.json"
+        assets = json.loads(path.read_text()) if path.exists() else {"seeds": {}}
+        paths = assignment_asset_paths(study, seed)
+        prefix = f"ot-assignment-seed{seed}" if seed is not None else "ot-assignment-complete"
+        asset = upload_artifacts(study, paths, source_commit, auth_env, prefix) | {"paths": paths}
+        if seed is None:
+            assets["complete"] = asset
+        else:
+            assets["seeds"][str(seed)] = asset
+        write_json(path, assets)
+        publish_reports(study, source_commit, message, auth_env)
+
+    run_study(config, inputs, root, resolve_device("cuda"), on_progress=publish)
+
+
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
-    if not (IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
+    is_assignment = STAGES == ("assignment",)
+    if not (is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
         if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-            raise ValueError('Use ("rebuild_audit",), ("audit",), ("strength",), or original development stages')
+            raise ValueError('Use ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
@@ -772,9 +945,11 @@ def main():
         import torchvision
 
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
-        if not torch.cuda.is_available():
+        if not torch.cuda.is_available() and not (is_assignment and ASSIGNMENT_PREFLIGHT_ONLY):
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        if IS_AUDIT_REBUILD:
+        if is_assignment:
+            execute_assignment(source_commit, auth_env)
+        elif IS_AUDIT_REBUILD:
             execute_rebuilt_weight_audit(source_commit, auth_env)
         elif IS_STRENGTH_STUDY:
             execute_strength(source_commit, auth_env, rebuild=rebuild)

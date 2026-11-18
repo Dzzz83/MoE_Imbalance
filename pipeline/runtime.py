@@ -70,13 +70,20 @@ def atomic_write_json(path, value):
 
 
 def save_checkpoint(path, model, config, train_data):
+    save_checkpoint_with_metadata(
+        path, model, config, torch.from_numpy(train_data.class_counts.copy()), train_data.data_settings,
+    )
+
+
+def save_checkpoint_with_metadata(path, model, config, class_counts, data_settings):
+    """Save an image-inference checkpoint when training uses cached features."""
     torch.save({
         "model_state_dict": {
             name: tensor.detach().cpu() for name, tensor in model.state_dict().items()
         },
         "config": config,
-        "class_counts": torch.from_numpy(train_data.class_counts.copy()),
-        "data_settings": train_data.data_settings,
+        "class_counts": class_counts.detach().cpu().clone(),
+        "data_settings": data_settings,
     }, path)
 
 

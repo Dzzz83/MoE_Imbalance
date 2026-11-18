@@ -1,0 +1,19 @@
+{
+  "stage": "assignment",
+  "input_results_commit": "51c7829d505143bd556ff1f3038b6559751e3428",
+  "archive_sha256": "e157e664288bd849a0dc5d6fb5eed2f61269a3452327d9a1407145a02331aeb2",
+  "seeds": [0, 1, 2],
+  "shuffle_seeds": [0, 1, 2],
+  "tie_seed": 0,
+  "batch_size": 128,
+  "weight_exponent": 3,
+  "classifier": {
+    "epochs": 40,
+    "learning_rate": 0.002,
+    "momentum": 0.9,
+    "weight_decay": 0.0005,
+    "nesterov": true,
+    "scheduler": "constant"
+  },
+  "practical_gain": 0.005
+}

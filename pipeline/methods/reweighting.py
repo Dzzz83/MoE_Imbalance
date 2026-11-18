@@ -359,8 +359,6 @@ def train_classifier(
     An optional raw feature cache must come from this model's frozen backbone.
     An epoch callback may add development measurements to the history record.
     """
-    options = config["method_options"]
-    stage = "reweighting" if use_ot else config["method"]
     print("Caching deterministic training features for frozen-backbone Stage 2", flush=True)
     if cached_features is None:
         raw_features, labels = _cache_training_features(model, train_data, config, device)
@@ -373,6 +371,28 @@ def train_classifier(
             or not torch.isfinite(raw_features).all()
         ):
             raise ValueError("Cached features must match the fitting data in retained order")
+    return train_classifier_from_features(
+        model, raw_features, labels, config, output_dir, device,
+        epoch_offset=epoch_offset, use_ot=use_ot, weight_builder=weight_builder,
+        epoch_callback=epoch_callback,
+    )
+
+
+def train_classifier_from_features(
+    model, raw_features, labels, config, output_dir, device, *, epoch_offset,
+    use_ot, weight_builder=None, epoch_callback=None,
+):
+    """Use the shared classifier loop after the caller validates cache provenance."""
+    if (
+        raw_features.ndim != 2 or raw_features.shape != (len(labels), 64) or not len(labels)
+        or not raw_features.is_floating_point() or not torch.isfinite(raw_features).all()
+        or labels.dtype != torch.int64 or labels.shape != (len(raw_features),)
+        or (labels < 0).any() or (labels >= NUM_CLASSES).any()
+    ):
+        raise ValueError("Expected finite raw (N, 64) features and aligned int64 labels in [0, 99]")
+    _freeze_backbone(model)
+    options = config["method_options"]
+    stage = "reweighting" if use_ot else config["method"]
     if use_ot:
         normalized_features, references, reference_masses = _build_ot_references(raw_features, labels)
         cost = _build_ot_cost(
