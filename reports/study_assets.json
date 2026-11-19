@@ -1,9 +1,9 @@
 {
   "seeds": {
     "0": {
-      "asset_id": 766422025,
-      "sha256": "8f59ead1804d59f8256c8a8f88f3b631c2b4d20e3d995c914e761f687f16fcf3",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed0-8f59ead1804d59f8256c8a8f88f3b631c2b4d20e3d995c914e761f687f16fcf3/ot-simple-controls-seed0.zip",
+      "asset_id": 766422545,
+      "sha256": "53002dc558795ad96ed2af47aecccde374f8dc6043befc6efdf1eceba86907d2",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed0-53002dc558795ad96ed2af47aecccde374f8dc6043befc6efdf1eceba86907d2/ot-simple-controls-seed0.zip",
       "paths": [
         "diagnostics/seed0/controls.json",
         "diagnostics/seed0/geometry.pt",
@@ -17,6 +17,16 @@
         "runs/seed0/cluster_balanced/starting_metrics.json",
         "runs/seed0/cluster_balanced/weight_diagnostics.json",
         "runs/seed0/cluster_balanced/weights.pt",
+        "runs/seed0/easy_rank/assignment_finetuning_diagnostics.json",
+        "runs/seed0/easy_rank/complete.json",
+        "runs/seed0/easy_rank/config.json",
+        "runs/seed0/easy_rank/final.pt",
+        "runs/seed0/easy_rank/history.json",
+        "runs/seed0/easy_rank/metrics.json",
+        "runs/seed0/easy_rank/prototype_weight_diagnostics.json",
+        "runs/seed0/easy_rank/starting_metrics.json",
+        "runs/seed0/easy_rank/weight_diagnostics.json",
+        "runs/seed0/easy_rank/weights.pt",
         "runs/seed0/prototype_distance/assignment_finetuning_diagnostics.json",
         "runs/seed0/prototype_distance/complete.json",
         "runs/seed0/prototype_distance/config.json",
