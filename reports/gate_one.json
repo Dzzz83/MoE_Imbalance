@@ -1,0 +1,127 @@
+{
+  "preparation_sha256": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
+  "decision": {
+    "status": "failed",
+    "passed": false,
+    "reasons": [
+      "insufficient_damage",
+      "insufficient_recovery"
+    ],
+    "completed_fits": 9,
+    "expected_fits": 9,
+    "damage": {
+      "per_seed": [
+        {
+          "seed": 0,
+          "value": 0.6712544124397362,
+          "reference": 0.6684112993118767,
+          "individual_values": [
+            0.6712544124397362
+          ],
+          "reference_individual_values": [
+            0.6684112993118767
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": 0.0028431131278594535
+        },
+        {
+          "seed": 1,
+          "value": 0.6822409726303936,
+          "reference": 0.6694640186802262,
+          "individual_values": [
+            0.6822409726303936
+          ],
+          "reference_individual_values": [
+            0.6694640186802262
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": 0.012776953950167425
+        },
+        {
+          "seed": 2,
+          "value": 0.6586138088598059,
+          "reference": 0.6556708204009403,
+          "individual_values": [
+            0.6586138088598059
+          ],
+          "reference_individual_values": [
+            0.6556708204009403
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": 0.0029429884588656474
+        }
+      ],
+      "mean_difference": 0.006187685178964175,
+      "sample_sd_difference": 0.00570669264765518
+    },
+    "recovery": {
+      "per_seed": [
+        {
+          "seed": 0,
+          "value": 0.6670501687748533,
+          "reference": 0.6684112993118767,
+          "individual_values": [
+            0.6670501687748533
+          ],
+          "reference_individual_values": [
+            0.6684112993118767
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": -0.0013611305370233584
+        },
+        {
+          "seed": 1,
+          "value": 0.6761895911850144,
+          "reference": 0.6694640186802262,
+          "individual_values": [
+            0.6761895911850144
+          ],
+          "reference_individual_values": [
+            0.6694640186802262
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": 0.006725572504788224
+        },
+        {
+          "seed": 2,
+          "value": 0.6522285064769953,
+          "reference": 0.6556708204009403,
+          "individual_values": [
+            0.6522285064769953
+          ],
+          "reference_individual_values": [
+            0.6556708204009403
+          ],
+          "shuffle_sample_sd": null,
+          "reference_shuffle_sample_sd": null,
+          "difference": -0.0034423139239450062
+        }
+      ],
+      "mean_difference": 0.0006407093479399532,
+      "sample_sd_difference": 0.005371405849559014
+    },
+    "recovery_fraction": 0.1035458866133213,
+    "thresholds": {
+      "minimum_damage": 0.01,
+      "minimum_recovery": 0.005,
+      "minimum_recovery_fraction": 0.25,
+      "minimum_positive_seeds": 2
+    }
+  },
+  "completed_runs": {
+    "runs/seed0/unbiased_cb": "ebb8e71255793a3727176e764c9bc82efdc082fd2b1e62c707e002a23459c86d",
+    "runs/seed0/biased_cb": "3bdf70b793e7fecbee9c681b5a7af27c98898db441fd0c80e77b3a51b43a3d72",
+    "runs/seed0/known_correction": "86e78bb819f285b066a21eff55025de303aa982a3bb176ea92b8efac3c8a0f5a",
+    "runs/seed1/unbiased_cb": "82b32694904c75c0af1bdbfe993d7f2a8353beb7718ae2b1fdb4c9dc1e282773",
+    "runs/seed1/biased_cb": "2b81f22951ac9c3a85a77c2620a86dee41534e661a997bc41eeed33757ff6c14",
+    "runs/seed1/known_correction": "e4142406ad7fec676f7dc4ed9a0304b7ff455a8c372f5b6d1f2bd5168d1b08fa",
+    "runs/seed2/unbiased_cb": "3ccd55a7ab07e709363fd97e8ab38ddbc603ca5a4eb9f7359452054700f7e994",
+    "runs/seed2/biased_cb": "293b7ae88a37d2c8a8a26d5aa41d125e342cf62dbfc451365043240fdc805669",
+    "runs/seed2/known_correction": "86d11f0c2b6b6bd5a4a34f51fd5fb7bdaaeb3f95761818806f232e3b3c103e58"
+  }
+}

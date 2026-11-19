@@ -6,6 +6,7 @@
     "diagnostics/seed0/diagnostics.json": "b9670ca2e1833e1fa93d2dcc1db9188cf27adbbcc71cc42ef1f02c28cb831cbc",
     "diagnostics/seed1/diagnostics.json": "d50e7968f56d5f8a6a63c13463c04312c0f0005e5e3785488ff2028342162fcb",
     "diagnostics/seed2/diagnostics.json": "b990a41fdb64202c1e1b02fb4b03fdf429417df6f78bd6f198193aa9c24f1e0e",
+    "gate_one.json": "3ee51f34ee1313276022f29baf4006f0ecc59bcefa4fc9fabcd2ccf277627fc8",
     "preparation/complete.json": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
     "preparation/sampling.json": "23f98b3260d672327173ff5624c85cd2f0285dd7c76adf8203b272de66bf33b5",
     "readable_report.json": "91bb9873df9cbb7a37f2007deea9cc13e7afcccda5e3aade26f328fd3efe2bec",
@@ -54,10 +55,10 @@
     "runs/seed2/unbiased_cb/history.json": "100e7507a65877d10aeece33f862fb0edfa5d2a823c028a22b86b5c4e12d591e",
     "runs/seed2/unbiased_cb/metrics.json": "367682f71b5cc3b07d0521114fa59b3c135dd7522d345d562d2dfbc072530f02",
     "runs/seed2/unbiased_cb/optimization.json": "3512e32ba1be01ac3cedfec13ef5f45b19f3491c18403cf343258f2dc0e6af3b",
-    "study_assets.json": "924b8da8eabbc7b6aa1b69d1c4ffca1d4a5fbcb9ef383a4dab8d3343b6f0c609",
+    "study_assets.json": "4640e31c59b9795da438bbf6459fe4f879a82804b1932a4a4f71262baf51331f",
     "study_config.json": "efef3c426b146abdb8cf785be676ebce6cab8338a418bafd5136e2ea108eb6af",
     "study_results.json": "86e77b8e86e05f9da7fdd75bd53f8e510fe4d4ead606fdca8e76526e5167a91c",
-    "study_status.json": "71590d14b29c479398af4db793683fa34968faeba00be0ae196321993148b211",
+    "study_status.json": "0ce49112a5d5f7021f3192f4e5c010581e231e5a9c189aeeddaa1e12493d38e7",
     "study_summary.json": "7adb7cfc88504f3efd3160d9b72dd87687d505d7ef43a8e0c83790e0fb88e0e5"
   },
   "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available"

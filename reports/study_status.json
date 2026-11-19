@@ -1,5 +1,5 @@
 {
-  "status": "running",
+  "status": "stopped_gate_one",
   "error": null,
   "completed_runs": 9,
   "expected_runs": 9,
