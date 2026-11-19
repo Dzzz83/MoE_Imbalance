@@ -1,0 +1,20 @@
+{
+  "method": "assignment_finetuning",
+  "seed": 1,
+  "batch_size": 128,
+  "num_workers": 0,
+  "input_results_commit": "51c7829d505143bd556ff1f3038b6559751e3428",
+  "baseline_sha256": "970df0e4d6d35e2a36493d43e1e55d05bf8cac896a6d59aece0d146b709beee2",
+  "method_options": {
+    "condition": "cluster_balanced",
+    "shuffle_seed": null,
+    "classifier": {
+      "epochs": 40,
+      "learning_rate": 0.002,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "nesterov": true,
+      "scheduler": "constant"
+    }
+  }
+}
