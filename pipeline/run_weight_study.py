@@ -26,6 +26,10 @@ PRIMARY_REFERENCES = ("strong_ot", "class_balanced", "shuffled_strong_ot")
 
 
 def resolve_config(config):
+    if isinstance(config, dict) and config.get("stage") == "simple_controls":
+        from pipeline.run_simple_controls import resolve_config as resolve_controls
+
+        return resolve_controls(config)
     defaults = {
         "stage": "assignment", "input_results_commit": AUDIT_COMMIT, "archive_sha256": ARCHIVE_SHA256,
         "seeds": [0, 1, 2], "shuffle_seeds": [0, 1, 2], "tie_seed": 0,
@@ -181,7 +185,13 @@ def _continuation(config, inputs, seed, condition, shuffle, weights, scores, roo
     return metrics
 
 
-def run_study(config, input_root, output_root, device, on_progress=None):
+def run_study(config, input_root, output_root, device, on_progress=None, *, parent_root=None):
+    if config.get("stage") == "simple_controls":
+        from pipeline.run_simple_controls import run_study as run_controls
+
+        if parent_root is None:
+            raise ValueError("Stage B requires the pinned Stage A --parent directory")
+        return run_controls(config, input_root, parent_root, output_root, device, on_progress)
     config = resolve_config(config)
     inputs = load_audit_inputs(input_root, config)
     root, device = Path(output_root), torch.device(device)
@@ -278,15 +288,24 @@ def main():
     parser.add_argument("command", choices=("validate", "run"))
     parser.add_argument("--config", default="configs/weight_assignment.json")
     parser.add_argument("--inputs", required=True)
-    parser.add_argument("--output-dir", default="outputs/weight_assignment")
+    parser.add_argument("--parent", help="Stage A directory containing manifest.json and reports/")
+    parser.add_argument("--output-dir")
     parser.add_argument("--device", default="cuda")
     args = parser.parse_args()
     config = resolve_config(json.loads(Path(args.config).read_text()))
     if args.command == "validate":
-        inputs = load_audit_inputs(args.inputs, config)
+        if config["stage"] == "simple_controls":
+            from pipeline.run_simple_controls import prepare_study
+
+            if args.parent is None:
+                parser.error("Stage B requires --parent")
+            inputs, _, _ = prepare_study(config, args.inputs, args.parent)
+        else:
+            inputs = load_audit_inputs(args.inputs, config)
         print(json.dumps(inputs["provenance"], indent=2))
     else:
-        run_study(config, args.inputs, args.output_dir, resolve_device(args.device))
+        output = args.output_dir or f"outputs/weight_{config['stage']}"
+        run_study(config, args.inputs, output, resolve_device(args.device), parent_root=args.parent)
 
 
 if __name__ == "__main__":

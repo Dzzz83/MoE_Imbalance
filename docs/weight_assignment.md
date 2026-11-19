@@ -12,7 +12,8 @@ restored from GitHub; no CIFAR attachment or baseline training is needed.
 2. Enable the existing `GITHUB_TOKEN` secret with write access to
    `Dzzz83/MoE_Imbalance`, including release asset upload access.
 3. Paste the published `scripts/kaggle_ablation_study.py` into one cell and run
-   it. The default is `STAGES = ("assignment",)`. Leave
+   it after explicitly setting `STAGES = ("assignment",)`. The script now
+   defaults to [Stage B](weight_simple_controls.md). Leave
    `ASSIGNMENT_CONFIG_OVERRIDES = {}` and `ASSIGNMENT_PREFLIGHT_ONLY = False`.
 
 Use the new implementation from `ablation_study`; older copies of this script

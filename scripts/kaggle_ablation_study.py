@@ -23,16 +23,19 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Run the matched assignment study from the published audit features.
+# Run Stage B from the published audit features and completed Stage A references.
 # Use ("audit",) to audit an existing stronger OT run without training.
-STAGES = ("assignment",)
+STAGES = ("simple_controls",)
+IS_SIMPLE_CONTROLS = STAGES == ("simple_controls",)
 IS_ASSIGNMENT_STUDY = STAGES == ("assignment",)
 IS_WEIGHT_AUDIT = STAGES == ("audit",)
 IS_AUDIT_REBUILD = STAGES == ("rebuild_audit",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
 STRENGTH_RESULTS_BRANCH = "ablation-strength-results"
-if IS_ASSIGNMENT_STUDY:
+if IS_SIMPLE_CONTROLS:
+    RESULTS_BRANCH, RESULTS_FOLDER = "ablation-simple-controls-results", "ot-simple-controls-results"
+elif IS_ASSIGNMENT_STUDY:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-assignment-results", "ot-assignment-results"
 elif IS_WEIGHT_AUDIT:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-weight-audit-results", "ot-weight-audit-results"
@@ -46,11 +49,13 @@ GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
 CODE_ROOT = Path("/kaggle/working") / (
+    "ot-simple-controls-code" if IS_SIMPLE_CONTROLS else
     "ot-assignment-code" if IS_ASSIGNMENT_STUDY else
     "ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code"
 )
 RESULTS_ROOT = Path("/kaggle/working") / RESULTS_FOLDER
 WORK_ROOT = Path("/kaggle/working") / (
+    "ot-simple-controls" if IS_SIMPLE_CONTROLS else
     "ot-weight-assignment" if IS_ASSIGNMENT_STUDY else
     "ot-ablation-audit-rebuild" if IS_AUDIT_REBUILD else "ot-ablation"
 )
@@ -70,6 +75,8 @@ CONFIG_OVERRIDES = {"num_workers": 2}
 # Assignment settings use their own config; keep research settings fixed.
 ASSIGNMENT_CONFIG_OVERRIDES = {}
 ASSIGNMENT_PREFLIGHT_ONLY = False
+# Stage B settings are frozen; preflight validates references/geometry without training.
+SIMPLE_CONTROLS_PREFLIGHT_ONLY = False
 
 
 def run(command, cwd=None, env=None, capture=False):
@@ -330,6 +337,9 @@ def publish_reports(study_root, source_commit, message, auth_env):
     is_assignment = (study_root / "study_assets.json").is_file()
     if is_assignment:
         title = "OT assignment ablation results"
+        config = json.loads((study_root / "study_config.json").read_text())
+        if config.get("config", {}).get("stage") == "simple_controls":
+            title = "OT simple controls ablation results"
     report_locations = ""
     if "study_summary.json" in files or is_strength_study:
         report_locations += "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
@@ -770,6 +780,20 @@ def is_assignment_asset_path(relative):
 
 
 def assignment_asset_paths(root, seed=None):
+    return cached_asset_paths(root, seed, is_assignment_asset_path)
+
+
+def is_simple_controls_asset_path(relative):
+    parts = PurePosixPath(relative).parts
+    if len(parts) == 3 and parts[0] == "diagnostics" and parts[1] in {"seed0", "seed1", "seed2"}:
+        return parts[2] in {"geometry.pt", "controls.json"}
+    conditions = {"cluster_balanced", "prototype_distance", "easy_rank",
+                  "cluster_rank_strong", "distance_rank_strong"}
+    return (len(parts) == 4 and parts[0] == "runs" and parts[1] in {"seed0", "seed1", "seed2"}
+            and parts[2] in conditions and parts[3] in ASSIGNMENT_RUN_FILES)
+
+
+def cached_asset_paths(root, seed, accept_path):
     paths = []
     for current in ([seed] if seed is not None else (0, 1, 2)):
         folders = [root / f"diagnostics/seed{current}"]
@@ -778,7 +802,7 @@ def assignment_asset_paths(root, seed=None):
         for folder in folders:
             for path in sorted(folder.glob("*")):
                 relative = path.relative_to(root).as_posix()
-                if path.is_file() and is_assignment_asset_path(relative):
+                if path.is_file() and accept_path(relative):
                     paths.append(relative)
     return paths
 
@@ -786,24 +810,31 @@ def assignment_asset_paths(root, seed=None):
 def restore_assignment_study(auth_env):
     """Restore published JSON and its checksum-linked completed continuation files."""
     local = WORK_ROOT / "study"
+    return restore_cached_study(RESULTS_ROOT, local, auth_env, is_assignment_asset_path)
+
+
+def restore_cached_study(published_root, local, auth_env, accept_path):
+    """Restore a report tree and only its allowlisted, receipted binary artifacts."""
     if local.exists():
         return local
-    published = report_path("study_config.json")
+    published = published_root / "reports/study_config.json"
     if not published.is_file():
         return local
-    manifest = json.loads((RESULTS_ROOT / "manifest.json").read_text())
+    manifest = json.loads((published_root / "manifest.json").read_text())
     for relative, digest in manifest["report_hashes"].items():
-        if sha256(report_path(relative)) != digest:
-            raise ValueError(f"Published assignment report changed: {relative}")
-    asset_report = report_path("study_assets.json")
+        parts = PurePosixPath(relative).parts
+        if (not parts or ".." in parts or PurePosixPath(relative).is_absolute()
+                or sha256(published_root / "reports" / relative) != digest):
+            raise ValueError(f"Published cached-study report changed: {relative}")
+    asset_report = published_root / "reports/study_assets.json"
     if not asset_report.is_file():
         raise ValueError("Published assignment study has no reusable continuation assets")
     assets = json.loads(asset_report.read_text())
     selected = [assets["complete"]] if "complete" in assets else list(assets["seeds"].values())
-    WORK_ROOT.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="assignment-restore-", dir=WORK_ROOT) as temporary:
+    local.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="cached-study-restore-", dir=local.parent) as temporary:
         staged = Path(temporary) / "study"
-        shutil.copytree(RESULTS_ROOT / "reports", staged)
+        shutil.copytree(published_root / "reports", staged)
         for index, asset in enumerate(selected):
             archive_path = Path(temporary) / f"asset{index}.zip"
             url = f"{RELEASES_API}/assets/{int(asset['asset_id'])}"
@@ -814,7 +845,7 @@ def restore_assignment_study(auth_env):
             with ZipFile(archive_path) as archive:
                 names = archive.namelist()
                 if (len(names) != len(set(names)) or sorted(names) != sorted(asset["paths"])
-                        or any(not is_assignment_asset_path(name) for name in names)):
+                        or any(not accept_path(name) for name in names)):
                     raise ValueError("Unexpected assignment continuation archive entries")
                 for name in names:
                     contents = archive.read(name)
@@ -886,27 +917,103 @@ def execute_assignment(source_commit, auth_env):
     archive_interrupted_runs(root)
 
     def publish(study, seed, message):
-        path = study / "study_assets.json"
-        assets = json.loads(path.read_text()) if path.exists() else {"seeds": {}}
-        paths = assignment_asset_paths(study, seed)
-        prefix = f"ot-assignment-seed{seed}" if seed is not None else "ot-assignment-complete"
-        asset = upload_artifacts(study, paths, source_commit, auth_env, prefix) | {"paths": paths}
-        if seed is None:
-            assets["complete"] = asset
-        else:
-            assets["seeds"][str(seed)] = asset
-        write_json(path, assets)
-        publish_reports(study, source_commit, message, auth_env)
+        publish_cached_study(study, seed, message, source_commit, auth_env,
+                             "ot-assignment", is_assignment_asset_path)
 
     run_study(config, inputs, root, resolve_device("cuda"), on_progress=publish)
+
+
+def publish_cached_study(study, seed, message, source_commit, auth_env, asset_prefix, accept_path):
+    """Publish one completed-run snapshot; retrying reuses its content-addressed asset."""
+    path = study / "study_assets.json"
+    assets = json.loads(path.read_text()) if path.exists() else {"seeds": {}}
+    paths = cached_asset_paths(study, seed, accept_path)
+    suffix = f"seed{seed}" if seed is not None else "complete"
+    asset = upload_artifacts(study, paths, source_commit, auth_env, f"{asset_prefix}-{suffix}") | {"paths": paths}
+    if seed is None:
+        assets["complete"] = asset
+    else:
+        assets["seeds"][str(seed)] = asset
+    write_json(path, assets)
+    publish_reports(study, source_commit, message, auth_env)
+
+
+def prepare_simple_controls_parent(auth_env):
+    """Fetch exactly the pinned parent reports and their complete release archive."""
+    from pipeline.ablation_references import PARENT_COMMIT, validate_parent_manifest
+
+    destination = WORK_ROOT / "parent"
+    if destination.exists():
+        validate_parent_manifest(destination)
+        return destination
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    run(["git", "fetch", "origin", PARENT_COMMIT], cwd=RESULTS_ROOT, env=auth_env)
+    with tempfile.TemporaryDirectory(prefix="simple-controls-parent-", dir=WORK_ROOT) as temporary:
+        published = Path(temporary) / "published"
+        published.mkdir()
+
+        def read_pinned(relative):
+            response = subprocess.run(["git", "show", f"{PARENT_COMMIT}:{relative}"],
+                                      cwd=RESULTS_ROOT, env=auth_env, check=True, stdout=subprocess.PIPE)
+            target = published / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(response.stdout)
+
+        read_pinned("manifest.json")
+        manifest = json.loads((published / "manifest.json").read_text())
+        for relative in manifest["report_hashes"]:
+            parts = PurePosixPath(relative).parts
+            if not parts or ".." in parts or PurePosixPath(relative).is_absolute():
+                raise ValueError("Invalid pinned parent report path")
+            read_pinned(f"reports/{relative}")
+        validate_parent_manifest(published)
+        restored = Path(temporary) / "parent"
+        restored.mkdir()
+        restore_cached_study(published, restored / "reports", auth_env, is_assignment_asset_path)
+        shutil.copyfile(published / "manifest.json", restored / "manifest.json")
+        validate_parent_manifest(restored)
+        restored.rename(destination)
+    return destination
+
+
+def execute_simple_controls(source_commit, auth_env):
+    import torch
+    from pipeline.run_simple_controls import prepare_study, resolve_config
+    from pipeline.run_weight_study import run_study
+    from pipeline.runtime import resolve_device
+
+    config = resolve_config(json.loads((CODE_ROOT / "configs/weight_simple_controls.json").read_text()))
+    # Match the recorded parent backend settings before checking compatibility.
+    torch.set_num_threads(2)
+    torch.use_deterministic_algorithms(False)
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = True
+    inputs = prepare_assignment_inputs(config, auth_env)
+    parent = prepare_simple_controls_parent(auth_env)
+    if SIMPLE_CONTROLS_PREFLIGHT_ONLY:
+        prepare_study(config, inputs, parent)
+        print("Stage B preflight passed: parent references, three geometry replays and 15 weight vectors; "
+              "training environment is checked when training starts.", flush=True)
+        return
+    root = restore_cached_study(RESULTS_ROOT, WORK_ROOT / "study", auth_env, is_simple_controls_asset_path)
+    archive_interrupted_runs(root)
+
+    def publish(study, seed, message):
+        publish_cached_study(study, seed, message, source_commit, auth_env,
+                             "ot-simple-controls", is_simple_controls_asset_path)
+
+    run_study(config, inputs, root, resolve_device("cuda"), on_progress=publish, parent_root=parent)
 
 
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
     is_assignment = STAGES == ("assignment",)
-    if not (is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
+    is_simple_controls = STAGES == ("simple_controls",)
+    if not (is_simple_controls or is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
         if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-            raise ValueError('Use ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
+            raise ValueError('Use ("simple_controls",), ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
@@ -945,9 +1052,13 @@ def main():
         import torchvision
 
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
-        if not torch.cuda.is_available() and not (is_assignment and ASSIGNMENT_PREFLIGHT_ONLY):
+        preflight_only = ((is_assignment and ASSIGNMENT_PREFLIGHT_ONLY)
+                          or (is_simple_controls and SIMPLE_CONTROLS_PREFLIGHT_ONLY))
+        if not torch.cuda.is_available() and not preflight_only:
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        if is_assignment:
+        if is_simple_controls:
+            execute_simple_controls(source_commit, auth_env)
+        elif is_assignment:
             execute_assignment(source_commit, auth_env)
         elif IS_AUDIT_REBUILD:
             execute_rebuilt_weight_audit(source_commit, auth_env)
@@ -959,7 +1070,7 @@ def main():
             config = json.loads((CODE_ROOT / "configs/ablation_study.json").read_text()) | CONFIG_OVERRIDES
             config["train_data"] = str(prepared)
             execute_stages(config, source_commit, raw_root, auth_env)
-        if is_assignment and ASSIGNMENT_PREFLIGHT_ONLY:
+        if preflight_only:
             print("Preflight complete; no training or report publication was performed.", flush=True)
         else:
             print(f"Reports pushed to {RESULTS_BRANCH}. Preserve {WORK_ROOT} in Kaggle outputs.", flush=True)

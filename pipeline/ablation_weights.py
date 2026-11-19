@@ -101,12 +101,16 @@ def reassign_weights(strong_weights, labels, margins, condition, tie_order):
     priorities = {"easy_strong": margins, "boundary_strong": -margins.abs(), "hard_strong": -margins}
     if condition not in priorities:
         raise ValueError(f"Unknown ranked condition: {condition}")
-    if (margins.shape != labels.shape or not torch.isfinite(margins).all()
+    return reassign_by_priority(strong_weights, labels, priorities[condition], tie_order)
+
+
+def reassign_by_priority(strong_weights, labels, priority, tie_order):
+    """Permute a class weight multiset using a saved, independent tie order."""
+    if (priority.shape != labels.shape or not torch.isfinite(priority).all()
             or tie_order.dtype != torch.int64 or tie_order.shape != labels.shape
             or not torch.equal(tie_order.sort().values, torch.arange(len(labels)))):
-        raise ValueError("Expected finite aligned margins and a complete tie permutation")
+        raise ValueError("Expected finite aligned priorities and a complete tie permutation")
     weights = transform_weights(strong_weights, labels, "ot")
-    priority = priorities[condition]
     for c in range(NUM_CLASSES):
         positions = tie_order[labels[tie_order] == c]
         ordered = positions[torch.argsort(priority[positions], stable=True)]

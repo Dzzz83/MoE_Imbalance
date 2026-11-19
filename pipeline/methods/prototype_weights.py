@@ -104,7 +104,8 @@ def _relaxed_sinkhorn(cost, *, epsilon, row_kl_strength, sinkhorn_iterations, si
 
 
 @torch.no_grad()
-def build_weights(raw_features, labels, config, device):
+def build_weights(raw_features, labels, config, device, *, geometry=None):
+    """Build fixed weights; optionally append each class's fitting-only geometry."""
     options = config["method_options"]
     weighting = options["weighting"]
     generator = torch.Generator().manual_seed(config["seed"])
@@ -114,6 +115,7 @@ def build_weights(raw_features, labels, config, device):
         raise ValueError("Prototype fine-tuning requires retained training examples in every class")
     class_diagnostics = []
     for class_index, count in enumerate(counts.tolist()):
+        class_geometry = {"class_index": class_index, "assignments": None, "centers": None}
         class_rows = labels == class_index
         class_weights = weights.new_full((count,), 1 / count)
         diagnostics = {
@@ -125,6 +127,7 @@ def build_weights(raw_features, labels, config, device):
             clusters = _cluster_class(features, options["minimum_cluster_size"], generator, diagnostics)
             if clusters is not None:
                 assignments, sizes, centers = clusters
+                class_geometry.update(assignments=assignments.clone(), centers=centers.clone())
                 diagnostics["cluster_sizes"] = sizes.tolist()
                 if weighting == "cluster_balanced":
                     class_weights = 0.5 / sizes[assignments].to(weights.dtype)
@@ -142,4 +145,6 @@ def build_weights(raw_features, labels, config, device):
         diagnostics["minimum_weight_multiplier"] = (count * class_weights.min()).item()
         diagnostics["maximum_weight_multiplier"] = (count * class_weights.max()).item()
         class_diagnostics.append(diagnostics)
+        if geometry is not None:
+            geometry.append(class_geometry)
     return weights.to(device), class_diagnostics
