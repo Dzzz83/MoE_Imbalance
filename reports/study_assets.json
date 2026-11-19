@@ -1,0 +1,23 @@
+{
+  "seeds": {
+    "0": {
+      "asset_id": 766421439,
+      "sha256": "4e08be5ae7c3add463b8f8c89abd5a49c59b55396981b4c60883d72215285add",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed0-4e08be5ae7c3add463b8f8c89abd5a49c59b55396981b4c60883d72215285add/ot-simple-controls-seed0.zip",
+      "paths": [
+        "diagnostics/seed0/controls.json",
+        "diagnostics/seed0/geometry.pt",
+        "runs/seed0/cluster_balanced/assignment_finetuning_diagnostics.json",
+        "runs/seed0/cluster_balanced/complete.json",
+        "runs/seed0/cluster_balanced/config.json",
+        "runs/seed0/cluster_balanced/final.pt",
+        "runs/seed0/cluster_balanced/history.json",
+        "runs/seed0/cluster_balanced/metrics.json",
+        "runs/seed0/cluster_balanced/prototype_weight_diagnostics.json",
+        "runs/seed0/cluster_balanced/starting_metrics.json",
+        "runs/seed0/cluster_balanced/weight_diagnostics.json",
+        "runs/seed0/cluster_balanced/weights.pt"
+      ]
+    }
+  }
+}
