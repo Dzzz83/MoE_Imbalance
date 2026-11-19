@@ -1,6 +1,6 @@
 {
   "status": "incomplete",
-  "completed_runs": 3,
+  "completed_runs": 4,
   "expected_runs": 15,
   "decision": {
     "status": "incomplete"
