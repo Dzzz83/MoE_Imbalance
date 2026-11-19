@@ -1,9 +1,9 @@
 {
   "seeds": {
     "0": {
-      "asset_id": 766423224,
-      "sha256": "32d729cdc19ac78c79332a923e74779876c836042000356105e572a242bae9b0",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed0-32d729cdc19ac78c79332a923e74779876c836042000356105e572a242bae9b0/ot-simple-controls-seed0.zip",
+      "asset_id": 766423886,
+      "sha256": "20df14b7e2bfec0d57e0cb5996c374fe8bb5491df2b06dab33fba58bd0ade3b9",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed0-20df14b7e2bfec0d57e0cb5996c374fe8bb5491df2b06dab33fba58bd0ade3b9/ot-simple-controls-seed0.zip",
       "paths": [
         "diagnostics/seed0/controls.json",
         "diagnostics/seed0/geometry.pt",
@@ -27,6 +27,16 @@
         "runs/seed0/cluster_rank_strong/starting_metrics.json",
         "runs/seed0/cluster_rank_strong/weight_diagnostics.json",
         "runs/seed0/cluster_rank_strong/weights.pt",
+        "runs/seed0/distance_rank_strong/assignment_finetuning_diagnostics.json",
+        "runs/seed0/distance_rank_strong/complete.json",
+        "runs/seed0/distance_rank_strong/config.json",
+        "runs/seed0/distance_rank_strong/final.pt",
+        "runs/seed0/distance_rank_strong/history.json",
+        "runs/seed0/distance_rank_strong/metrics.json",
+        "runs/seed0/distance_rank_strong/prototype_weight_diagnostics.json",
+        "runs/seed0/distance_rank_strong/starting_metrics.json",
+        "runs/seed0/distance_rank_strong/weight_diagnostics.json",
+        "runs/seed0/distance_rank_strong/weights.pt",
         "runs/seed0/easy_rank/assignment_finetuning_diagnostics.json",
         "runs/seed0/easy_rank/complete.json",
         "runs/seed0/easy_rank/config.json",
