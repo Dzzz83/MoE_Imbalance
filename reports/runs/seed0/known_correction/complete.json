@@ -1,0 +1,29 @@
+{
+  "inputs": {
+    "preparation_sha256": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
+    "seed": 0,
+    "condition": "known_correction",
+    "positions": {
+      "sha256": "4ab6d373910be0ec2ab42bd927e96c7f319042bd5248064abebd97288fb4ed8b",
+      "shape": [
+        3485
+      ],
+      "dtype": "torch.int64"
+    },
+    "weights": {
+      "sha256": "05a28d76bd4026cca1d0e40a12427652519c3282d885e101c99c1b0980ed28ad",
+      "shape": [
+        3485
+      ],
+      "dtype": "torch.float64"
+    }
+  },
+  "files": {
+    "optimization.json": "eea6f2c4985834affce2093f9e57ff758d04d1f2f08eba987a5c0de3fcb6cd44",
+    "metrics.json": "455f23f654213f2475de983d133fcbcd5958e7fefbc0e3ae31b62c036713b695",
+    "config.json": "c0bc4db16822b81254a2172707d4459523f6c4795d53582632aa3a709dec4316",
+    "history.json": "246b27eab062ebdcf71b26b9ec6103c3b259067348dcf2b95c7e2e2df94bff9f",
+    "head.pt": "e17e467f2f81479fb2bc2c3e81717be75de21f8fc5d67c9e136edd3fca136c21",
+    "predictions.pt": "9bf211e550885f5e9e0361463f7ab63899beeef59de211d9671f56cae20f6402"
+  }
+}
