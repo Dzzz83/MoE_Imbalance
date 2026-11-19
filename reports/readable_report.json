@@ -1,12 +1,15 @@
 {
   "lines": [
     "Controlled-bias diagnostic",
-    "Status: incomplete; completed fits: 8 (maximum 27).",
+    "Status: stopped_gate_one; completed fits: 9 (maximum 27).",
     "Scores concern 34 eligible classes with fresh heads, not historical 100-class continuations.",
-    "Gate 1: incomplete; reasons: none.",
+    "Gate 1: failed; reasons: insufficient_damage, insufficient_recovery.",
+    "Mean removal damage: 0.619 percentage points; known-correction recovery: 0.064 points.",
     "Before removal, class balancing: 67.125%, 68.224%, 65.861%; mean 67.070%.",
     "After removal, class balancing: 66.841%, 66.946%, 65.567%; mean 66.452%.",
-    "Known sampling correction: 66.705%, 67.619%; mean 67.162%.",
+    "Known sampling correction: 66.705%, 67.619%, 65.223%; mean 66.516%.",
+    "The introduced removal did not cause the required consistent 1-point accuracy loss.",
+    "Known correction did not meet the required recovery; stop before testing OT.",
     "Exploratory budget criteria, not significance/equivalence tests. Three representations share images and masks. Fixed-backbone classifier diagnostic, not a universal OT verdict."
   ]
 }

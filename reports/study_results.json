@@ -7286,5 +7286,916 @@
       "is_converged": true
     },
     "completion_sha256": "293b7ae88a37d2c8a8a26d5aa41d125e342cf62dbfc451365043240fdc805669"
+  },
+  {
+    "seed": 2,
+    "condition": "known_correction",
+    "output_dir": "runs/seed2/known_correction",
+    "metrics": {
+      "diagnostic_balanced_accuracy": 0.6522285064769953,
+      "accuracy": 0.6757225433526012,
+      "cross_entropy": 1.2535628226465911,
+      "class_macro_cross_entropy": 1.3501390076843556,
+      "classes": [
+        {
+          "class_index": 0,
+          "original_class": 0,
+          "support": 100,
+          "correct": 94,
+          "recall": 0.94,
+          "cross_entropy": 0.18566356474519563
+        },
+        {
+          "class_index": 1,
+          "original_class": 1,
+          "support": 95,
+          "correct": 83,
+          "recall": 0.8736842105263158,
+          "cross_entropy": 0.36066072614734335
+        },
+        {
+          "class_index": 2,
+          "original_class": 2,
+          "support": 91,
+          "correct": 55,
+          "recall": 0.6043956043956044,
+          "cross_entropy": 1.4298602030500838
+        },
+        {
+          "class_index": 3,
+          "original_class": 3,
+          "support": 86,
+          "correct": 48,
+          "recall": 0.5581395348837209,
+          "cross_entropy": 1.3927160276150492
+        },
+        {
+          "class_index": 4,
+          "original_class": 4,
+          "support": 83,
+          "correct": 52,
+          "recall": 0.6265060240963856,
+          "cross_entropy": 1.4199155953464
+        },
+        {
+          "class_index": 5,
+          "original_class": 5,
+          "support": 79,
+          "correct": 61,
+          "recall": 0.7721518987341772,
+          "cross_entropy": 0.7218670305299514
+        },
+        {
+          "class_index": 6,
+          "original_class": 6,
+          "support": 75,
+          "correct": 56,
+          "recall": 0.7466666666666667,
+          "cross_entropy": 0.9339095540963402
+        },
+        {
+          "class_index": 7,
+          "original_class": 7,
+          "support": 72,
+          "correct": 41,
+          "recall": 0.5694444444444444,
+          "cross_entropy": 1.6236516729245425
+        },
+        {
+          "class_index": 8,
+          "original_class": 8,
+          "support": 68,
+          "correct": 55,
+          "recall": 0.8088235294117647,
+          "cross_entropy": 0.6075644340634069
+        },
+        {
+          "class_index": 9,
+          "original_class": 9,
+          "support": 65,
+          "correct": 51,
+          "recall": 0.7846153846153846,
+          "cross_entropy": 1.0163784408563052
+        },
+        {
+          "class_index": 10,
+          "original_class": 10,
+          "support": 62,
+          "correct": 34,
+          "recall": 0.5483870967741935,
+          "cross_entropy": 2.1288924099581643
+        },
+        {
+          "class_index": 11,
+          "original_class": 11,
+          "support": 59,
+          "correct": 24,
+          "recall": 0.4067796610169492,
+          "cross_entropy": 2.5253918060672724
+        },
+        {
+          "class_index": 12,
+          "original_class": 12,
+          "support": 57,
+          "correct": 40,
+          "recall": 0.7017543859649122,
+          "cross_entropy": 1.3742833915024917
+        },
+        {
+          "class_index": 13,
+          "original_class": 13,
+          "support": 54,
+          "correct": 47,
+          "recall": 0.8703703703703703,
+          "cross_entropy": 0.4277854280433715
+        },
+        {
+          "class_index": 14,
+          "original_class": 14,
+          "support": 52,
+          "correct": 29,
+          "recall": 0.5576923076923077,
+          "cross_entropy": 1.628208213851696
+        },
+        {
+          "class_index": 15,
+          "original_class": 15,
+          "support": 49,
+          "correct": 29,
+          "recall": 0.5918367346938775,
+          "cross_entropy": 1.6794344948151914
+        },
+        {
+          "class_index": 16,
+          "original_class": 16,
+          "support": 47,
+          "correct": 32,
+          "recall": 0.6808510638297872,
+          "cross_entropy": 1.306100368088454
+        },
+        {
+          "class_index": 17,
+          "original_class": 17,
+          "support": 45,
+          "correct": 39,
+          "recall": 0.8666666666666667,
+          "cross_entropy": 0.46264973662184083
+        },
+        {
+          "class_index": 18,
+          "original_class": 18,
+          "support": 43,
+          "correct": 25,
+          "recall": 0.5813953488372093,
+          "cross_entropy": 2.016192820344007
+        },
+        {
+          "class_index": 19,
+          "original_class": 19,
+          "support": 41,
+          "correct": 19,
+          "recall": 0.4634146341463415,
+          "cross_entropy": 2.6296428405612255
+        },
+        {
+          "class_index": 20,
+          "original_class": 20,
+          "support": 39,
+          "correct": 37,
+          "recall": 0.9487179487179487,
+          "cross_entropy": 0.25411383232350243
+        },
+        {
+          "class_index": 21,
+          "original_class": 21,
+          "support": 37,
+          "correct": 23,
+          "recall": 0.6216216216216216,
+          "cross_entropy": 1.2494280755574854
+        },
+        {
+          "class_index": 22,
+          "original_class": 22,
+          "support": 35,
+          "correct": 17,
+          "recall": 0.4857142857142857,
+          "cross_entropy": 2.2552906295363515
+        },
+        {
+          "class_index": 23,
+          "original_class": 23,
+          "support": 34,
+          "correct": 28,
+          "recall": 0.8235294117647058,
+          "cross_entropy": 0.49616872967210895
+        },
+        {
+          "class_index": 24,
+          "original_class": 24,
+          "support": 32,
+          "correct": 20,
+          "recall": 0.625,
+          "cross_entropy": 1.3444768650504755
+        },
+        {
+          "class_index": 25,
+          "original_class": 25,
+          "support": 31,
+          "correct": 12,
+          "recall": 0.3870967741935484,
+          "cross_entropy": 2.704979710252342
+        },
+        {
+          "class_index": 26,
+          "original_class": 26,
+          "support": 29,
+          "correct": 19,
+          "recall": 0.6551724137931034,
+          "cross_entropy": 1.2767363542583634
+        },
+        {
+          "class_index": 27,
+          "original_class": 27,
+          "support": 28,
+          "correct": 12,
+          "recall": 0.42857142857142855,
+          "cross_entropy": 1.9440034506155701
+        },
+        {
+          "class_index": 28,
+          "original_class": 28,
+          "support": 27,
+          "correct": 19,
+          "recall": 0.7037037037037037,
+          "cross_entropy": 1.1332128916740425
+        },
+        {
+          "class_index": 29,
+          "original_class": 29,
+          "support": 25,
+          "correct": 13,
+          "recall": 0.52,
+          "cross_entropy": 2.106738894509108
+        },
+        {
+          "class_index": 30,
+          "original_class": 30,
+          "support": 24,
+          "correct": 22,
+          "recall": 0.9166666666666666,
+          "cross_entropy": 0.31195882472044273
+        },
+        {
+          "class_index": 31,
+          "original_class": 31,
+          "support": 23,
+          "correct": 11,
+          "recall": 0.4782608695652174,
+          "cross_entropy": 1.660653737853632
+        },
+        {
+          "class_index": 32,
+          "original_class": 32,
+          "support": 22,
+          "correct": 9,
+          "recall": 0.4090909090909091,
+          "cross_entropy": 2.190718387490022
+        },
+        {
+          "class_index": 33,
+          "original_class": 33,
+          "support": 21,
+          "correct": 13,
+          "recall": 0.6190476190476191,
+          "cross_entropy": 1.1054771185263095
+        }
+      ],
+      "controller_groups": [
+        {
+          "class_index": 0,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 72,
+          "correct": 67,
+          "recall": 0.9305555555555556,
+          "balanced_accuracy_contribution": 0.019705882352941177
+        },
+        {
+          "class_index": 0,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 28,
+          "correct": 27,
+          "recall": 0.9642857142857143,
+          "balanced_accuracy_contribution": 0.007941176470588236
+        },
+        {
+          "class_index": 1,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 49,
+          "correct": 41,
+          "recall": 0.8367346938775511,
+          "balanced_accuracy_contribution": 0.012693498452012383
+        },
+        {
+          "class_index": 1,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 46,
+          "correct": 42,
+          "recall": 0.9130434782608695,
+          "balanced_accuracy_contribution": 0.013003095975232198
+        },
+        {
+          "class_index": 2,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 35,
+          "correct": 15,
+          "recall": 0.42857142857142855,
+          "balanced_accuracy_contribution": 0.004848093083387201
+        },
+        {
+          "class_index": 2,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 56,
+          "correct": 40,
+          "recall": 0.7142857142857143,
+          "balanced_accuracy_contribution": 0.012928248222365869
+        },
+        {
+          "class_index": 3,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 66,
+          "correct": 39,
+          "recall": 0.5909090909090909,
+          "balanced_accuracy_contribution": 0.013337893296853625
+        },
+        {
+          "class_index": 3,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 20,
+          "correct": 9,
+          "recall": 0.45,
+          "balanced_accuracy_contribution": 0.0030779753761969904
+        },
+        {
+          "class_index": 4,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 31,
+          "correct": 19,
+          "recall": 0.6129032258064516,
+          "balanced_accuracy_contribution": 0.006732813607370659
+        },
+        {
+          "class_index": 4,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 52,
+          "correct": 33,
+          "recall": 0.6346153846153846,
+          "balanced_accuracy_contribution": 0.011693834160170093
+        },
+        {
+          "class_index": 5,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 35,
+          "correct": 30,
+          "recall": 0.8571428571428571,
+          "balanced_accuracy_contribution": 0.011169024571854059
+        },
+        {
+          "class_index": 5,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 44,
+          "correct": 31,
+          "recall": 0.7045454545454546,
+          "balanced_accuracy_contribution": 0.01154132539091586
+        },
+        {
+          "class_index": 6,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 33,
+          "correct": 30,
+          "recall": 0.9090909090909091,
+          "balanced_accuracy_contribution": 0.011764705882352941
+        },
+        {
+          "class_index": 6,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 42,
+          "correct": 26,
+          "recall": 0.6190476190476191,
+          "balanced_accuracy_contribution": 0.01019607843137255
+        },
+        {
+          "class_index": 7,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 42,
+          "correct": 18,
+          "recall": 0.42857142857142855,
+          "balanced_accuracy_contribution": 0.007352941176470588
+        },
+        {
+          "class_index": 7,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 30,
+          "correct": 23,
+          "recall": 0.7666666666666667,
+          "balanced_accuracy_contribution": 0.009395424836601307
+        },
+        {
+          "class_index": 8,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 30,
+          "correct": 29,
+          "recall": 0.9666666666666667,
+          "balanced_accuracy_contribution": 0.012543252595155709
+        },
+        {
+          "class_index": 8,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 38,
+          "correct": 26,
+          "recall": 0.6842105263157895,
+          "balanced_accuracy_contribution": 0.011245674740484428
+        },
+        {
+          "class_index": 9,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 26,
+          "correct": 23,
+          "recall": 0.8846153846153846,
+          "balanced_accuracy_contribution": 0.010407239819004526
+        },
+        {
+          "class_index": 9,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 39,
+          "correct": 28,
+          "recall": 0.717948717948718,
+          "balanced_accuracy_contribution": 0.012669683257918552
+        },
+        {
+          "class_index": 10,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 27,
+          "correct": 14,
+          "recall": 0.5185185185185185,
+          "balanced_accuracy_contribution": 0.006641366223908918
+        },
+        {
+          "class_index": 10,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 35,
+          "correct": 20,
+          "recall": 0.5714285714285714,
+          "balanced_accuracy_contribution": 0.009487666034155597
+        },
+        {
+          "class_index": 11,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 32,
+          "correct": 15,
+          "recall": 0.46875,
+          "balanced_accuracy_contribution": 0.007477567298105683
+        },
+        {
+          "class_index": 11,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 27,
+          "correct": 9,
+          "recall": 0.3333333333333333,
+          "balanced_accuracy_contribution": 0.00448654037886341
+        },
+        {
+          "class_index": 12,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 34,
+          "correct": 22,
+          "recall": 0.6470588235294118,
+          "balanced_accuracy_contribution": 0.01135190918472652
+        },
+        {
+          "class_index": 12,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 23,
+          "correct": 18,
+          "recall": 0.782608695652174,
+          "balanced_accuracy_contribution": 0.009287925696594427
+        },
+        {
+          "class_index": 13,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 25,
+          "correct": 20,
+          "recall": 0.8,
+          "balanced_accuracy_contribution": 0.010893246187363833
+        },
+        {
+          "class_index": 13,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 29,
+          "correct": 27,
+          "recall": 0.9310344827586207,
+          "balanced_accuracy_contribution": 0.014705882352941176
+        },
+        {
+          "class_index": 14,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 23,
+          "correct": 13,
+          "recall": 0.5652173913043478,
+          "balanced_accuracy_contribution": 0.007352941176470588
+        },
+        {
+          "class_index": 14,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 29,
+          "correct": 16,
+          "recall": 0.5517241379310345,
+          "balanced_accuracy_contribution": 0.00904977375565611
+        },
+        {
+          "class_index": 15,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 28,
+          "correct": 16,
+          "recall": 0.5714285714285714,
+          "balanced_accuracy_contribution": 0.009603841536614645
+        },
+        {
+          "class_index": 15,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 21,
+          "correct": 13,
+          "recall": 0.6190476190476191,
+          "balanced_accuracy_contribution": 0.0078031212484994
+        },
+        {
+          "class_index": 16,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 13,
+          "correct": 7,
+          "recall": 0.5384615384615384,
+          "balanced_accuracy_contribution": 0.004380475594493116
+        },
+        {
+          "class_index": 16,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 34,
+          "correct": 25,
+          "recall": 0.7352941176470589,
+          "balanced_accuracy_contribution": 0.015644555694618274
+        },
+        {
+          "class_index": 17,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 19,
+          "correct": 16,
+          "recall": 0.8421052631578947,
+          "balanced_accuracy_contribution": 0.010457516339869282
+        },
+        {
+          "class_index": 17,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 26,
+          "correct": 23,
+          "recall": 0.8846153846153846,
+          "balanced_accuracy_contribution": 0.01503267973856209
+        },
+        {
+          "class_index": 18,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 17,
+          "correct": 13,
+          "recall": 0.7647058823529411,
+          "balanced_accuracy_contribution": 0.008891928864569083
+        },
+        {
+          "class_index": 18,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 26,
+          "correct": 12,
+          "recall": 0.46153846153846156,
+          "balanced_accuracy_contribution": 0.008207934336525308
+        },
+        {
+          "class_index": 19,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 16,
+          "correct": 7,
+          "recall": 0.4375,
+          "balanced_accuracy_contribution": 0.005021520803443329
+        },
+        {
+          "class_index": 19,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 25,
+          "correct": 12,
+          "recall": 0.48,
+          "balanced_accuracy_contribution": 0.00860832137733142
+        },
+        {
+          "class_index": 20,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 14,
+          "correct": 13,
+          "recall": 0.9285714285714286,
+          "balanced_accuracy_contribution": 0.00980392156862745
+        },
+        {
+          "class_index": 20,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 25,
+          "correct": 24,
+          "recall": 0.96,
+          "balanced_accuracy_contribution": 0.01809954751131222
+        },
+        {
+          "class_index": 21,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 14,
+          "correct": 12,
+          "recall": 0.8571428571428571,
+          "balanced_accuracy_contribution": 0.009538950715421305
+        },
+        {
+          "class_index": 21,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 23,
+          "correct": 11,
+          "recall": 0.4782608695652174,
+          "balanced_accuracy_contribution": 0.008744038155802863
+        },
+        {
+          "class_index": 22,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 12,
+          "correct": 5,
+          "recall": 0.4166666666666667,
+          "balanced_accuracy_contribution": 0.004201680672268907
+        },
+        {
+          "class_index": 22,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 23,
+          "correct": 12,
+          "recall": 0.5217391304347826,
+          "balanced_accuracy_contribution": 0.010084033613445379
+        },
+        {
+          "class_index": 23,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 17,
+          "correct": 12,
+          "recall": 0.7058823529411765,
+          "balanced_accuracy_contribution": 0.010380622837370243
+        },
+        {
+          "class_index": 23,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 17,
+          "correct": 16,
+          "recall": 0.9411764705882353,
+          "balanced_accuracy_contribution": 0.01384083044982699
+        },
+        {
+          "class_index": 24,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 18,
+          "correct": 12,
+          "recall": 0.6666666666666666,
+          "balanced_accuracy_contribution": 0.011029411764705883
+        },
+        {
+          "class_index": 24,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 14,
+          "correct": 8,
+          "recall": 0.5714285714285714,
+          "balanced_accuracy_contribution": 0.007352941176470588
+        },
+        {
+          "class_index": 25,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 19,
+          "correct": 5,
+          "recall": 0.2631578947368421,
+          "balanced_accuracy_contribution": 0.004743833017077799
+        },
+        {
+          "class_index": 25,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 12,
+          "correct": 7,
+          "recall": 0.5833333333333334,
+          "balanced_accuracy_contribution": 0.006641366223908918
+        },
+        {
+          "class_index": 26,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 20,
+          "correct": 12,
+          "recall": 0.6,
+          "balanced_accuracy_contribution": 0.012170385395537525
+        },
+        {
+          "class_index": 26,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 9,
+          "correct": 7,
+          "recall": 0.7777777777777778,
+          "balanced_accuracy_contribution": 0.007099391480730223
+        },
+        {
+          "class_index": 27,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 9,
+          "correct": 4,
+          "recall": 0.4444444444444444,
+          "balanced_accuracy_contribution": 0.004201680672268907
+        },
+        {
+          "class_index": 27,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 19,
+          "correct": 8,
+          "recall": 0.42105263157894735,
+          "balanced_accuracy_contribution": 0.008403361344537815
+        },
+        {
+          "class_index": 28,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 17,
+          "correct": 15,
+          "recall": 0.8823529411764706,
+          "balanced_accuracy_contribution": 0.016339869281045753
+        },
+        {
+          "class_index": 28,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 10,
+          "correct": 4,
+          "recall": 0.4,
+          "balanced_accuracy_contribution": 0.004357298474945533
+        },
+        {
+          "class_index": 29,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 12,
+          "correct": 8,
+          "recall": 0.6666666666666666,
+          "balanced_accuracy_contribution": 0.009411764705882354
+        },
+        {
+          "class_index": 29,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 13,
+          "correct": 5,
+          "recall": 0.38461538461538464,
+          "balanced_accuracy_contribution": 0.0058823529411764705
+        },
+        {
+          "class_index": 30,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 6,
+          "correct": 4,
+          "recall": 0.6666666666666666,
+          "balanced_accuracy_contribution": 0.004901960784313725
+        },
+        {
+          "class_index": 30,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 18,
+          "correct": 18,
+          "recall": 1.0,
+          "balanced_accuracy_contribution": 0.022058823529411766
+        },
+        {
+          "class_index": 31,
+          "controller_group": 0,
+          "role": "downsampled",
+          "support": 11,
+          "correct": 4,
+          "recall": 0.36363636363636365,
+          "balanced_accuracy_contribution": 0.005115089514066496
+        },
+        {
+          "class_index": 31,
+          "controller_group": 1,
+          "role": "retained_all",
+          "support": 12,
+          "correct": 7,
+          "recall": 0.5833333333333334,
+          "balanced_accuracy_contribution": 0.00895140664961637
+        },
+        {
+          "class_index": 32,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 10,
+          "correct": 5,
+          "recall": 0.5,
+          "balanced_accuracy_contribution": 0.0066844919786096255
+        },
+        {
+          "class_index": 32,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 12,
+          "correct": 4,
+          "recall": 0.3333333333333333,
+          "balanced_accuracy_contribution": 0.005347593582887701
+        },
+        {
+          "class_index": 33,
+          "controller_group": 0,
+          "role": "retained_all",
+          "support": 11,
+          "correct": 8,
+          "recall": 0.7272727272727273,
+          "balanced_accuracy_contribution": 0.011204481792717087
+        },
+        {
+          "class_index": 33,
+          "controller_group": 1,
+          "role": "downsampled",
+          "support": 10,
+          "correct": 5,
+          "recall": 0.5,
+          "balanced_accuracy_contribution": 0.007002801120448179
+        }
+      ]
+    },
+    "optimization": {
+      "objective": 0.07166428618798883,
+      "weighted_cross_entropy": 0.024909740443170906,
+      "regularizer": 0.04675454574481792,
+      "iterations": 103,
+      "evaluations": 109,
+      "verification_evaluations": 1,
+      "gradient_infinity_norm": 6.406854776461017e-08,
+      "parameter_norm": 13.675459150583267,
+      "is_converged": true
+    },
+    "completion_sha256": "86d11f0c2b6b6bd5a4a34f51fd5fb7bdaaeb3f95761818806f232e3b3c103e58"
   }
 ]
