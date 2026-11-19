@@ -1,0 +1,24 @@
+{
+  "source_commit": "d5416a487239436d5c3fab252fbe9a4d02524862",
+  "source_ref": "ablation_study",
+  "runner_version": 1,
+  "report_hashes": {
+    "diagnostics/seed0/diagnostics.json": "b9670ca2e1833e1fa93d2dcc1db9188cf27adbbcc71cc42ef1f02c28cb831cbc",
+    "diagnostics/seed1/diagnostics.json": "d50e7968f56d5f8a6a63c13463c04312c0f0005e5e3785488ff2028342162fcb",
+    "diagnostics/seed2/diagnostics.json": "b990a41fdb64202c1e1b02fb4b03fdf429417df6f78bd6f198193aa9c24f1e0e",
+    "preparation/complete.json": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
+    "preparation/sampling.json": "23f98b3260d672327173ff5624c85cd2f0285dd7c76adf8203b272de66bf33b5",
+    "readable_report.json": "0ee0098a8e03515698aec2be19026619002b9f004e15742c11cce4e949e8e58b",
+    "runs/seed0/unbiased_cb/complete.json": "ebb8e71255793a3727176e764c9bc82efdc082fd2b1e62c707e002a23459c86d",
+    "runs/seed0/unbiased_cb/config.json": "b1e1d2c006ccb12702d28786f03fdd6fc38f38179183285659bf770cf326896a",
+    "runs/seed0/unbiased_cb/history.json": "6f47d2bfdaef68da8400b8512b0505ffad27677e31723ff077866ed163fcfb22",
+    "runs/seed0/unbiased_cb/metrics.json": "8fe7584b1c30001c0d2ded13ea14a13398a97a0658d8088c3b6f6b23669bce97",
+    "runs/seed0/unbiased_cb/optimization.json": "aa4e7f7338acfeb61e06258e025daa9e67d46cca4a9e4ddf7739bf199260c284",
+    "study_assets.json": "5ed59b466cbe9ba9feb0a5e9d1666d2773380ff03ff6b54830ea16dd8c29a5be",
+    "study_config.json": "efef3c426b146abdb8cf785be676ebce6cab8338a418bafd5136e2ea108eb6af",
+    "study_results.json": "b500b7fe82b14cbfdf5ac3400b2fd498592028c057854b58d1b2e4f0062db4fb",
+    "study_status.json": "5a498b333e9fbcac37a7577a52a9515ecef612695325216229ddfcc24eb070fb",
+    "study_summary.json": "67f73c7d46cfd3b066cdd1e3dae9bc4eadb71c9c1b1d80913081b3f1cab45c1f"
+  },
+  "artifact_policy": "JSON in Git; reusable weight audit inputs in GitHub Releases when available"
+}

@@ -1,0 +1,1591 @@
+{
+  "eligibility": [
+    {
+      "original_class": 0,
+      "original_count": 500,
+      "cluster_sizes": [
+        282,
+        118
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 1,
+      "original_count": 477,
+      "cluster_sizes": [
+        191,
+        191
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 2,
+      "original_count": 455,
+      "cluster_sizes": [
+        139,
+        225
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 3,
+      "original_count": 434,
+      "cluster_sizes": [
+        251,
+        97
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 4,
+      "original_count": 415,
+      "cluster_sizes": [
+        137,
+        195
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 5,
+      "original_count": 396,
+      "cluster_sizes": [
+        142,
+        175
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 6,
+      "original_count": 378,
+      "cluster_sizes": [
+        152,
+        151
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 7,
+      "original_count": 361,
+      "cluster_sizes": [
+        142,
+        147
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 8,
+      "original_count": 344,
+      "cluster_sizes": [
+        143,
+        133
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 9,
+      "original_count": 328,
+      "cluster_sizes": [
+        111,
+        152
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 10,
+      "original_count": 314,
+      "cluster_sizes": [
+        107,
+        145
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 11,
+      "original_count": 299,
+      "cluster_sizes": [
+        128,
+        112
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 12,
+      "original_count": 286,
+      "cluster_sizes": [
+        83,
+        146
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 13,
+      "original_count": 273,
+      "cluster_sizes": [
+        110,
+        109
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 14,
+      "original_count": 260,
+      "cluster_sizes": [
+        94,
+        114
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 15,
+      "original_count": 248,
+      "cluster_sizes": [
+        107,
+        92
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 16,
+      "original_count": 237,
+      "cluster_sizes": [
+        44,
+        146
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 17,
+      "original_count": 226,
+      "cluster_sizes": [
+        67,
+        114
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 18,
+      "original_count": 216,
+      "cluster_sizes": [
+        81,
+        92
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 19,
+      "original_count": 206,
+      "cluster_sizes": [
+        65,
+        100
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 20,
+      "original_count": 197,
+      "cluster_sizes": [
+        78,
+        80
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 21,
+      "original_count": 188,
+      "cluster_sizes": [
+        77,
+        74
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 22,
+      "original_count": 179,
+      "cluster_sizes": [
+        53,
+        91
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 23,
+      "original_count": 171,
+      "cluster_sizes": [
+        68,
+        69
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 24,
+      "original_count": 163,
+      "cluster_sizes": [
+        80,
+        51
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 25,
+      "original_count": 156,
+      "cluster_sizes": [
+        71,
+        54
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 26,
+      "original_count": 149,
+      "cluster_sizes": [
+        80,
+        40
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 27,
+      "original_count": 142,
+      "cluster_sizes": [
+        43,
+        71
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 28,
+      "original_count": 135,
+      "cluster_sizes": [
+        72,
+        36
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 29,
+      "original_count": 129,
+      "cluster_sizes": [
+        40,
+        64
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 30,
+      "original_count": 123,
+      "cluster_sizes": [
+        32,
+        67
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 31,
+      "original_count": 118,
+      "cluster_sizes": [
+        46,
+        49
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 32,
+      "original_count": 112,
+      "cluster_sizes": [
+        44,
+        46
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 33,
+      "original_count": 107,
+      "cluster_sizes": [
+        33,
+        53
+      ],
+      "is_eligible": true
+    },
+    {
+      "original_class": 34,
+      "original_count": 102,
+      "cluster_sizes": [
+        23,
+        59
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 35,
+      "original_count": 98,
+      "cluster_sizes": [
+        21,
+        58
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 36,
+      "original_count": 93,
+      "cluster_sizes": [
+        43,
+        32
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 37,
+      "original_count": 89,
+      "cluster_sizes": [
+        34,
+        38
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 38,
+      "original_count": 85,
+      "cluster_sizes": [
+        37,
+        31
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 39,
+      "original_count": 81,
+      "cluster_sizes": [
+        46,
+        19
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 40,
+      "original_count": 77,
+      "cluster_sizes": [
+        30,
+        32
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 41,
+      "original_count": 74,
+      "cluster_sizes": [
+        35,
+        25
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 42,
+      "original_count": 70,
+      "cluster_sizes": [
+        21,
+        35
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 43,
+      "original_count": 67,
+      "cluster_sizes": [
+        39,
+        15
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 44,
+      "original_count": 64,
+      "cluster_sizes": [
+        34,
+        18
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 45,
+      "original_count": 61,
+      "cluster_sizes": [
+        21,
+        28
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 46,
+      "original_count": 58,
+      "cluster_sizes": [
+        17,
+        30
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 47,
+      "original_count": 56,
+      "cluster_sizes": [
+        27,
+        18
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 48,
+      "original_count": 53,
+      "cluster_sizes": [
+        37,
+        6
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 49,
+      "original_count": 51,
+      "cluster_sizes": [
+        22,
+        19
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 50,
+      "original_count": 48,
+      "cluster_sizes": [
+        12,
+        27
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 51,
+      "original_count": 46,
+      "cluster_sizes": [
+        15,
+        22
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 52,
+      "original_count": 44,
+      "cluster_sizes": [
+        22,
+        14
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 53,
+      "original_count": 42,
+      "cluster_sizes": [
+        19,
+        15
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 54,
+      "original_count": 40,
+      "cluster_sizes": [
+        6,
+        26
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 55,
+      "original_count": 38,
+      "cluster_sizes": [
+        14,
+        17
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 56,
+      "original_count": 36,
+      "cluster_sizes": [
+        16,
+        13
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 57,
+      "original_count": 35,
+      "cluster_sizes": [
+        21,
+        7
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 58,
+      "original_count": 33,
+      "cluster_sizes": [
+        14,
+        13
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 59,
+      "original_count": 32,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 60,
+      "original_count": 30,
+      "cluster_sizes": [
+        7,
+        17
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 61,
+      "original_count": 29,
+      "cluster_sizes": [
+        14,
+        10
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 62,
+      "original_count": 27,
+      "cluster_sizes": [
+        15,
+        7
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 63,
+      "original_count": 26,
+      "cluster_sizes": [
+        16,
+        5
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 64,
+      "original_count": 25,
+      "cluster_sizes": [
+        13,
+        7
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 65,
+      "original_count": 24,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 66,
+      "original_count": 23,
+      "cluster_sizes": [
+        11,
+        8
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 67,
+      "original_count": 22,
+      "cluster_sizes": [
+        8,
+        10
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 68,
+      "original_count": 21,
+      "cluster_sizes": [
+        8,
+        9
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 69,
+      "original_count": 20,
+      "cluster_sizes": [
+        5,
+        11
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 70,
+      "original_count": 19,
+      "cluster_sizes": [
+        10,
+        6
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 71,
+      "original_count": 18,
+      "cluster_sizes": [
+        9,
+        6
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 72,
+      "original_count": 17,
+      "cluster_sizes": [
+        7,
+        7
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 73,
+      "original_count": 16,
+      "cluster_sizes": [
+        5,
+        8
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 74,
+      "original_count": 15,
+      "cluster_sizes": [
+        7,
+        5
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 75,
+      "original_count": 15,
+      "cluster_sizes": [
+        7,
+        5
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 76,
+      "original_count": 14,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 77,
+      "original_count": 13,
+      "cluster_sizes": [
+        6,
+        5
+      ],
+      "is_eligible": false
+    },
+    {
+      "original_class": 78,
+      "original_count": 13,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 79,
+      "original_count": 12,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 80,
+      "original_count": 12,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 81,
+      "original_count": 11,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 82,
+      "original_count": 11,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 83,
+      "original_count": 10,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 84,
+      "original_count": 10,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 85,
+      "original_count": 9,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 86,
+      "original_count": 9,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 87,
+      "original_count": 8,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 88,
+      "original_count": 8,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 89,
+      "original_count": 7,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 90,
+      "original_count": 7,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 91,
+      "original_count": 7,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 92,
+      "original_count": 6,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 93,
+      "original_count": 6,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 94,
+      "original_count": 6,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 95,
+      "original_count": 6,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 96,
+      "original_count": 5,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 97,
+      "original_count": 5,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 98,
+      "original_count": 5,
+      "cluster_sizes": null,
+      "is_eligible": false
+    },
+    {
+      "original_class": 99,
+      "original_count": 5,
+      "cluster_sizes": null,
+      "is_eligible": false
+    }
+  ],
+  "classes": [
+    {
+      "original_class": 0,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 282,
+          "reference": 56,
+          "unbiased": 226,
+          "retained": 226,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 118,
+          "reference": 23,
+          "unbiased": 95,
+          "retained": 24,
+          "inclusion_probability": 0.25263157894736843
+        }
+      ]
+    },
+    {
+      "original_class": 1,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 191,
+          "reference": 38,
+          "unbiased": 153,
+          "retained": 39,
+          "inclusion_probability": 0.2549019607843137
+        },
+        {
+          "controller_group": 1,
+          "original": 191,
+          "reference": 38,
+          "unbiased": 153,
+          "retained": 153,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 2,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 139,
+          "reference": 27,
+          "unbiased": 112,
+          "retained": 112,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 225,
+          "reference": 45,
+          "unbiased": 180,
+          "retained": 45,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 3,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 251,
+          "reference": 50,
+          "unbiased": 201,
+          "retained": 51,
+          "inclusion_probability": 0.2537313432835821
+        },
+        {
+          "controller_group": 1,
+          "original": 97,
+          "reference": 19,
+          "unbiased": 78,
+          "retained": 78,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 4,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 137,
+          "reference": 27,
+          "unbiased": 110,
+          "retained": 28,
+          "inclusion_probability": 0.2545454545454545
+        },
+        {
+          "controller_group": 1,
+          "original": 195,
+          "reference": 39,
+          "unbiased": 156,
+          "retained": 156,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 5,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 142,
+          "reference": 28,
+          "unbiased": 114,
+          "retained": 29,
+          "inclusion_probability": 0.2543859649122807
+        },
+        {
+          "controller_group": 1,
+          "original": 175,
+          "reference": 35,
+          "unbiased": 140,
+          "retained": 140,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 6,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 152,
+          "reference": 30,
+          "unbiased": 122,
+          "retained": 122,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 151,
+          "reference": 30,
+          "unbiased": 121,
+          "retained": 31,
+          "inclusion_probability": 0.256198347107438
+        }
+      ]
+    },
+    {
+      "original_class": 7,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 142,
+          "reference": 28,
+          "unbiased": 114,
+          "retained": 114,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 147,
+          "reference": 29,
+          "unbiased": 118,
+          "retained": 30,
+          "inclusion_probability": 0.2542372881355932
+        }
+      ]
+    },
+    {
+      "original_class": 8,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 143,
+          "reference": 28,
+          "unbiased": 115,
+          "retained": 115,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 133,
+          "reference": 26,
+          "unbiased": 107,
+          "retained": 27,
+          "inclusion_probability": 0.2523364485981308
+        }
+      ]
+    },
+    {
+      "original_class": 9,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 111,
+          "reference": 22,
+          "unbiased": 89,
+          "retained": 23,
+          "inclusion_probability": 0.25842696629213485
+        },
+        {
+          "controller_group": 1,
+          "original": 152,
+          "reference": 30,
+          "unbiased": 122,
+          "retained": 122,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 10,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 107,
+          "reference": 21,
+          "unbiased": 86,
+          "retained": 86,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 145,
+          "reference": 29,
+          "unbiased": 116,
+          "retained": 29,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 11,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 128,
+          "reference": 25,
+          "unbiased": 103,
+          "retained": 103,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 112,
+          "reference": 22,
+          "unbiased": 90,
+          "retained": 23,
+          "inclusion_probability": 0.25555555555555554
+        }
+      ]
+    },
+    {
+      "original_class": 12,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 83,
+          "reference": 16,
+          "unbiased": 67,
+          "retained": 67,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 146,
+          "reference": 29,
+          "unbiased": 117,
+          "retained": 30,
+          "inclusion_probability": 0.2564102564102564
+        }
+      ]
+    },
+    {
+      "original_class": 13,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 110,
+          "reference": 22,
+          "unbiased": 88,
+          "retained": 22,
+          "inclusion_probability": 0.25
+        },
+        {
+          "controller_group": 1,
+          "original": 109,
+          "reference": 21,
+          "unbiased": 88,
+          "retained": 88,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 14,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 94,
+          "reference": 18,
+          "unbiased": 76,
+          "retained": 19,
+          "inclusion_probability": 0.25
+        },
+        {
+          "controller_group": 1,
+          "original": 114,
+          "reference": 22,
+          "unbiased": 92,
+          "retained": 92,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 15,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 107,
+          "reference": 21,
+          "unbiased": 86,
+          "retained": 86,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 92,
+          "reference": 18,
+          "unbiased": 74,
+          "retained": 19,
+          "inclusion_probability": 0.25675675675675674
+        }
+      ]
+    },
+    {
+      "original_class": 16,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 44,
+          "reference": 8,
+          "unbiased": 36,
+          "retained": 36,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 146,
+          "reference": 29,
+          "unbiased": 117,
+          "retained": 30,
+          "inclusion_probability": 0.2564102564102564
+        }
+      ]
+    },
+    {
+      "original_class": 17,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 67,
+          "reference": 13,
+          "unbiased": 54,
+          "retained": 14,
+          "inclusion_probability": 0.25925925925925924
+        },
+        {
+          "controller_group": 1,
+          "original": 114,
+          "reference": 22,
+          "unbiased": 92,
+          "retained": 92,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 18,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 81,
+          "reference": 16,
+          "unbiased": 65,
+          "retained": 17,
+          "inclusion_probability": 0.26153846153846155
+        },
+        {
+          "controller_group": 1,
+          "original": 92,
+          "reference": 18,
+          "unbiased": 74,
+          "retained": 74,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 19,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 65,
+          "reference": 13,
+          "unbiased": 52,
+          "retained": 52,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 100,
+          "reference": 20,
+          "unbiased": 80,
+          "retained": 20,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 20,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 78,
+          "reference": 15,
+          "unbiased": 63,
+          "retained": 63,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 80,
+          "reference": 16,
+          "unbiased": 64,
+          "retained": 16,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 21,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 77,
+          "reference": 15,
+          "unbiased": 62,
+          "retained": 62,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 74,
+          "reference": 14,
+          "unbiased": 60,
+          "retained": 15,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 22,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 53,
+          "reference": 10,
+          "unbiased": 43,
+          "retained": 43,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 91,
+          "reference": 18,
+          "unbiased": 73,
+          "retained": 19,
+          "inclusion_probability": 0.2602739726027397
+        }
+      ]
+    },
+    {
+      "original_class": 23,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 68,
+          "reference": 13,
+          "unbiased": 55,
+          "retained": 55,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 69,
+          "reference": 13,
+          "unbiased": 56,
+          "retained": 14,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 24,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 80,
+          "reference": 16,
+          "unbiased": 64,
+          "retained": 64,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 51,
+          "reference": 10,
+          "unbiased": 41,
+          "retained": 11,
+          "inclusion_probability": 0.2682926829268293
+        }
+      ]
+    },
+    {
+      "original_class": 25,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 71,
+          "reference": 14,
+          "unbiased": 57,
+          "retained": 15,
+          "inclusion_probability": 0.2631578947368421
+        },
+        {
+          "controller_group": 1,
+          "original": 54,
+          "reference": 10,
+          "unbiased": 44,
+          "retained": 44,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 26,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 80,
+          "reference": 16,
+          "unbiased": 64,
+          "retained": 64,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 40,
+          "reference": 8,
+          "unbiased": 32,
+          "retained": 8,
+          "inclusion_probability": 0.25
+        }
+      ]
+    },
+    {
+      "original_class": 27,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 43,
+          "reference": 8,
+          "unbiased": 35,
+          "retained": 35,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 71,
+          "reference": 14,
+          "unbiased": 57,
+          "retained": 15,
+          "inclusion_probability": 0.2631578947368421
+        }
+      ]
+    },
+    {
+      "original_class": 28,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 72,
+          "reference": 14,
+          "unbiased": 58,
+          "retained": 15,
+          "inclusion_probability": 0.25862068965517243
+        },
+        {
+          "controller_group": 1,
+          "original": 36,
+          "reference": 7,
+          "unbiased": 29,
+          "retained": 29,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 29,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 40,
+          "reference": 8,
+          "unbiased": 32,
+          "retained": 8,
+          "inclusion_probability": 0.25
+        },
+        {
+          "controller_group": 1,
+          "original": 64,
+          "reference": 12,
+          "unbiased": 52,
+          "retained": 52,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 30,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 32,
+          "reference": 6,
+          "unbiased": 26,
+          "retained": 26,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 67,
+          "reference": 13,
+          "unbiased": 54,
+          "retained": 14,
+          "inclusion_probability": 0.25925925925925924
+        }
+      ]
+    },
+    {
+      "original_class": 31,
+      "biased_group": 0,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 46,
+          "reference": 9,
+          "unbiased": 37,
+          "retained": 10,
+          "inclusion_probability": 0.2702702702702703
+        },
+        {
+          "controller_group": 1,
+          "original": 49,
+          "reference": 9,
+          "unbiased": 40,
+          "retained": 40,
+          "inclusion_probability": 1.0
+        }
+      ]
+    },
+    {
+      "original_class": 32,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 44,
+          "reference": 8,
+          "unbiased": 36,
+          "retained": 36,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 46,
+          "reference": 9,
+          "unbiased": 37,
+          "retained": 10,
+          "inclusion_probability": 0.2702702702702703
+        }
+      ]
+    },
+    {
+      "original_class": 33,
+      "biased_group": 1,
+      "groups": [
+        {
+          "controller_group": 0,
+          "original": 33,
+          "reference": 6,
+          "unbiased": 27,
+          "retained": 27,
+          "inclusion_probability": 1.0
+        },
+        {
+          "controller_group": 1,
+          "original": 53,
+          "reference": 10,
+          "unbiased": 43,
+          "retained": 11,
+          "inclusion_probability": 0.2558139534883721
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "eligible": 6992,
+    "reference": 1372,
+    "unbiased": 5620,
+    "retained": 3485,
+    "removed": 2135
+  },
+  "seeds": {
+    "reference": 144,
+    "retention": 145,
+    "biased_group": 146
+  }
+}

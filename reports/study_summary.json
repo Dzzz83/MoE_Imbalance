@@ -1,0 +1,24 @@
+{
+  "completed_runs": 1,
+  "maximum_runs": 27,
+  "gate_one": {
+    "status": "incomplete",
+    "passed": false,
+    "reasons": [],
+    "completed_fits": 1,
+    "expected_fits": 9,
+    "thresholds": {
+      "minimum_damage": 0.01,
+      "minimum_recovery": 0.005,
+      "minimum_recovery_fraction": 0.25,
+      "minimum_positive_seeds": 2
+    }
+  },
+  "interpretation": "Exploratory budget criteria, not significance/equivalence tests. Three representations share images and masks. Fixed-backbone classifier diagnostic, not a universal OT verdict.",
+  "status": "incomplete",
+  "expected_runs": 9,
+  "decision": {
+    "outcomes": [],
+    "next_stage": "Stop; no automatic redesign or sweep."
+  }
+}

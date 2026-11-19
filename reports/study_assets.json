@@ -1,0 +1,30 @@
+{
+  "seeds": {
+    "0": {
+      "asset_id": 768023794,
+      "sha256": "24c2242951e46b62531cd151135705ee573913087c6982aa2405b7e599be1c02",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-controlled-bias-seed0-24c2242951e46b62531cd151135705ee573913087c6982aa2405b7e599be1c02/ot-controlled-bias-seed0.zip",
+      "paths": [
+        "diagnostics/seed0/diagnostics.json",
+        "diagnostics/seed0/geometry.pt",
+        "diagnostics/seed0/weights.pt",
+        "diagnostics/seed1/diagnostics.json",
+        "diagnostics/seed1/geometry.pt",
+        "diagnostics/seed1/weights.pt",
+        "diagnostics/seed2/diagnostics.json",
+        "diagnostics/seed2/geometry.pt",
+        "diagnostics/seed2/weights.pt",
+        "preparation/complete.json",
+        "preparation/sampling.json",
+        "preparation/sampling.pt",
+        "runs/seed0/unbiased_cb/complete.json",
+        "runs/seed0/unbiased_cb/config.json",
+        "runs/seed0/unbiased_cb/head.pt",
+        "runs/seed0/unbiased_cb/history.json",
+        "runs/seed0/unbiased_cb/metrics.json",
+        "runs/seed0/unbiased_cb/optimization.json",
+        "runs/seed0/unbiased_cb/predictions.pt"
+      ]
+    }
+  }
+}
