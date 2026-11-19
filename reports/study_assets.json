@@ -117,6 +117,25 @@
         "runs/seed1/prototype_distance/weight_diagnostics.json",
         "runs/seed1/prototype_distance/weights.pt"
       ]
+    },
+    "2": {
+      "asset_id": 766427035,
+      "sha256": "aa3a2cd8d522a776239b0d5f858bd6fc39814f2bdcaee2357e8efdc15b385be0",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed2-aa3a2cd8d522a776239b0d5f858bd6fc39814f2bdcaee2357e8efdc15b385be0/ot-simple-controls-seed2.zip",
+      "paths": [
+        "diagnostics/seed2/controls.json",
+        "diagnostics/seed2/geometry.pt",
+        "runs/seed2/cluster_balanced/assignment_finetuning_diagnostics.json",
+        "runs/seed2/cluster_balanced/complete.json",
+        "runs/seed2/cluster_balanced/config.json",
+        "runs/seed2/cluster_balanced/final.pt",
+        "runs/seed2/cluster_balanced/history.json",
+        "runs/seed2/cluster_balanced/metrics.json",
+        "runs/seed2/cluster_balanced/prototype_weight_diagnostics.json",
+        "runs/seed2/cluster_balanced/starting_metrics.json",
+        "runs/seed2/cluster_balanced/weight_diagnostics.json",
+        "runs/seed2/cluster_balanced/weights.pt"
+      ]
     }
   }
 }
