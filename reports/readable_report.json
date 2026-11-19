@@ -1,10 +1,10 @@
 {
   "lines": [
     "Controlled-bias diagnostic",
-    "Status: incomplete; completed fits: 6 (maximum 27).",
+    "Status: incomplete; completed fits: 7 (maximum 27).",
     "Scores concern 34 eligible classes with fresh heads, not historical 100-class continuations.",
     "Gate 1: incomplete; reasons: none.",
-    "Before removal, class balancing: 67.125%, 68.224%; mean 67.675%.",
+    "Before removal, class balancing: 67.125%, 68.224%, 65.861%; mean 67.070%.",
     "After removal, class balancing: 66.841%, 66.946%; mean 66.894%.",
     "Known sampling correction: 66.705%, 67.619%; mean 67.162%.",
     "Exploratory budget criteria, not significance/equivalence tests. Three representations share images and masks. Fixed-backbone classifier diagnostic, not a universal OT verdict."
