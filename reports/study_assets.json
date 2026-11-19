@@ -41,9 +41,9 @@
       ]
     },
     "1": {
-      "asset_id": 768024950,
-      "sha256": "a0990c53e4d0c9dd6ff9c66e646a27abb53d610495607a3967478654e5f97057",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-controlled-bias-seed1-a0990c53e4d0c9dd6ff9c66e646a27abb53d610495607a3967478654e5f97057/ot-controlled-bias-seed1.zip",
+      "asset_id": 768025222,
+      "sha256": "5cf21c27eae46dbb173ab02d0b7d26ccbbe0ae9d1a7f2026500cd1fbe1fa8f4f",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-controlled-bias-seed1-5cf21c27eae46dbb173ab02d0b7d26ccbbe0ae9d1a7f2026500cd1fbe1fa8f4f/ot-controlled-bias-seed1.zip",
       "paths": [
         "diagnostics/seed0/diagnostics.json",
         "diagnostics/seed0/geometry.pt",
@@ -57,6 +57,13 @@
         "preparation/complete.json",
         "preparation/sampling.json",
         "preparation/sampling.pt",
+        "runs/seed1/biased_cb/complete.json",
+        "runs/seed1/biased_cb/config.json",
+        "runs/seed1/biased_cb/head.pt",
+        "runs/seed1/biased_cb/history.json",
+        "runs/seed1/biased_cb/metrics.json",
+        "runs/seed1/biased_cb/optimization.json",
+        "runs/seed1/biased_cb/predictions.pt",
         "runs/seed1/unbiased_cb/complete.json",
         "runs/seed1/unbiased_cb/config.json",
         "runs/seed1/unbiased_cb/head.pt",
