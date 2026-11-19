@@ -119,9 +119,9 @@
       ]
     },
     "2": {
-      "asset_id": 766427035,
-      "sha256": "aa3a2cd8d522a776239b0d5f858bd6fc39814f2bdcaee2357e8efdc15b385be0",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed2-aa3a2cd8d522a776239b0d5f858bd6fc39814f2bdcaee2357e8efdc15b385be0/ot-simple-controls-seed2.zip",
+      "asset_id": 766427579,
+      "sha256": "9ee6b4c3edfe093b451c905e51021af09f25aabbed6d2576738210b0711a9893",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-simple-controls-seed2-9ee6b4c3edfe093b451c905e51021af09f25aabbed6d2576738210b0711a9893/ot-simple-controls-seed2.zip",
       "paths": [
         "diagnostics/seed2/controls.json",
         "diagnostics/seed2/geometry.pt",
@@ -134,7 +134,17 @@
         "runs/seed2/cluster_balanced/prototype_weight_diagnostics.json",
         "runs/seed2/cluster_balanced/starting_metrics.json",
         "runs/seed2/cluster_balanced/weight_diagnostics.json",
-        "runs/seed2/cluster_balanced/weights.pt"
+        "runs/seed2/cluster_balanced/weights.pt",
+        "runs/seed2/prototype_distance/assignment_finetuning_diagnostics.json",
+        "runs/seed2/prototype_distance/complete.json",
+        "runs/seed2/prototype_distance/config.json",
+        "runs/seed2/prototype_distance/final.pt",
+        "runs/seed2/prototype_distance/history.json",
+        "runs/seed2/prototype_distance/metrics.json",
+        "runs/seed2/prototype_distance/prototype_weight_diagnostics.json",
+        "runs/seed2/prototype_distance/starting_metrics.json",
+        "runs/seed2/prototype_distance/weight_diagnostics.json",
+        "runs/seed2/prototype_distance/weights.pt"
       ]
     }
   }
