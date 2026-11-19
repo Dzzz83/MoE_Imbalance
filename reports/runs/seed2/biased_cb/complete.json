@@ -1,0 +1,29 @@
+{
+  "inputs": {
+    "preparation_sha256": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
+    "seed": 2,
+    "condition": "biased_cb",
+    "positions": {
+      "sha256": "4ab6d373910be0ec2ab42bd927e96c7f319042bd5248064abebd97288fb4ed8b",
+      "shape": [
+        3485
+      ],
+      "dtype": "torch.int64"
+    },
+    "weights": {
+      "sha256": "29b43026824855ca9b4ac9aab222a229fc30f6be30ebe35db1fe7d7591e9aff2",
+      "shape": [
+        3485
+      ],
+      "dtype": "torch.float64"
+    }
+  },
+  "files": {
+    "optimization.json": "1c64a371a64a47eeb4029849dad02ef7d1d51bbcdb620221cc40d0109a88465a",
+    "metrics.json": "c359cf806ef33ee4176dc7d31501f4807c39caf2cd66fd61d0f2978884233c3f",
+    "config.json": "d29410a51150654bb8b7fc9606d303bb77abf74b4d748334b19e5daaf9aff9eb",
+    "history.json": "ed8083b48cdb778b703362222c398f0f665d45eb63cc434c8339a3c4160c749b",
+    "head.pt": "8bafa0996678e812036db1f62c7e5680e8b237bd8661624442df97bb79f33dae",
+    "predictions.pt": "25a15bca7b97158c79a02fca9c2959646fac6bbcb1edc497f0399b31dcf3001d"
+  }
+}

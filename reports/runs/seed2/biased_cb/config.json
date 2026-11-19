@@ -1,0 +1,19 @@
+{
+  "preparation_sha256": "a032a83be957ad4223b29fb2f2d7a46a06ac895c05fb8391a68a4b523b6fcaf7",
+  "seed": 2,
+  "condition": "biased_cb",
+  "positions": {
+    "sha256": "4ab6d373910be0ec2ab42bd927e96c7f319042bd5248064abebd97288fb4ed8b",
+    "shape": [
+      3485
+    ],
+    "dtype": "torch.int64"
+  },
+  "weights": {
+    "sha256": "29b43026824855ca9b4ac9aab222a229fc30f6be30ebe35db1fe7d7591e9aff2",
+    "shape": [
+      3485
+    ],
+    "dtype": "torch.float64"
+  }
+}
