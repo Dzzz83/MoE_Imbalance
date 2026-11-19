@@ -23,9 +23,11 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Run Stage B from the published audit features and completed Stage A references.
+# Run the controlled-bias diagnostic on CPU from published frozen features.
+# Stage B remains available as ("simple_controls",).
 # Use ("audit",) to audit an existing stronger OT run without training.
-STAGES = ("simple_controls",)
+STAGES = ("controlled_bias",)
+IS_CONTROLLED_BIAS = STAGES == ("controlled_bias",)
 IS_SIMPLE_CONTROLS = STAGES == ("simple_controls",)
 IS_ASSIGNMENT_STUDY = STAGES == ("assignment",)
 IS_WEIGHT_AUDIT = STAGES == ("audit",)
@@ -33,7 +35,9 @@ IS_AUDIT_REBUILD = STAGES == ("rebuild_audit",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
 STRENGTH_RESULTS_BRANCH = "ablation-strength-results"
-if IS_SIMPLE_CONTROLS:
+if IS_CONTROLLED_BIAS:
+    RESULTS_BRANCH, RESULTS_FOLDER = "ablation-controlled-bias-results", "ot-controlled-bias-results"
+elif IS_SIMPLE_CONTROLS:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-simple-controls-results", "ot-simple-controls-results"
 elif IS_ASSIGNMENT_STUDY:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-assignment-results", "ot-assignment-results"
@@ -49,12 +53,14 @@ GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
 CODE_ROOT = Path("/kaggle/working") / (
+    "ot-controlled-bias-code" if IS_CONTROLLED_BIAS else
     "ot-simple-controls-code" if IS_SIMPLE_CONTROLS else
     "ot-assignment-code" if IS_ASSIGNMENT_STUDY else
     "ot-strength-code" if IS_STRENGTH_STUDY else "ot-ablation-code"
 )
 RESULTS_ROOT = Path("/kaggle/working") / RESULTS_FOLDER
 WORK_ROOT = Path("/kaggle/working") / (
+    "ot-controlled-bias" if IS_CONTROLLED_BIAS else
     "ot-simple-controls" if IS_SIMPLE_CONTROLS else
     "ot-weight-assignment" if IS_ASSIGNMENT_STUDY else
     "ot-ablation-audit-rebuild" if IS_AUDIT_REBUILD else "ot-ablation"
@@ -77,6 +83,8 @@ ASSIGNMENT_CONFIG_OVERRIDES = {}
 ASSIGNMENT_PREFLIGHT_ONLY = False
 # Stage B settings are frozen; preflight validates references/geometry without training.
 SIMPLE_CONTROLS_PREFLIGHT_ONLY = False
+# Freeze and verify preparation without fitting a diagnostic head.
+CONTROLLED_BIAS_PREFLIGHT_ONLY = False
 
 
 def run(command, cwd=None, env=None, capture=False):
@@ -335,12 +343,17 @@ def publish_reports(study_root, source_commit, message, auth_env):
     is_strength_study = "strength_config.json" in files
     title = "Stronger OT ablation results" if is_strength_study else "OT reweighting ablation results"
     is_assignment = (study_root / "study_assets.json").is_file()
+    report_locations = ""
     if is_assignment:
         title = "OT assignment ablation results"
         config = json.loads((study_root / "study_config.json").read_text())
         if config.get("config", {}).get("stage") == "simple_controls":
             title = "OT simple controls ablation results"
-    report_locations = ""
+        elif config.get("config", {}).get("stage") == "controlled_bias":
+            title = "Controlled-bias OT diagnostic results"
+            report_locations += "Readable report: `reports/readable_report.json`.\n"
+            if "gate_one.json" in files:
+                report_locations += "Gate receipt: `reports/gate_one.json`.\n"
     if "study_summary.json" in files or is_strength_study:
         report_locations += "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
     if not is_assignment and not is_strength_study and "weight_audit.json" not in files:
@@ -813,8 +826,10 @@ def restore_assignment_study(auth_env):
     return restore_cached_study(RESULTS_ROOT, local, auth_env, is_assignment_asset_path)
 
 
-def restore_cached_study(published_root, local, auth_env, accept_path):
+def restore_cached_study(published_root, local, auth_env, accept_path, run_files=None):
     """Restore a report tree and only its allowlisted, receipted binary artifacts."""
+    if run_files is None:
+        run_files = ASSIGNMENT_RUN_FILES
     if local.exists():
         return local
     published = published_root / "reports/study_config.json"
@@ -858,7 +873,7 @@ def restore_cached_study(published_root, local, auth_env, accept_path):
         for receipt in staged.glob("runs/*/*/complete.json"):
             saved = json.loads(receipt.read_text())
             for name, digest in saved["files"].items():
-                if name not in ASSIGNMENT_RUN_FILES or not (receipt.parent / name).is_file():
+                if name not in run_files or not (receipt.parent / name).is_file():
                     raise ValueError("Incomplete published continuation archive")
                 if sha256(receipt.parent / name) != digest:
                     raise ValueError("Changed published continuation artifact")
@@ -927,12 +942,16 @@ def publish_cached_study(study, seed, message, source_commit, auth_env, asset_pr
     """Publish one completed-run snapshot; retrying reuses its content-addressed asset."""
     path = study / "study_assets.json"
     assets = json.loads(path.read_text()) if path.exists() else {"seeds": {}}
-    paths = cached_asset_paths(study, seed, accept_path)
+    paths = (controlled_bias_asset_paths(study, seed) if asset_prefix == "ot-controlled-bias"
+             else cached_asset_paths(study, seed, accept_path))
     suffix = f"seed{seed}" if seed is not None else "complete"
     asset = upload_artifacts(study, paths, source_commit, auth_env, f"{asset_prefix}-{suffix}") | {"paths": paths}
     if seed is None:
         assets["complete"] = asset
     else:
+        # A gate snapshot can be followed by additional authorized fits. Its
+        # older complete archive must not hide the newer incremental assets.
+        assets.pop("complete", None)
         assets["seeds"][str(seed)] = asset
     write_json(path, assets)
     publish_reports(study, source_commit, message, auth_env)
@@ -1007,13 +1026,96 @@ def execute_simple_controls(source_commit, auth_env):
     run_study(config, inputs, root, resolve_device("cuda"), on_progress=publish, parent_root=parent)
 
 
+def prepare_controlled_bias_controller(auth_env):
+    """Validate the complete pinned Stage B archive and extract only seed-0 geometry."""
+    from pipeline.controlled_bias_data import (
+        CONTROLLER_ARCHIVE_SHA256, CONTROLLER_ASSET_ID, CONTROLLER_COMMIT, load_controller,
+    )
+
+    destination = WORK_ROOT / "controller"
+    if destination.exists():
+        load_controller(destination)
+        return destination
+    WORK_ROOT.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="controlled-controller-", dir=WORK_ROOT) as temporary:
+        temporary = Path(temporary)
+        archive_path = temporary / "controller.zip"
+        with github_release_request(f"{RELEASES_API}/assets/{CONTROLLER_ASSET_ID}", auth_env, binary=True) as response, archive_path.open("wb") as target:
+            shutil.copyfileobj(response, target)
+        if sha256(archive_path) != CONTROLLER_ARCHIVE_SHA256:
+            raise ValueError("Pinned controller archive checksum mismatch")
+        staged = temporary / "controller"
+        with ZipFile(archive_path) as archive:
+            names = archive.namelist()
+            if len(names) != len(set(names)) or any(not is_simple_controls_asset_path(name) for name in names):
+                raise ValueError("Unexpected controller archive entries")
+            for name in ("diagnostics/seed0/controls.json", "diagnostics/seed0/geometry.pt"):
+                target = staged / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(archive.read(name))
+        load_controller(staged)
+        write_json(staged / "source.json", {"results_commit": CONTROLLER_COMMIT,
+                   "archive_sha256": CONTROLLER_ARCHIVE_SHA256, "asset_id": CONTROLLER_ASSET_ID})
+        staged.rename(destination)
+    return destination
+
+
+def is_controlled_bias_asset_path(relative):
+    from pipeline.controlled_bias_reporting import GATE_ONE, GATE_TWO
+    from pipeline.run_controlled_bias import RUN_FILES
+
+    parts = PurePosixPath(relative).parts
+    if parts in (("preparation", "sampling.pt"), ("preparation", "sampling.json"), ("preparation", "complete.json")):
+        return True
+    if len(parts) == 3 and parts[0] == "diagnostics" and parts[1] in {"seed0", "seed1", "seed2"}:
+        return parts[2] in {"geometry.pt", "weights.pt", "diagnostics.json"}
+    return (len(parts) == 4 and parts[0] == "runs" and parts[1] in {"seed0", "seed1", "seed2"}
+            and parts[2] in GATE_ONE + GATE_TWO and parts[3] in RUN_FILES | {"complete.json"})
+
+
+def controlled_bias_asset_paths(study, seed=None):
+    # Every incremental archive includes all frozen preparation. A receipt for
+    # seed 0 must not refer to missing seed-1/2 weight or geometry files on restore.
+    paths = [p.relative_to(study).as_posix() for p in sorted((study / "preparation").glob("*"))
+             if p.is_file() and is_controlled_bias_asset_path(p.relative_to(study).as_posix())]
+    for current in (0, 1, 2):
+        paths += [p.relative_to(study).as_posix() for p in sorted((study / f"diagnostics/seed{current}").glob("*"))
+                  if p.is_file() and is_controlled_bias_asset_path(p.relative_to(study).as_posix())]
+    for current in ([seed] if seed is not None else (0, 1, 2)):
+        for folder in sorted((study / f"runs/seed{current}").glob("*")):
+            if (folder / "complete.json").is_file():
+                paths += [p.relative_to(study).as_posix() for p in sorted(folder.glob("*"))
+                          if p.is_file() and is_controlled_bias_asset_path(p.relative_to(study).as_posix())]
+    return sorted(paths)
+
+
+def execute_controlled_bias(source_commit, auth_env):
+    from pipeline.run_controlled_bias import RUN_FILES, resolve_config, run_study
+
+    config = resolve_config(json.loads((CODE_ROOT / "configs/controlled_bias.json").read_text()))
+    inputs = prepare_assignment_inputs(config, auth_env)
+    controller = prepare_controlled_bias_controller(auth_env)
+    root = restore_cached_study(RESULTS_ROOT, WORK_ROOT / "study", auth_env,
+                                is_controlled_bias_asset_path, run_files=RUN_FILES)
+
+    def publish(study, seed, message):
+        publish_cached_study(study, seed, message, source_commit, auth_env,
+                             "ot-controlled-bias", is_controlled_bias_asset_path)
+
+    summary = run_study(config, inputs, controller, root,
+                        on_progress=publish if not CONTROLLED_BIAS_PREFLIGHT_ONLY else None,
+                        preflight_only=CONTROLLED_BIAS_PREFLIGHT_ONLY)
+    print(json.dumps({k: summary[k] for k in ("status", "sampling_counts") if k in summary}, indent=2), flush=True)
+
+
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
     is_assignment = STAGES == ("assignment",)
     is_simple_controls = STAGES == ("simple_controls",)
-    if not (is_simple_controls or is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
+    is_controlled_bias = STAGES == ("controlled_bias",)
+    if not (is_controlled_bias or is_simple_controls or is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
         if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-            raise ValueError('Use ("simple_controls",), ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
+            raise ValueError('Use ("controlled_bias",), ("simple_controls",), ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
@@ -1053,10 +1155,13 @@ def main():
 
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
         preflight_only = ((is_assignment and ASSIGNMENT_PREFLIGHT_ONLY)
-                          or (is_simple_controls and SIMPLE_CONTROLS_PREFLIGHT_ONLY))
-        if not torch.cuda.is_available() and not preflight_only:
+                          or (is_simple_controls and SIMPLE_CONTROLS_PREFLIGHT_ONLY)
+                          or (is_controlled_bias and CONTROLLED_BIAS_PREFLIGHT_ONLY))
+        if not torch.cuda.is_available() and not preflight_only and not is_controlled_bias:
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        if is_simple_controls:
+        if is_controlled_bias:
+            execute_controlled_bias(source_commit, auth_env)
+        elif is_simple_controls:
             execute_simple_controls(source_commit, auth_env)
         elif is_assignment:
             execute_assignment(source_commit, auth_env)

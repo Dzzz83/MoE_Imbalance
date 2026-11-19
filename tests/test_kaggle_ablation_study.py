@@ -79,6 +79,20 @@ def test_report_paths_cannot_escape_or_publish_binary_artifacts(path):
         kaggle.report_path(path)
 
 
+def test_controlled_bias_publication_links_readable_report_and_gate(tmp_path, results_repository):
+    study = tmp_path / "study"
+    kaggle.write_json(study / "study_config.json", {"config": {"stage": "controlled_bias"}})
+    kaggle.write_json(study / "study_assets.json", {"seeds": {}})
+    kaggle.write_json(study / "study_summary.json", {"status": "incomplete"})
+    kaggle.write_json(study / "readable_report.json", {"lines": ["One completed diagnostic head"]})
+    kaggle.write_json(study / "gate_one.json", {"decision": {"passed": False}})
+    kaggle.publish_reports(study, "a" * 40, "save diagnostic", os.environ.copy())
+    readme = (results_repository / "README.md").read_text()
+    assert "Controlled-bias OT diagnostic results" in readme
+    assert "reports/readable_report.json" in readme
+    assert "reports/gate_one.json" in readme
+
+
 def test_interrupted_runs_are_archived_without_touching_completed_or_failed_pilots(tmp_path, monkeypatch):
     monkeypatch.setattr(kaggle, "WORK_ROOT", tmp_path)
     study = tmp_path / "study"

@@ -71,13 +71,22 @@ def _cluster_class(features, minimum_size, generator, diagnostics=None):
     return None
 
 
-def _relaxed_sinkhorn(cost, *, epsilon, row_kl_strength, sinkhorn_iterations, sinkhorn_tolerance):
-    """Fix equal prototype masses and penalize departure from uniform sample masses."""
+def _relaxed_sinkhorn(cost, *, epsilon, row_kl_strength, sinkhorn_iterations, sinkhorn_tolerance,
+                      prototype_masses=None):
+    """Fix prototype masses and penalize departure from uniform sample masses."""
     log_kernel = -cost.to(torch.float64) / epsilon
     if not torch.isfinite(log_kernel).all():
         raise RuntimeError("Nonfinite prototype Sinkhorn kernel")
     log_sample_mass = -math.log(cost.shape[0])
     log_prototype_mass = -math.log(cost.shape[1])
+    if prototype_masses is not None:
+        prototype_masses = torch.as_tensor(prototype_masses, dtype=torch.float64, device=cost.device)
+        if (prototype_masses.shape != (cost.shape[1],) or not torch.isfinite(prototype_masses).all()
+                or (prototype_masses <= 0).any()
+                or not torch.isclose(prototype_masses.sum(), prototype_masses.new_tensor(1.),
+                                     rtol=1e-10, atol=1e-12)):
+            raise ValueError("Prototype masses must be positive, finite and sum to one")
+        log_prototype_mass = prototype_masses.log()
     row_exponent = 1 / (1 + epsilon / row_kl_strength)
     log_column_scale = log_kernel.new_zeros(cost.shape[1])
     for iteration in range(1, sinkhorn_iterations + 1):
@@ -93,6 +102,8 @@ def _relaxed_sinkhorn(cost, *, epsilon, row_kl_strength, sinkhorn_iterations, si
         if residual <= sinkhorn_tolerance:
             plan = (log_kernel + log_row_scale[:, None] + log_column_scale).exp()
             column_error = (plan.sum(dim=0) * cost.shape[1] - 1).abs().max().item()
+            if prototype_masses is not None:
+                column_error = (plan.sum(dim=0) / prototype_masses - 1).abs().max().item()
             if not math.isfinite(column_error) or column_error > sinkhorn_tolerance:
                 raise RuntimeError("Prototype Sinkhorn did not meet its column quotas")
             return plan, {

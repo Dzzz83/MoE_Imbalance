@@ -1,0 +1,35 @@
+{
+  "stage": "controlled_bias",
+  "seeds": [0, 1, 2],
+  "shuffle_seeds": [0, 1, 2],
+  "reference_seed": 144,
+  "retention_seed": 145,
+  "biased_group_seed": 146,
+  "cpu_threads": 2,
+  "minimum_controller_size": 30,
+  "reference_fraction": 0.2,
+  "retention_divisor": 4,
+  "minimum_cluster_size": 5,
+  "reference_pseudocount": 0.5,
+  "epsilon": 0.1,
+  "row_kl_strength": 0.2,
+  "sinkhorn_iterations": 200,
+  "sinkhorn_tolerance": 0.001,
+  "head": {
+    "regularization": 0.0005,
+    "learning_rate": 1,
+    "history_size": 100,
+    "max_iterations": 1000,
+    "max_evaluations": 1250,
+    "gradient_tolerance": 1e-7,
+    "change_tolerance": 1e-12,
+    "accepted_gradient_norm": 1e-6
+  },
+  "gate": {
+    "minimum_damage": 0.01,
+    "minimum_recovery": 0.005,
+    "minimum_recovery_fraction": 0.25,
+    "minimum_positive_seeds": 2
+  },
+  "practical_gain": 0.005
+}

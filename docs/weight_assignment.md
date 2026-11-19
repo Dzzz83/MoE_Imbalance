@@ -1,6 +1,6 @@
 # Run the OT assignment study on Kaggle
 
-This runs Stage A of [the research plan](PLAN.md):
+This guide reproduces completed Stage A of [the research plan](PLAN.md):
 27 classifier continuations on the three published audit baselines. It compares
 class-balanced, original OT, strong OT, three strong-weight shuffles, and
 easy/boundary/hard assignments of the same stronger weights. Baselines are
@@ -13,7 +13,7 @@ restored from GitHub; no CIFAR attachment or baseline training is needed.
    `Dzzz83/MoE_Imbalance`, including release asset upload access.
 3. Paste the published `scripts/kaggle_ablation_study.py` into one cell and run
    it after explicitly setting `STAGES = ("assignment",)`. The script now
-   defaults to [Stage B](weight_simple_controls.md). Leave
+   defaults to the [controlled-bias diagnostic](PLAN.md#implemented-commands-and-kaggle-delivery). Leave
    `ASSIGNMENT_CONFIG_OVERRIDES = {}` and `ASSIGNMENT_PREFLIGHT_ONLY = False`.
 
 Use the new implementation from `ablation_study`; older copies of this script
@@ -83,9 +83,11 @@ boundary-versus-class-balanced differences before selecting Stage B or a
 conditional follow-up. This runner does not automatically run later stages,
 select a final method, or evaluate the official test set.
 
-Implementation verification: the full local suite passed 335 tests, with one
-optional plotting test skipped because Matplotlib was absent. The final focused
-assignment checks passed all 16 tests. A separate real-input preflight downloaded
-the original archive, verified its checksum and pinned reports, and validated
-all three seeds (8,716 fitting and 2,131 development examples each). Full Kaggle
-training, CUDA execution, and real GitHub asset publication remain unverified.
+Stage A completed all 27 continuations for 40 epochs on Kaggle. Its reports and
+assets are pinned to results commit
+`0d4cf3e90be73513ddbe5c731698610b0285773c`, produced with source
+`a792b81ef737e8fba54033ffb4cc72a92c6b2e2a`. Analysis verified completion
+receipts, frozen backbones, cached-feature predictions, and stronger-weight
+reassignment invariants. See the [research handoff](HANDOFF.md) for findings
+and [PLAN.md](PLAN.md) for the next diagnostic, which is not implemented by
+these commands.

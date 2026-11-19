@@ -1,6 +1,7 @@
 # Run Stage B on Kaggle
 
-Stage B runs **15 new classifier continuations**: five controls across seeds
+This guide reproduces completed Stage B: **15 classifier continuations**,
+five controls across seeds
 0/1/2, using the exact fitting/development features and frozen baselines from
 Stage A. The controls are cluster balancing, prototype distance, easy-margin
 rank, and two reassignments of the stronger OT weights. See
@@ -33,7 +34,9 @@ No temperature, factor, learning-rate or coverage search is added.
    release upload access to `Dzzz83/MoE_Imbalance`.
 2. Paste the current
    [Kaggle script](../scripts/kaggle_ablation_study.py) from `ablation_study`
-   into a cell and run it. The defaults are:
+   into a cell, explicitly set `STAGES = ("simple_controls",)`, and run it.
+   The script now defaults to the separate controlled-bias diagnostic.
+   Use these Stage B settings:
 
    ```python
    STAGES = ("simple_controls",)
@@ -115,10 +118,12 @@ chosen after Stage A. The 0.5 percentage-point target with positive differences
 on at least two seeds is a research-budget rule, not a significance test.
 No later experiment or official test evaluation runs automatically.
 
-Implementation verification: the local suite passed 349 tests with one
-optional plotting test skipped. A separate read-only preflight downloaded and
-verified the actual input and parent archives, all 27 parent receipts, all
-three geometry replays (75/70/73 active classes), and all 15 new weight vectors.
-Full Stage B CUDA training and live publication of its results remain unverified
-until the Kaggle run.
-After the focused self-review fixes, all 52 affected checks passed.
+Stage B completed all 15 continuations for 40 epochs on Kaggle. Its reports and
+complete assets are pinned to results commit
+`451349aa463cd5b7ec37ea3a97fd99b8bf50a5d2`, produced with source
+`b4cea1c8b68eb7bd872f1b5500e8e4d9038ecf69`. Read-only analysis verified
+the archive hashes, frozen backbone states, weight invariants, final accuracy/
+recall from saved heads on CPU, and the published paired contrasts.
+See the [research handoff](HANDOFF.md) for findings and the
+[controlled-bias protocol](PLAN.md#controlled-bias-diagnostic-the-next-experiment)
+for the next planned experiment. That diagnostic is not implemented by this runner.
