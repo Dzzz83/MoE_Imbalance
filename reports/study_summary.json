@@ -1,11 +1,11 @@
 {
-  "completed_runs": 3,
+  "completed_runs": 4,
   "maximum_runs": 27,
   "gate_one": {
     "status": "incomplete",
     "passed": false,
     "reasons": [],
-    "completed_fits": 3,
+    "completed_fits": 4,
     "expected_fits": 9,
     "thresholds": {
       "minimum_damage": 0.01,
