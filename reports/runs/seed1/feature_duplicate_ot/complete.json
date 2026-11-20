@@ -1,0 +1,42 @@
+{
+  "inputs": {
+    "preparation_sha256": "17e64fb16f847979f46deb3807352814d3d6e7af24dae21c47f83d962b5e945f",
+    "seed": 1,
+    "condition": "feature_duplicate_ot",
+    "weights": {
+      "sha256": "f7174096de0aa8c58ce79f322ff6f9eb8162580458c968c67c1251958edc3b76",
+      "shape": [
+        11442
+      ],
+      "dtype": "torch.float64"
+    },
+    "features": {
+      "sha256": "8d1cf9ee844e309862adc84ef9993ae6da7fd6c3d3968599ef8c8d9866c9e070",
+      "shape": [
+        11442,
+        64
+      ],
+      "dtype": "torch.float32"
+    },
+    "labels": {
+      "sha256": "bf2fab72077569be0487e2fbbf8e66d26d8ea723242d05f42576094aa4bb79b4",
+      "shape": [
+        11442
+      ],
+      "dtype": "torch.int64"
+    }
+  },
+  "files": {
+    "final.pt": "417571b358690cdde8f95b0775af973cda7bd6861437015baacf74e532ea3d6a",
+    "head.pt": "42f9077ee4aff9a273de44c37bede120b6aa685eeb4f1f76be7f6c4d8f718341",
+    "weight_diagnostics.json": "8cb77a7c089ba31b248c58e4bc8d1c164be744038be4ab96d7f79c2f1f968ba2",
+    "cast_predictions.pt": "65d2ee5e3a556144a2768052f4b6130ec6baf2a3aeeff400594b321d4e48c482",
+    "history.json": "0cd8f4b8d304fb2bd4374f491234c052b4968962f3acbab1ce265e51139a0ec5",
+    "config.json": "8e8db2fc2e20bcaaed09d758dcd4d684ce88dcd1662da6df005bfe97c2d5a273",
+    "cast_metrics.json": "d19167da9d05b3e9acae6ca125c5e45af14b7f1dc9ba7387334f75f43b09172a",
+    "predictions.pt": "ac69cfa0b11d3c872abdbd2aeb0b0c579d7763a87edf4e2d1e3b72fe5fdba2c6",
+    "metrics.json": "235f8b8ec14c0f56286a68f6c76988254f9fdc6432a73db43291307fe4518eb9",
+    "weights.pt": "29821ff8575290dfc36c0c91e03eaae32a16436d3632fd050af2858f6f156c2c",
+    "optimization.json": "7c532c26d35c757999b6997fdd19f63e7dcaa526b7595eb54b761bd2dfd3cbfd"
+  }
+}
