@@ -1,0 +1,49 @@
+{
+  "preparation_sha256": "17e64fb16f847979f46deb3807352814d3d6e7af24dae21c47f83d962b5e945f",
+  "seed": 0,
+  "condition": "feature_real_cb",
+  "weights": {
+    "sha256": "62d35dcda9bbe5be462e3789836933628f4bbfc30189de0f8a9ab67c5fcb9fd3",
+    "shape": [
+      8716
+    ],
+    "dtype": "torch.float64"
+  },
+  "features": {
+    "sha256": "8a46a6fcbbcb7d6188daaeaf4eca5e3539d58c4156bd921e0bfc80f27db26089",
+    "shape": [
+      8716,
+      64
+    ],
+    "dtype": "torch.float32"
+  },
+  "labels": {
+    "sha256": "fc74cd909353483b7303e06c9a50bf7e57468815c6d3bb68351390c277c056e2",
+    "shape": [
+      8716
+    ],
+    "dtype": "torch.int64"
+  },
+  "config": {
+    "stage": "synthetic_reweighting",
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "cpu_threads": 2,
+    "practical_gain": 0.005,
+    "head": {
+      "regularization": 0.0005,
+      "learning_rate": 1,
+      "history_size": 100,
+      "max_iterations": 1000,
+      "max_evaluations": 1250,
+      "gradient_tolerance": 1e-07,
+      "change_tolerance": 1e-12,
+      "accepted_gradient_norm": 1e-06
+    },
+    "input_results_commit": "51c7829d505143bd556ff1f3038b6559751e3428",
+    "archive_sha256": "e157e664288bd849a0dc5d6fb5eed2f61269a3452327d9a1407145a02331aeb2"
+  }
+}

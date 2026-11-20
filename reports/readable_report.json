@@ -1,0 +1,12 @@
+{
+  "status": "incomplete",
+  "completed_runs": 1,
+  "expected_runs": 30,
+  "score_unit": "percentage points for differences",
+  "conclusions": {},
+  "contrasts": {},
+  "decision": {
+    "status": "incomplete"
+  },
+  "limits": "Development results, not official-test results. Synthetic rows and shuffled controls are not independent replications."
+}
