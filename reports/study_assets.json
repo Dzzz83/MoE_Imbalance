@@ -265,6 +265,31 @@
         "runs/seed1/feature_smote_prototype_distance/weight_diagnostics.json",
         "runs/seed1/feature_smote_prototype_distance/weights.pt"
       ]
+    },
+    "2": {
+      "asset_id": 770557875,
+      "sha256": "9d0f403859d59c3314a063c86698a1c6ba127161495f8c026753958121623d02",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-synthetic-reweighting-seed2-9d0f403859d59c3314a063c86698a1c6ba127161495f8c026753958121623d02/ot-synthetic-reweighting-seed2.zip",
+      "paths": [
+        "diagnostics/seed0/preparation.pt",
+        "diagnostics/seed0/preparation_report.json",
+        "diagnostics/seed1/preparation.pt",
+        "diagnostics/seed1/preparation_report.json",
+        "diagnostics/seed2/preparation.pt",
+        "diagnostics/seed2/preparation_report.json",
+        "runs/seed2/feature_real_cb/cast_metrics.json",
+        "runs/seed2/feature_real_cb/cast_predictions.pt",
+        "runs/seed2/feature_real_cb/complete.json",
+        "runs/seed2/feature_real_cb/config.json",
+        "runs/seed2/feature_real_cb/final.pt",
+        "runs/seed2/feature_real_cb/head.pt",
+        "runs/seed2/feature_real_cb/history.json",
+        "runs/seed2/feature_real_cb/metrics.json",
+        "runs/seed2/feature_real_cb/optimization.json",
+        "runs/seed2/feature_real_cb/predictions.pt",
+        "runs/seed2/feature_real_cb/weight_diagnostics.json",
+        "runs/seed2/feature_real_cb/weights.pt"
+      ]
     }
   }
 }
