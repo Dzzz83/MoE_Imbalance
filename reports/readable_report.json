@@ -1,6 +1,6 @@
 {
   "status": "incomplete",
-  "completed_runs": 3,
+  "completed_runs": 4,
   "expected_runs": 30,
   "score_unit": "percentage points for differences",
   "conclusions": {},
