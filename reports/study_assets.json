@@ -1,9 +1,9 @@
 {
   "seeds": {
     "0": {
-      "asset_id": 770552580,
-      "sha256": "694e54ef206fe7d32370aad84eec083f601153c9c805ff0fe41c3cc836c6cd3b",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-synthetic-reweighting-seed0-694e54ef206fe7d32370aad84eec083f601153c9c805ff0fe41c3cc836c6cd3b/ot-synthetic-reweighting-seed0.zip",
+      "asset_id": 770552869,
+      "sha256": "4071eb923b1640da3e23c84d17604368f6889ca2d8855406ecb236c077876824",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-synthetic-reweighting-seed0-4071eb923b1640da3e23c84d17604368f6889ca2d8855406ecb236c077876824/ot-synthetic-reweighting-seed0.zip",
       "paths": [
         "diagnostics/seed0/preparation.pt",
         "diagnostics/seed0/preparation_report.json",
@@ -58,7 +58,19 @@
         "runs/seed0/feature_real_ot/optimization.json",
         "runs/seed0/feature_real_ot/predictions.pt",
         "runs/seed0/feature_real_ot/weight_diagnostics.json",
-        "runs/seed0/feature_real_ot/weights.pt"
+        "runs/seed0/feature_real_ot/weights.pt",
+        "runs/seed0/feature_smote_cb/cast_metrics.json",
+        "runs/seed0/feature_smote_cb/cast_predictions.pt",
+        "runs/seed0/feature_smote_cb/complete.json",
+        "runs/seed0/feature_smote_cb/config.json",
+        "runs/seed0/feature_smote_cb/final.pt",
+        "runs/seed0/feature_smote_cb/head.pt",
+        "runs/seed0/feature_smote_cb/history.json",
+        "runs/seed0/feature_smote_cb/metrics.json",
+        "runs/seed0/feature_smote_cb/optimization.json",
+        "runs/seed0/feature_smote_cb/predictions.pt",
+        "runs/seed0/feature_smote_cb/weight_diagnostics.json",
+        "runs/seed0/feature_smote_cb/weights.pt"
       ]
     }
   }
