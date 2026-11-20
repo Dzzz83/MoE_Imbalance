@@ -12,7 +12,7 @@ from pipeline import followup_reporting as reporting, run_ot_followups as study
 from pipeline.ablation_data import prepare_split
 from pipeline.controlled_bias_head import HeadConvergenceError
 from pipeline.data import TrainingData, save_training_data
-from pipeline.feature_smote import build_banks, validate_bank
+from pipeline.feature_smote import bank_diagnostics, build_banks, validate_bank
 from pipeline import followup_images
 from pipeline.followup_weights import (
     FEATURE_CONDITIONS, IMAGE_CONDITIONS, build_feature_weights, build_image_weights,
@@ -70,6 +70,22 @@ def test_smote_count_policy_ties_parent_identity_raw_coordinates_and_rng():
         validate_bank(bad, features, labels, "smote")
     with pytest.raises(ValueError, match="at least two"):
         build_banks(torch.ones(100, 3), torch.arange(100))
+
+
+def test_duplicate_parent_diversity_excludes_unused_neighbors():
+    labels = torch.arange(100).repeat_interleave(4)
+    features = torch.arange(800, dtype=torch.float32).reshape(400, 2) + 1
+    bank = build_banks(features, labels)["duplicate"]
+    # Twelve copies of one real anchor have one contributing parent, even
+    # though a distinct neighbor was saved for the matched SMOTE proposal.
+    bank["anchor_positions"][:12] = 0
+    bank["neighbor_positions"][:12] = 1
+    bank["features"][len(labels):len(labels) + 12] = features[0]
+    validate_bank(bank, features, labels, "duplicate")
+    report = bank_diagnostics(bank, features)
+    assert report["classes"][0]["unique_anchor_count"] == 1
+    assert report["classes"][0]["unique_parent_count"] == 1
+    assert report["classes"][0]["exact_real_duplicate_count"] == 12
 
 
 def test_fixed_real_geometry_fallback_mass_shuffle_and_solver_failure(followup_inputs, monkeypatch):

@@ -96,10 +96,14 @@ def bank_diagnostics(bank, real_features):
         # Exact duplicates are descriptive; they are never rejected or redrawn.
         real_values = real_features[real]
         duplicate_real = sum(bool((real_values == row).all(dim=1).any()) for row in values)
+        # Zero-lambda copies use only the anchor; the saved candidate neighbor
+        # did not contribute feature coordinates to these rows.
+        contributing_neighbors = added & (bank["lambda"] > 0)
+        parents = torch.cat((bank["anchor_positions"][added],
+                             bank["neighbor_positions"][contributing_neighbors]))
         records.append({"class_index": c, "real_count": int(real.sum()), "added_count": len(values),
                         "unique_anchor_count": len(bank["anchor_positions"][added].unique()),
-                        "unique_parent_count": len(torch.cat((bank["anchor_positions"][added],
-                                                              bank["neighbor_positions"][added])).unique()),
+                        "unique_parent_count": len(parents.unique()),
                         "exact_real_duplicate_count": duplicate_real,
                         "repeated_added_count": len(values) - len(values.unique(dim=0)),
                         "mean_neighbor_cosine_distance": float(bank["neighbor_cosine_distance"][added].mean())
