@@ -1,0 +1,898 @@
+[
+  {
+    "evaluation": 1,
+    "objective": 4.605170185988092,
+    "weighted_cross_entropy": 4.605170185988092,
+    "regularizer": 0.0,
+    "gradient_infinity_norm": 0.08508546352167513
+  },
+  {
+    "evaluation": 2,
+    "objective": 4.591991002637615,
+    "weighted_cross_entropy": 4.591990926698177,
+    "regularizer": 7.59394378938533e-08,
+    "gradient_infinity_norm": 0.08489809819183092
+  },
+  {
+    "evaluation": 3,
+    "objective": 4.474272475883592,
+    "weighted_cross_entropy": 4.474264881939803,
+    "regularizer": 7.593943789385332e-06,
+    "gradient_infinity_norm": 0.08304395039834661
+  },
+  {
+    "evaluation": 4,
+    "objective": 3.40869920714935,
+    "weighted_cross_entropy": 3.4079398127704117,
+    "regularizer": 0.000759394378938533,
+    "gradient_infinity_norm": 0.06070963679043131
+  },
+  {
+    "evaluation": 5,
+    "objective": 0.6923404207199465,
+    "weighted_cross_entropy": 0.635018719222034,
+    "regularizer": 0.057321701497912506,
+    "gradient_infinity_norm": 0.09356416061724145
+  },
+  {
+    "evaluation": 6,
+    "objective": 3.0352536716125815,
+    "weighted_cross_entropy": 2.9291438926445434,
+    "regularizer": 0.10610977896803826,
+    "gradient_infinity_norm": 0.15923161900409605
+  },
+  {
+    "evaluation": 7,
+    "objective": 0.46120015512448764,
+    "weighted_cross_entropy": 0.395838118314063,
+    "regularizer": 0.06536203681042461,
+    "gradient_infinity_norm": 0.0582046476520028
+  },
+  {
+    "evaluation": 8,
+    "objective": 0.38627420086050457,
+    "weighted_cross_entropy": 0.31610218465534456,
+    "regularizer": 0.07017201620516,
+    "gradient_infinity_norm": 0.02678024724915303
+  },
+  {
+    "evaluation": 9,
+    "objective": 0.34621703684445565,
+    "weighted_cross_entropy": 0.2684287662463943,
+    "regularizer": 0.07778827059806138,
+    "gradient_infinity_norm": 0.03167423260977581
+  },
+  {
+    "evaluation": 10,
+    "objective": 0.3118467798645565,
+    "weighted_cross_entropy": 0.22209764807351312,
+    "regularizer": 0.08974913179104338,
+    "gradient_infinity_norm": 0.012933534828692032
+  },
+  {
+    "evaluation": 11,
+    "objective": 0.28400592138018804,
+    "weighted_cross_entropy": 0.17722272739058198,
+    "regularizer": 0.10678319398960606,
+    "gradient_infinity_norm": 0.011231228721892321
+  },
+  {
+    "evaluation": 12,
+    "objective": 0.26715434566657026,
+    "weighted_cross_entropy": 0.1433213909075667,
+    "regularizer": 0.12383295475900355,
+    "gradient_infinity_norm": 0.00943037507324795
+  },
+  {
+    "evaluation": 13,
+    "objective": 0.25510929798910503,
+    "weighted_cross_entropy": 0.11990314235062637,
+    "regularizer": 0.13520615563847865,
+    "gradient_infinity_norm": 0.00705714838119373
+  },
+  {
+    "evaluation": 14,
+    "objective": 0.24539115175113016,
+    "weighted_cross_entropy": 0.10619702177103565,
+    "regularizer": 0.1391941299800945,
+    "gradient_infinity_norm": 0.003995992773310901
+  },
+  {
+    "evaluation": 15,
+    "objective": 0.23083387084607654,
+    "weighted_cross_entropy": 0.09070850252877127,
+    "regularizer": 0.14012536831730527,
+    "gradient_infinity_norm": 0.006622193278775493
+  },
+  {
+    "evaluation": 16,
+    "objective": 0.2258541438278852,
+    "weighted_cross_entropy": 0.09070495298333053,
+    "regularizer": 0.13514919084455468,
+    "gradient_infinity_norm": 0.019504452329988937
+  },
+  {
+    "evaluation": 17,
+    "objective": 0.21548049596695174,
+    "weighted_cross_entropy": 0.08362443801625986,
+    "regularizer": 0.13185605795069186,
+    "gradient_infinity_norm": 0.0059719917403169035
+  },
+  {
+    "evaluation": 18,
+    "objective": 0.2092548883953257,
+    "weighted_cross_entropy": 0.08289671362497143,
+    "regularizer": 0.12635817477035424,
+    "gradient_infinity_norm": 0.0042447968443058036
+  },
+  {
+    "evaluation": 19,
+    "objective": 0.20093166240196478,
+    "weighted_cross_entropy": 0.08414200573689089,
+    "regularizer": 0.11678965666507389,
+    "gradient_infinity_norm": 0.006529248531354101
+  },
+  {
+    "evaluation": 20,
+    "objective": 0.19434394703224467,
+    "weighted_cross_entropy": 0.08148061751266034,
+    "regularizer": 0.11286332951958433,
+    "gradient_infinity_norm": 0.006062716684378575
+  },
+  {
+    "evaluation": 21,
+    "objective": 0.18912531368895702,
+    "weighted_cross_entropy": 0.0797513748771759,
+    "regularizer": 0.10937393881178112,
+    "gradient_infinity_norm": 0.0058866069620562905
+  },
+  {
+    "evaluation": 22,
+    "objective": 0.18440951166330172,
+    "weighted_cross_entropy": 0.07171217231347889,
+    "regularizer": 0.11269733934982284,
+    "gradient_infinity_norm": 0.0020806691529206504
+  },
+  {
+    "evaluation": 23,
+    "objective": 0.18209280910503117,
+    "weighted_cross_entropy": 0.06918936522477931,
+    "regularizer": 0.11290344388025185,
+    "gradient_infinity_norm": 0.002126205110719675
+  },
+  {
+    "evaluation": 24,
+    "objective": 0.17812724795338614,
+    "weighted_cross_entropy": 0.0690572981039992,
+    "regularizer": 0.10906994984938692,
+    "gradient_infinity_norm": 0.0028616986343407503
+  },
+  {
+    "evaluation": 25,
+    "objective": 0.1763502978334767,
+    "weighted_cross_entropy": 0.07068682644227497,
+    "regularizer": 0.10566347139120172,
+    "gradient_infinity_norm": 0.00367799735324645
+  },
+  {
+    "evaluation": 26,
+    "objective": 0.1740357442256535,
+    "weighted_cross_entropy": 0.06899755736224422,
+    "regularizer": 0.10503818686340928,
+    "gradient_infinity_norm": 0.0017806115745942145
+  },
+  {
+    "evaluation": 27,
+    "objective": 0.17257784096786066,
+    "weighted_cross_entropy": 0.06862568201983943,
+    "regularizer": 0.10395215894802123,
+    "gradient_infinity_norm": 0.0013130309868867173
+  },
+  {
+    "evaluation": 28,
+    "objective": 0.17133499546501282,
+    "weighted_cross_entropy": 0.0673625659709714,
+    "regularizer": 0.10397242949404142,
+    "gradient_infinity_norm": 0.0015399589571714967
+  },
+  {
+    "evaluation": 29,
+    "objective": 0.16985311937669217,
+    "weighted_cross_entropy": 0.0644250259400447,
+    "regularizer": 0.10542809343664747,
+    "gradient_infinity_norm": 0.0016889617195671443
+  },
+  {
+    "evaluation": 30,
+    "objective": 0.16886334868491015,
+    "weighted_cross_entropy": 0.06106104105062408,
+    "regularizer": 0.10780230763428608,
+    "gradient_infinity_norm": 0.0017132323149208852
+  },
+  {
+    "evaluation": 31,
+    "objective": 0.16809712597415516,
+    "weighted_cross_entropy": 0.059748182788388726,
+    "regularizer": 0.10834894318576643,
+    "gradient_infinity_norm": 0.0011269306830665967
+  },
+  {
+    "evaluation": 32,
+    "objective": 0.16757302695034826,
+    "weighted_cross_entropy": 0.05952173046836341,
+    "regularizer": 0.10805129648198485,
+    "gradient_infinity_norm": 0.00072834043596553
+  },
+  {
+    "evaluation": 33,
+    "objective": 0.16716783074786856,
+    "weighted_cross_entropy": 0.059807072756736926,
+    "regularizer": 0.10736075799113162,
+    "gradient_infinity_norm": 0.0011383554362713014
+  },
+  {
+    "evaluation": 34,
+    "objective": 0.16667715006480519,
+    "weighted_cross_entropy": 0.06061119020387393,
+    "regularizer": 0.10606595986093126,
+    "gradient_infinity_norm": 0.002132247503477707
+  },
+  {
+    "evaluation": 35,
+    "objective": 0.16620900332611638,
+    "weighted_cross_entropy": 0.06133794142255046,
+    "regularizer": 0.10487106190356592,
+    "gradient_infinity_norm": 0.0027038470110271845
+  },
+  {
+    "evaluation": 36,
+    "objective": 0.16585345096366244,
+    "weighted_cross_entropy": 0.061263256929344936,
+    "regularizer": 0.10459019403431749,
+    "gradient_infinity_norm": 0.0011129691814719632
+  },
+  {
+    "evaluation": 37,
+    "objective": 0.16558757423841658,
+    "weighted_cross_entropy": 0.06102713267644905,
+    "regularizer": 0.10456044156196752,
+    "gradient_infinity_norm": 0.00065061586696969
+  },
+  {
+    "evaluation": 38,
+    "objective": 0.1654564191509843,
+    "weighted_cross_entropy": 0.06072610151142841,
+    "regularizer": 0.10473031763955588,
+    "gradient_infinity_norm": 0.0012667396756637253
+  },
+  {
+    "evaluation": 39,
+    "objective": 0.16528426056171017,
+    "weighted_cross_entropy": 0.060206322090642146,
+    "regularizer": 0.10507793847106803,
+    "gradient_infinity_norm": 0.0013737396249561165
+  },
+  {
+    "evaluation": 40,
+    "objective": 0.1650786993905891,
+    "weighted_cross_entropy": 0.05945339383594232,
+    "regularizer": 0.10562530555464679,
+    "gradient_infinity_norm": 0.0006661632610204498
+  },
+  {
+    "evaluation": 41,
+    "objective": 0.16493371431538342,
+    "weighted_cross_entropy": 0.05910795310437288,
+    "regularizer": 0.10582576121101055,
+    "gradient_infinity_norm": 0.0005766911129717882
+  },
+  {
+    "evaluation": 42,
+    "objective": 0.16483310873993146,
+    "weighted_cross_entropy": 0.05904345091669004,
+    "regularizer": 0.10578965782324141,
+    "gradient_infinity_norm": 0.00032717672679744047
+  },
+  {
+    "evaluation": 43,
+    "objective": 0.16478334608659864,
+    "weighted_cross_entropy": 0.05928499733861014,
+    "regularizer": 0.10549834874798851,
+    "gradient_infinity_norm": 0.00035573747306956243
+  },
+  {
+    "evaluation": 44,
+    "objective": 0.1647485512040831,
+    "weighted_cross_entropy": 0.05939164265779159,
+    "regularizer": 0.10535690854629153,
+    "gradient_infinity_norm": 0.0003300714764399111
+  },
+  {
+    "evaluation": 45,
+    "objective": 0.16467302795360406,
+    "weighted_cross_entropy": 0.059595251936421484,
+    "regularizer": 0.10507777601718257,
+    "gradient_infinity_norm": 0.00024760880989180696
+  },
+  {
+    "evaluation": 46,
+    "objective": 0.16460777744714739,
+    "weighted_cross_entropy": 0.05948873305730654,
+    "regularizer": 0.10511904438984083,
+    "gradient_infinity_norm": 0.0004127670433974851
+  },
+  {
+    "evaluation": 47,
+    "objective": 0.1645575312067689,
+    "weighted_cross_entropy": 0.059321478316964285,
+    "regularizer": 0.1052360528898046,
+    "gradient_infinity_norm": 0.000172845229176973
+  },
+  {
+    "evaluation": 48,
+    "objective": 0.16452811983495214,
+    "weighted_cross_entropy": 0.05911327826701129,
+    "regularizer": 0.10541484156794083,
+    "gradient_infinity_norm": 0.000266937021293008
+  },
+  {
+    "evaluation": 49,
+    "objective": 0.1645104895563216,
+    "weighted_cross_entropy": 0.05903329428538632,
+    "regularizer": 0.1054771952709353,
+    "gradient_infinity_norm": 0.0003183012574060095
+  },
+  {
+    "evaluation": 50,
+    "objective": 0.16448447819596496,
+    "weighted_cross_entropy": 0.05899426477906353,
+    "regularizer": 0.10549021341690144,
+    "gradient_infinity_norm": 0.0002914058310671268
+  },
+  {
+    "evaluation": 51,
+    "objective": 0.16446012806684931,
+    "weighted_cross_entropy": 0.05904073024148681,
+    "regularizer": 0.10541939782536251,
+    "gradient_infinity_norm": 0.000336126092006322
+  },
+  {
+    "evaluation": 52,
+    "objective": 0.16444256349764702,
+    "weighted_cross_entropy": 0.059080032595549364,
+    "regularizer": 0.10536253090209764,
+    "gradient_infinity_norm": 0.0001375240992689358
+  },
+  {
+    "evaluation": 53,
+    "objective": 0.1644337027577407,
+    "weighted_cross_entropy": 0.059084699591566585,
+    "regularizer": 0.1053490031661741,
+    "gradient_infinity_norm": 0.00019975626250015582
+  },
+  {
+    "evaluation": 54,
+    "objective": 0.1644253450884208,
+    "weighted_cross_entropy": 0.059053381284952695,
+    "regularizer": 0.1053719638034681,
+    "gradient_infinity_norm": 0.0001958045934169968
+  },
+  {
+    "evaluation": 55,
+    "objective": 0.16441794881456118,
+    "weighted_cross_entropy": 0.0590037439747345,
+    "regularizer": 0.10541420483982666,
+    "gradient_infinity_norm": 0.00016942162487159306
+  },
+  {
+    "evaluation": 56,
+    "objective": 0.1644079104599012,
+    "weighted_cross_entropy": 0.05892639862306836,
+    "regularizer": 0.10548151183683283,
+    "gradient_infinity_norm": 0.00012736073005925147
+  },
+  {
+    "evaluation": 57,
+    "objective": 0.16439963022663995,
+    "weighted_cross_entropy": 0.058868298315235726,
+    "regularizer": 0.10553133191140421,
+    "gradient_infinity_norm": 0.00024906234267331874
+  },
+  {
+    "evaluation": 58,
+    "objective": 0.16439409430860552,
+    "weighted_cross_entropy": 0.05888755018863978,
+    "regularizer": 0.10550654411996574,
+    "gradient_infinity_norm": 0.00023933824774630287
+  },
+  {
+    "evaluation": 59,
+    "objective": 0.16439047638758558,
+    "weighted_cross_entropy": 0.058924303710721354,
+    "regularizer": 0.10546617267686423,
+    "gradient_infinity_norm": 0.00016597640211726242
+  },
+  {
+    "evaluation": 60,
+    "objective": 0.16438762935721063,
+    "weighted_cross_entropy": 0.05897661902658979,
+    "regularizer": 0.10541101033062084,
+    "gradient_infinity_norm": 7.441478591162383e-05
+  },
+  {
+    "evaluation": 61,
+    "objective": 0.16438550393043358,
+    "weighted_cross_entropy": 0.05900223129910121,
+    "regularizer": 0.10538327263133236,
+    "gradient_infinity_norm": 0.00016072290874092764
+  },
+  {
+    "evaluation": 62,
+    "objective": 0.16438295321533047,
+    "weighted_cross_entropy": 0.059007355979492096,
+    "regularizer": 0.10537559723583836,
+    "gradient_infinity_norm": 0.0002359344709902244
+  },
+  {
+    "evaluation": 63,
+    "objective": 0.16437993371137624,
+    "weighted_cross_entropy": 0.05898994576263424,
+    "regularizer": 0.105389987948742,
+    "gradient_infinity_norm": 0.0002304264295457096
+  },
+  {
+    "evaluation": 64,
+    "objective": 0.16437888289972555,
+    "weighted_cross_entropy": 0.058960617607812335,
+    "regularizer": 0.10541826529191321,
+    "gradient_infinity_norm": 0.00014960367518375916
+  },
+  {
+    "evaluation": 65,
+    "objective": 0.16437661859394415,
+    "weighted_cross_entropy": 0.05894307420072539,
+    "regularizer": 0.10543354439321874,
+    "gradient_infinity_norm": 4.908342451918576e-05
+  },
+  {
+    "evaluation": 66,
+    "objective": 0.16437599017050572,
+    "weighted_cross_entropy": 0.058935402106156436,
+    "regularizer": 0.10544058806434928,
+    "gradient_infinity_norm": 4.189141101133636e-05
+  },
+  {
+    "evaluation": 67,
+    "objective": 0.16437534071715026,
+    "weighted_cross_entropy": 0.058929477241094375,
+    "regularizer": 0.10544586347605589,
+    "gradient_infinity_norm": 0.00010099555348319763
+  },
+  {
+    "evaluation": 68,
+    "objective": 0.1643744438080677,
+    "weighted_cross_entropy": 0.058923908022435974,
+    "regularizer": 0.10545053578563172,
+    "gradient_infinity_norm": 0.00013727084495242063
+  },
+  {
+    "evaluation": 69,
+    "objective": 0.1643731388556704,
+    "weighted_cross_entropy": 0.05891901718616535,
+    "regularizer": 0.10545412166950505,
+    "gradient_infinity_norm": 0.00012595305977962195
+  },
+  {
+    "evaluation": 70,
+    "objective": 0.164372540497282,
+    "weighted_cross_entropy": 0.0589240390308695,
+    "regularizer": 0.10544850146641249,
+    "gradient_infinity_norm": 8.397094546751141e-05
+  },
+  {
+    "evaluation": 71,
+    "objective": 0.1643714957075562,
+    "weighted_cross_entropy": 0.058931753837474926,
+    "regularizer": 0.10543974187008126,
+    "gradient_infinity_norm": 2.9387098233579062e-05
+  },
+  {
+    "evaluation": 72,
+    "objective": 0.16437123458915767,
+    "weighted_cross_entropy": 0.05893347894501784,
+    "regularizer": 0.10543775564413983,
+    "gradient_infinity_norm": 5.221131259271466e-05
+  },
+  {
+    "evaluation": 73,
+    "objective": 0.164370926001405,
+    "weighted_cross_entropy": 0.05893795827723436,
+    "regularizer": 0.10543296772417063,
+    "gradient_infinity_norm": 6.333765388980082e-05
+  },
+  {
+    "evaluation": 74,
+    "objective": 0.16437058420885575,
+    "weighted_cross_entropy": 0.05893885187818611,
+    "regularizer": 0.10543173233066964,
+    "gradient_infinity_norm": 4.848987148761198e-05
+  },
+  {
+    "evaluation": 75,
+    "objective": 0.16437062689098103,
+    "weighted_cross_entropy": 0.05894950107562358,
+    "regularizer": 0.10542112581535745,
+    "gradient_infinity_norm": 5.183577156213446e-05
+  },
+  {
+    "evaluation": 76,
+    "objective": 0.1643703772782627,
+    "weighted_cross_entropy": 0.058943721599084835,
+    "regularizer": 0.10542665567917786,
+    "gradient_infinity_norm": 3.446690901680034e-05
+  },
+  {
+    "evaluation": 77,
+    "objective": 0.16437014934151067,
+    "weighted_cross_entropy": 0.05894032688063972,
+    "regularizer": 0.10542982246087095,
+    "gradient_infinity_norm": 2.3423386286935282e-05
+  },
+  {
+    "evaluation": 78,
+    "objective": 0.1643700407438307,
+    "weighted_cross_entropy": 0.05893812435683938,
+    "regularizer": 0.10543191638699131,
+    "gradient_infinity_norm": 3.962191418007744e-05
+  },
+  {
+    "evaluation": 79,
+    "objective": 0.16436993014899637,
+    "weighted_cross_entropy": 0.058934375005871426,
+    "regularizer": 0.10543555514312496,
+    "gradient_infinity_norm": 4.068038080783044e-05
+  },
+  {
+    "evaluation": 80,
+    "objective": 0.16436977951159448,
+    "weighted_cross_entropy": 0.05892937854957794,
+    "regularizer": 0.10544040096201653,
+    "gradient_infinity_norm": 3.079279292347945e-05
+  },
+  {
+    "evaluation": 81,
+    "objective": 0.1643697629032007,
+    "weighted_cross_entropy": 0.05892530250766799,
+    "regularizer": 0.10544446039553272,
+    "gradient_infinity_norm": 2.2427032116395583e-05
+  },
+  {
+    "evaluation": 82,
+    "objective": 0.1643696081756391,
+    "weighted_cross_entropy": 0.05892513988994595,
+    "regularizer": 0.10544446828569314,
+    "gradient_infinity_norm": 1.4437275772648055e-05
+  },
+  {
+    "evaluation": 83,
+    "objective": 0.16436957275427755,
+    "weighted_cross_entropy": 0.05892633894892903,
+    "regularizer": 0.10544323380534854,
+    "gradient_infinity_norm": 1.6625194079665463e-05
+  },
+  {
+    "evaluation": 84,
+    "objective": 0.1643695222881017,
+    "weighted_cross_entropy": 0.05893024946830531,
+    "regularizer": 0.1054392728197964,
+    "gradient_infinity_norm": 1.779915108559107e-05
+  },
+  {
+    "evaluation": 85,
+    "objective": 0.16436947545360941,
+    "weighted_cross_entropy": 0.05893513691599786,
+    "regularizer": 0.10543433853761157,
+    "gradient_infinity_norm": 1.774430510093647e-05
+  },
+  {
+    "evaluation": 86,
+    "objective": 0.16436946885125048,
+    "weighted_cross_entropy": 0.05894314375697667,
+    "regularizer": 0.1054263250942738,
+    "gradient_infinity_norm": 1.612415835906036e-05
+  },
+  {
+    "evaluation": 87,
+    "objective": 0.16436941015373957,
+    "weighted_cross_entropy": 0.058942673394096104,
+    "regularizer": 0.10542673675964347,
+    "gradient_infinity_norm": 8.023516836965817e-06
+  },
+  {
+    "evaluation": 88,
+    "objective": 0.16436939568552555,
+    "weighted_cross_entropy": 0.058942035198348744,
+    "regularizer": 0.10542736048717682,
+    "gradient_infinity_norm": 6.3752148721275565e-06
+  },
+  {
+    "evaluation": 89,
+    "objective": 0.16436937202843777,
+    "weighted_cross_entropy": 0.058939756777045604,
+    "regularizer": 0.10542961525139216,
+    "gradient_infinity_norm": 8.3707877224791e-06
+  },
+  {
+    "evaluation": 90,
+    "objective": 0.16436935142858483,
+    "weighted_cross_entropy": 0.05893645791207096,
+    "regularizer": 0.10543289351651389,
+    "gradient_infinity_norm": 7.892144318095789e-06
+  },
+  {
+    "evaluation": 91,
+    "objective": 0.164369344715474,
+    "weighted_cross_entropy": 0.05893283317461796,
+    "regularizer": 0.10543651154085604,
+    "gradient_infinity_norm": 1.340192879163715e-05
+  },
+  {
+    "evaluation": 92,
+    "objective": 0.16436932220600958,
+    "weighted_cross_entropy": 0.05893143469869409,
+    "regularizer": 0.10543788750731549,
+    "gradient_infinity_norm": 4.239337431015053e-06
+  },
+  {
+    "evaluation": 93,
+    "objective": 0.16436931617744793,
+    "weighted_cross_entropy": 0.05893154742495001,
+    "regularizer": 0.10543776875249793,
+    "gradient_infinity_norm": 2.515048037496099e-06
+  },
+  {
+    "evaluation": 94,
+    "objective": 0.16436930741811653,
+    "weighted_cross_entropy": 0.05893230159338851,
+    "regularizer": 0.10543700582472802,
+    "gradient_infinity_norm": 4.441723368819048e-06
+  },
+  {
+    "evaluation": 95,
+    "objective": 0.16436929981445259,
+    "weighted_cross_entropy": 0.05893374911758957,
+    "regularizer": 0.10543555069686303,
+    "gradient_infinity_norm": 3.2237916781390668e-06
+  },
+  {
+    "evaluation": 96,
+    "objective": 0.1643693010210262,
+    "weighted_cross_entropy": 0.058935332378347735,
+    "regularizer": 0.10543396864267846,
+    "gradient_infinity_norm": 7.2430727139542e-06
+  },
+  {
+    "evaluation": 97,
+    "objective": 0.1643692961642297,
+    "weighted_cross_entropy": 0.05893448049030992,
+    "regularizer": 0.10543481567391978,
+    "gradient_infinity_norm": 3.6045832563537383e-06
+  },
+  {
+    "evaluation": 98,
+    "objective": 0.16436929108538584,
+    "weighted_cross_entropy": 0.05893639835718306,
+    "regularizer": 0.10543289272820279,
+    "gradient_infinity_norm": 1.6315356668262018e-06
+  },
+  {
+    "evaluation": 99,
+    "objective": 0.16436928865335582,
+    "weighted_cross_entropy": 0.05893689886304893,
+    "regularizer": 0.10543238979030688,
+    "gradient_infinity_norm": 1.892376564809799e-06
+  },
+  {
+    "evaluation": 100,
+    "objective": 0.16436928528626849,
+    "weighted_cross_entropy": 0.05893673773309521,
+    "regularizer": 0.10543254755317327,
+    "gradient_infinity_norm": 3.0327034565266796e-06
+  },
+  {
+    "evaluation": 101,
+    "objective": 0.16436928209823368,
+    "weighted_cross_entropy": 0.05893563900431302,
+    "regularizer": 0.10543364309392066,
+    "gradient_infinity_norm": 2.462650339639784e-06
+  },
+  {
+    "evaluation": 102,
+    "objective": 0.16436928218774888,
+    "weighted_cross_entropy": 0.05893393141065578,
+    "regularizer": 0.10543535077709311,
+    "gradient_infinity_norm": 3.9339411578966435e-06
+  },
+  {
+    "evaluation": 103,
+    "objective": 0.16436928071646836,
+    "weighted_cross_entropy": 0.05893479729054924,
+    "regularizer": 0.10543448342591911,
+    "gradient_infinity_norm": 1.3918529202323264e-06
+  },
+  {
+    "evaluation": 104,
+    "objective": 0.16436927930885342,
+    "weighted_cross_entropy": 0.05893370859648289,
+    "regularizer": 0.10543557071237053,
+    "gradient_infinity_norm": 8.730382959566056e-07
+  },
+  {
+    "evaluation": 105,
+    "objective": 0.16436927861242343,
+    "weighted_cross_entropy": 0.05893330612291781,
+    "regularizer": 0.10543597248950562,
+    "gradient_infinity_norm": 1.2328719036107708e-06
+  },
+  {
+    "evaluation": 106,
+    "objective": 0.16436927761529913,
+    "weighted_cross_entropy": 0.058933269389485586,
+    "regularizer": 0.10543600822581355,
+    "gradient_infinity_norm": 1.8653622930991497e-06
+  },
+  {
+    "evaluation": 107,
+    "objective": 0.16436927636364448,
+    "weighted_cross_entropy": 0.058933826089312386,
+    "regularizer": 0.1054354502743321,
+    "gradient_infinity_norm": 1.6114132682568507e-06
+  },
+  {
+    "evaluation": 108,
+    "objective": 0.16436927623577385,
+    "weighted_cross_entropy": 0.058934677090359544,
+    "regularizer": 0.10543459914541431,
+    "gradient_infinity_norm": 2.088462585690372e-06
+  },
+  {
+    "evaluation": 109,
+    "objective": 0.1643692750807096,
+    "weighted_cross_entropy": 0.05893510420321654,
+    "regularizer": 0.10543417087749304,
+    "gradient_infinity_norm": 5.448869425954319e-07
+  },
+  {
+    "evaluation": 110,
+    "objective": 0.16436927486100333,
+    "weighted_cross_entropy": 0.058935243906543214,
+    "regularizer": 0.1054340309544601,
+    "gradient_infinity_norm": 3.976100380927573e-07
+  },
+  {
+    "evaluation": 111,
+    "objective": 0.16436927451295752,
+    "weighted_cross_entropy": 0.05893535181158915,
+    "regularizer": 0.10543392270136838,
+    "gradient_infinity_norm": 7.760415515096499e-07
+  },
+  {
+    "evaluation": 112,
+    "objective": 0.16436927416826186,
+    "weighted_cross_entropy": 0.058935279442165894,
+    "regularizer": 0.10543399472609595,
+    "gradient_infinity_norm": 7.472249950637023e-07
+  },
+  {
+    "evaluation": 113,
+    "objective": 0.1643692746011401,
+    "weighted_cross_entropy": 0.05893377778870641,
+    "regularizer": 0.1054354968124337,
+    "gradient_infinity_norm": 1.720278137125504e-06
+  },
+  {
+    "evaluation": 114,
+    "objective": 0.16436927401000057,
+    "weighted_cross_entropy": 0.05893476712263409,
+    "regularizer": 0.10543450688736647,
+    "gradient_infinity_norm": 8.50444757006174e-07
+  },
+  {
+    "evaluation": 115,
+    "objective": 0.16436927370080992,
+    "weighted_cross_entropy": 0.05893457257652884,
+    "regularizer": 0.10543470112428108,
+    "gradient_infinity_norm": 5.372160753039151e-07
+  },
+  {
+    "evaluation": 116,
+    "objective": 0.16436927356703768,
+    "weighted_cross_entropy": 0.05893437480617315,
+    "regularizer": 0.10543489876086452,
+    "gradient_infinity_norm": 3.0639383164025305e-07
+  },
+  {
+    "evaluation": 117,
+    "objective": 0.16436927345120703,
+    "weighted_cross_entropy": 0.05893415733073268,
+    "regularizer": 0.10543511612047435,
+    "gradient_infinity_norm": 5.01976591053767e-07
+  },
+  {
+    "evaluation": 118,
+    "objective": 0.16436927340380253,
+    "weighted_cross_entropy": 0.05893477027308883,
+    "regularizer": 0.10543450313071372,
+    "gradient_infinity_norm": 1.2497626375399125e-06
+  },
+  {
+    "evaluation": 119,
+    "objective": 0.16436927326363143,
+    "weighted_cross_entropy": 0.05893447326060526,
+    "regularizer": 0.10543480000302617,
+    "gradient_infinity_norm": 4.554584022082903e-07
+  },
+  {
+    "evaluation": 120,
+    "objective": 0.16436927320609945,
+    "weighted_cross_entropy": 0.0589346518040145,
+    "regularizer": 0.10543462140208497,
+    "gradient_infinity_norm": 2.1186178251840883e-07
+  },
+  {
+    "evaluation": 121,
+    "objective": 0.16436927318376102,
+    "weighted_cross_entropy": 0.058934769936869844,
+    "regularizer": 0.10543450324689117,
+    "gradient_infinity_norm": 1.9833942317329769e-07
+  },
+  {
+    "evaluation": 122,
+    "objective": 0.16436927316659114,
+    "weighted_cross_entropy": 0.058934832375260364,
+    "regularizer": 0.10543444079133077,
+    "gradient_infinity_norm": 1.8065839325250303e-07
+  },
+  {
+    "evaluation": 123,
+    "objective": 0.16436927309196195,
+    "weighted_cross_entropy": 0.05893539438746164,
+    "regularizer": 0.1054338787045003,
+    "gradient_infinity_norm": 3.695483845306659e-07
+  },
+  {
+    "evaluation": 124,
+    "objective": 0.1643692731622861,
+    "weighted_cross_entropy": 0.05893568117253414,
+    "regularizer": 0.10543359198975195,
+    "gradient_infinity_norm": 1.2455959629615763e-06
+  },
+  {
+    "evaluation": 125,
+    "objective": 0.1643692730542566,
+    "weighted_cross_entropy": 0.0589355008350718,
+    "regularizer": 0.1054337722191848,
+    "gradient_infinity_norm": 3.0345175115297895e-07
+  },
+  {
+    "evaluation": 126,
+    "objective": 0.16436927304105362,
+    "weighted_cross_entropy": 0.0589350254591786,
+    "regularizer": 0.10543424758187502,
+    "gradient_infinity_norm": 2.8457796747306113e-07
+  },
+  {
+    "evaluation": 127,
+    "objective": 0.1643692730087996,
+    "weighted_cross_entropy": 0.05893505876722843,
+    "regularizer": 0.10543421424157119,
+    "gradient_infinity_norm": 1.8136026392777047e-07
+  },
+  {
+    "evaluation": 128,
+    "objective": 0.16436927299653867,
+    "weighted_cross_entropy": 0.05893495747932711,
+    "regularizer": 0.10543431551721157,
+    "gradient_infinity_norm": 9.392606348625817e-08
+  }
+]
