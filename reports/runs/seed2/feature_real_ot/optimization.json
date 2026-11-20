@@ -1,0 +1,12 @@
+{
+  "objective": 0.1946665970052855,
+  "weighted_cross_entropy": 0.07125993826915428,
+  "regularizer": 0.12340665873613121,
+  "iterations": 142,
+  "evaluations": 150,
+  "verification_evaluations": 1,
+  "gradient_infinity_norm": 9.945156338454471e-08,
+  "parameter_norm": 22.21770993924722,
+  "is_converged": true,
+  "elapsed_seconds": 1.7521139199999993
+}

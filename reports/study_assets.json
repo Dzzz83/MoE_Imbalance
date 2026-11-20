@@ -267,9 +267,9 @@
       ]
     },
     "2": {
-      "asset_id": 770557875,
-      "sha256": "9d0f403859d59c3314a063c86698a1c6ba127161495f8c026753958121623d02",
-      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-synthetic-reweighting-seed2-9d0f403859d59c3314a063c86698a1c6ba127161495f8c026753958121623d02/ot-synthetic-reweighting-seed2.zip",
+      "asset_id": 770558108,
+      "sha256": "bd8cd77b8b4164b23c052cb5e12b6dcdcb3392c958440588450c34ba539ee389",
+      "download_url": "https://github.com/Dzzz83/MoE_Imbalance/releases/download/ot-synthetic-reweighting-seed2-bd8cd77b8b4164b23c052cb5e12b6dcdcb3392c958440588450c34ba539ee389/ot-synthetic-reweighting-seed2.zip",
       "paths": [
         "diagnostics/seed0/preparation.pt",
         "diagnostics/seed0/preparation_report.json",
@@ -288,7 +288,19 @@
         "runs/seed2/feature_real_cb/optimization.json",
         "runs/seed2/feature_real_cb/predictions.pt",
         "runs/seed2/feature_real_cb/weight_diagnostics.json",
-        "runs/seed2/feature_real_cb/weights.pt"
+        "runs/seed2/feature_real_cb/weights.pt",
+        "runs/seed2/feature_real_ot/cast_metrics.json",
+        "runs/seed2/feature_real_ot/cast_predictions.pt",
+        "runs/seed2/feature_real_ot/complete.json",
+        "runs/seed2/feature_real_ot/config.json",
+        "runs/seed2/feature_real_ot/final.pt",
+        "runs/seed2/feature_real_ot/head.pt",
+        "runs/seed2/feature_real_ot/history.json",
+        "runs/seed2/feature_real_ot/metrics.json",
+        "runs/seed2/feature_real_ot/optimization.json",
+        "runs/seed2/feature_real_ot/predictions.pt",
+        "runs/seed2/feature_real_ot/weight_diagnostics.json",
+        "runs/seed2/feature_real_ot/weights.pt"
       ]
     }
   }
