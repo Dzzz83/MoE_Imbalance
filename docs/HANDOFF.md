@@ -71,46 +71,79 @@ and weight invariants, and recomputed the paired contrasts. Its source is
 `b4cea1c8b68eb7bd872f1b5500e8e4d9038ecf69`. The pinned input, parent, and
 archive identities are recorded in PLAN.md and the study's reports.
 
-The next experiment is the
-[controlled-bias diagnostic](PLAN.md#controlled-bias-diagnostic-the-next-experiment),
-which is **implemented; scientific fits have not run**:
+The [controlled-bias diagnostic](PLAN.md#controlled-bias-diagnostic-the-next-experiment)
+completed **9/9 converged fits** and stopped at Gate 1. Results commit
+[f2de29bb74ffbcefe1820668156a29cf6186cff2](https://github.com/Dzzz83/MoE_Imbalance/blob/f2de29bb74ffbcefe1820668156a29cf6186cff2/reports/study_summary.json)
+uses source d5416a487239436d5c3fab252fbe9a4d02524862. Before removal,
+after removal and known correction scored **67.070/66.452/66.516%** on the
+34-class task. The introduced damage was 0.619 points and recovery was
+0.064 points, below the 1.0/0.5-point gates. Do not force the 18 conditional
+OT fits to run. These results concern a fresh classifier on existing features,
+not image training from the biased data or a verdict on OT.
 
-- Use the existing feature caches and 34 eligible Head classes. Reserve
-  reference examples from fitting data, then deliberately undersample one
-  feature subgroup within each class using recorded inclusion probabilities.
-- First run nine fresh linear-head fits: unmodified fitting data, biased
-  fitting data, and the known sampling correction across three feature seeds.
-  Gate 1 checks that removal hurts and that reweighting the same retained
-  examples recovers a useful part of the damage.
-- Only after the gate passes, add at most 18 fits comparing equal-target OT,
-  reference-target OT, a simple reference-based correction, and three shuffles
-  of the new OT vector. Keep all methods' permitted information explicit.
-- Use the deterministic full-batch solver and convergence checks.
-  The 34-output diagnostic head is separate from the existing 100-class
-  image checkpoints. The backbones already saw all original fitting images;
-  conclusions concern classifier reweighting conditional on those features.
+Analysis verified 35 published JSON hashes, nine completion records, saved
+convergence diagnostics, class-count accuracy/recall and the gate decision.
+It did not independently reproduce binary-head predictions. Under-sampled
+groups gained 0.557 points of overall balanced-accuracy contribution with
+correction, offset by -0.493 from other groups. Macro prediction loss improved
+in every seed; this does not replace the failed primary accuracy gate.
 
-The diagnostic's preparation, weights, head solver, gates, reports and recovery
-are implemented. The pinned-input preflight verified 6,992 eligible fitting rows,
-1,372 references, 5,620 rows before removal and 3,485 retained rows after removal;
-all three geometries and 27 planned weight vectors were prepared without fitting
-scientific heads. Next, execute the nine Gate-1 fits and review their result;
-the runner permits the other 18 only on a verified pass.
-Later coverage, backbone, or confirmation experiments remain conditional
-on reviewing the diagnostic. Learned-score OT and synthesis remain outside
-the current research plan.
+The user requested both [Stage C experiments](PLAN.md#stage-c-two-bounded-follow-up-experiments).
+They are **implemented, with scientific training still to run on Kaggle**:
+
+- **C2 first:** feature-space SMOTE plus reweighting; 30 fresh CPU head fits
+  covering real-only, anchor duplication, interpolation, simple weighting and
+  origin-preserving OT shuffles. Use the same real-only prototype geometry.
+  The user chose feature-space SMOTE before considering DeepSMOTE images.
+- **C1:** 18 GPU image continuations comparing class balancing, original
+  prototype OT, easy rank and three OT shuffles while backbone parameters
+  update and BN running buffers stay frozen.
+- Share pinned audit baselines and input handling, not scores across different
+  training protocols. Both use the original 100-class development task and
+  fixed budgets; either proceeds regardless of the other's scientific outcome.
+- Confirm only a promising route on split 44 with three fresh fitting-only
+  baselines. DeepSMOTE, full-pool final evaluation, parameter searches and
+  learned full-pool OT remain outside this implementation scope.
+
+Both matrices use [`run_ot_followups.py`](../pipeline/run_ot_followups.py), with
+separate frozen configs. Deterministic banks, fixed real-only geometry weights,
+100-class reporting, image updates, recovery and incremental publication are
+implemented. The next step is Kaggle training, C2 first, then C1. Read PLAN.md
+for exact settings, decision criteria and conditional budgets.
+
+Local verification passed both complete matrices on artificial data. The full
+CPU suite passed 378 tests with one optional skip; affected checks were rerun
+after review fixes. Both pinned-input preflights passed with zero scientific
+fits. C2 reproduced 2,726 added rows and 11,442 total rows per representation.
+C1 reconstructed exact pixels/labels and replayed all six fitting/development
+feature populations against the published caches (rtol 1e-4, atol 1e-5;
+maximum absolute difference 1.72e-5 across all seeds). No official test rows
+were loaded and no scientific continuation/head was trained locally.
+
+The local and historical compressed NPZ file hashes differ. Image validation
+therefore pins canonical pixel/label array hashes derived from the verified
+official training archive and the audit's unchanged preparation code, along
+with exact split metadata and cache row labels. Local NPZ files keep their own
+file-hash receipts on reuse. Tests reject changed pixels while allowing an
+equivalent container serialization. CUDA execution and actual Kaggle access
+remain unverified until the user runs the notebooks.
 
 ## Kaggle and GitHub
 
-The existing [Kaggle ablation script](../scripts/kaggle_ablation_study.py)
-defaults to `STAGES = ("controlled_bias",)`. Use a fresh notebook with Internet
-and the existing `GITHUB_TOKEN` secret; this mode uses CPU and needs neither
-a GPU nor a CIFAR attachment. It restores the exact audit inputs and pinned
-Stage B controller, runs at most 27 fresh-head fits, and publishes JSON to
-`ablation-controlled-bias-results`, with binary assets in GitHub releases.
-Set `CONTROLLED_BIAS_PREFLIGHT_ONLY = True` to freeze/verify preparation without
-fitting or publishing. See the
-[implemented commands](PLAN.md#implemented-commands-and-kaggle-delivery).
+The [Kaggle ablation script](../scripts/kaggle_ablation_study.py) now defaults to
+`STAGES = ("synthetic_reweighting",)`: 30 C2 CPU head fits, no CIFAR attachment.
+Use a fresh notebook with Internet and the existing `GITHUB_TOKEN` secret.
+It restores the pinned audit inputs and publishes to
+`ablation-synthetic-reweighting-results`. For C1, use another fresh notebook,
+`STAGES = ("ot_contribution",)`, a GPU and CIFAR-100 training images (or
+`ALLOW_DOWNLOAD = True`); its 18 continuations publish to
+`ablation-ot-contribution-results`. Both use `FOLLOWUP_PREFLIGHT_ONLY = True`
+for checks without fitting/publication. See
+[Stage C delivery](PLAN.md#implemented-stage-c-commands-and-kaggle-delivery).
+
+The completed diagnostic remains available as `STAGES = ("controlled_bias",)`,
+with its own CPU preparation, result branch and `CONTROLLED_BIAS_PREFLIGHT_ONLY`
+setting. Its source/results identities above remain historical references.
 
 Use `STAGES = ("simple_controls",)` to reproduce completed Stage B on a Tesla T4.
 It restores the exact audit inputs and pinned Stage A references and publishes
@@ -122,7 +155,8 @@ reports and recovery. Stage A remains available explicitly with
 
 Stage B results and complete assets are published at the pinned results commit
 above. Keep its historical scores separate from the new diagnostic's fresh
-34-class heads. No controlled-bias scientific results are available yet.
+34-class heads. Controlled-bias results are pinned above; the new Stage C
+studies never force its failed gate open or reuse its scores as controls.
 
 The completed audit results branch is `ablation-rebuilt-audit-results`. Look for
 `reports/weight_audit.json` and `reports/weight_artifacts.json`. The latter

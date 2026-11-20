@@ -1,0 +1,11 @@
+{
+  "stage": "ot_contribution",
+  "seeds": [0, 1, 2],
+  "cpu_threads": 2,
+  "practical_gain": 0.005,
+  "image": {
+    "epochs": 40,
+    "batch_size": 128,
+    "learning_rate": 0.002
+  }
+}

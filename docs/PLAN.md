@@ -4,9 +4,12 @@ Branch: `ablation_study`.
 
 This guide records the experiment protocol and commands. The runner is
 implemented in `pipeline/run_ablation.py`, with Stages A/B in
-`pipeline/run_weight_study.py`. The next
+`pipeline/run_weight_study.py`. The
 [controlled-bias diagnostic](#controlled-bias-diagnostic-the-next-experiment)
-is a detailed protocol awaiting implementation. See the
+completed nine fits and stopped at Gate 1. The next work is to train the implemented
+[pair of Stage C experiments](#stage-c-two-bounded-follow-up-experiments):
+image fine-tuning and feature-space SMOTE with reweighting. Neither new
+experiment is implemented or run. See the
 [research handoff](HANDOFF.md) for the earlier studies.
 
 ## Goal
@@ -21,16 +24,16 @@ confirmation. The original development study tested three questions:
 
 Continue with the prototype Sinkhorn method implemented in
 `pipeline/methods/prototype_weights.py`. SAVA, learned-score `ot_finetuning`,
-and synthesis are outside this study. Backbone fine-tuning is a conditional
-later experiment. Conclusions apply to the tested prototype method and setting;
-they do not establish whether every form of OT reweighting is useful.
+and OT-guided synthesis are outside this study. Stage C adds backbone
+fine-tuning and feature-space SMOTE as two separate experiments; it does not
+implement DeepSMOTE image generation. Conclusions apply to the tested method
+and setting; they do not establish whether every form of OT reweighting is useful.
 
-After Stages A/B, first establish whether a known within-class sampling bias
-creates useful reweighting headroom, then compare OT with an informed simple
-correction. This controlled diagnostic keeps the retained pool and frozen
-features, but uses a separate Head-class task and fresh linear classifiers.
-Its explicitly documented data, solver, and reporting rules below override
-the historical continuation setup only for that diagnostic.
+The completed controlled diagnostic found too little net recovery to proceed
+to its OT comparison. Preserve that stop. Stage C directly tests OT on the
+100-class task under backbone fine-tuning and after modest feature synthesis.
+Its protocols below supersede the historical continuation settings only for
+these new experiments. Neither depends on making the failed gate pass.
 
 ## Data split
 
@@ -229,11 +232,29 @@ reproduced final accuracy/recall from saved heads, and recomputed the published
 paired contrasts. The [Stage A](weight_assignment.md) and
 [Stage B](weight_simple_controls.md) guides document those completed stages.
 
-The next authorized design is the controlled-bias diagnostic below: first
-nine fresh-head fits to check damage and recoverable headroom, then at most
-18 further fits to test the target and transport. The diagnostic is implemented;
-the scientific fits have not run. Final confirmation and official test
-evaluation remain separate.
+The controlled-bias diagnostic is complete at Gate 1: **9/9 fits**, no
+reported execution error, all heads converged. Results commit
+[`f2de29bb74ffbcefe1820668156a29cf6186cff2`](https://github.com/Dzzz83/MoE_Imbalance/blob/f2de29bb74ffbcefe1820668156a29cf6186cff2/reports/study_summary.json)
+uses source `d5416a487239436d5c3fab252fbe9a4d02524862`. Before removal,
+after removal, and known correction scored **67.070/66.452/66.516%** on
+34 eligible classes. Mean damage was **0.619 points**; recovery was
+**0.064 points**, or **10.35%** of the damage. Gate 1 failed both magnitude
+criteria and recovery improved accuracy in only one of three seeds. The
+conditional 18 fits did not run. This is not an OT failure result.
+
+Read-only analysis verified 35 published JSON hashes and nine completion
+records, recomputed accuracy/recall from class counts and the gate decision,
+and checked saved convergence diagnostics. It did not independently reload
+the binary heads and reproduce their predictions. Correction improved the
+downsampled groups' contributions by **0.557 points**, offset by **-0.493**
+from the other groups. Class-macro prediction loss improved in every seed.
+These subgroup and loss findings are explanatory, not replacements for the
+prespecified accuracy gate.
+
+The next agreed design is Stage C below: **18 image fine-tuning runs** and
+**30 CPU feature-head fits**, using feature-space SMOTE first. DeepSMOTE
+images, confirmation and official test evaluation remain separate. This is
+a design and implementation plan; no new runner or training is delivered yet.
 
 Use separate output folders under `outputs/ablation_study/`; do not overwrite
 archived results or existing checkpoints. Save resolved configurations, split
@@ -258,14 +279,14 @@ diagnostic and its implemented CPU/Kaggle commands are recorded below.
 3. **Controlled headroom and target:** can a known correction repair introduced
    sampling bias, and does reference-informed OT improve beyond an informed
    simple rule and its own shuffled weights?
-4. **Remaining limits, conditional:** is a specific limitation in optimization,
-   Tail coverage, or the frozen representation worth a separate experiment?
+4. **Stage C:** does OT add value when the backbone can adapt, or after
+   feature-space SMOTE? Run both bounded experiments with separate controls.
 5. **Confirmation:** does a frozen candidate improve on matched controls on a
    second development split?
 
-Run one stage, publish its results, and discuss the evidence before selecting
-the next conditional experiment. Record negative and failed runs. Avoid a large
-parameter search across all these factors.
+Publish each experiment's results and review both before selecting any
+confirmation. A negative Stage C experiment does not cancel the other one.
+Record negative and failed runs. Avoid a parameter search across these factors.
 
 ### Inputs and fixed protocol
 
@@ -503,8 +524,8 @@ requires its own matched shuffles and a separately recorded budget.
    and checkpoints in checksum-linked release assets. Reference original inputs
    and parent assets instead of duplicating their binaries in Git.
 4. Perform a focused self-review and affected local tests, publish the source,
-   and provide `STAGES = ("simple_controls",)` notebook settings. This is now
-   the script default; the completed Stage A remains available explicitly as
+   and provide `STAGES = ("simple_controls",)` notebook settings. This historical
+   mode is explicit; the completed Stage A remains available as
    `STAGES = ("assignment",)`.
 5. The user runs the 15 continuations on Kaggle. Read the complete published
    results and discuss the decision before implementing the next experiment.
@@ -513,10 +534,11 @@ requires its own matched shuffles and a separately recorded budget.
 
 #### Purpose, status, and limits
 
-Status: **implemented; scientific fits not run**. This is the next experiment after
-Stage B. It has two gates and at most **27 fresh linear-classifier fits**.
-It uses cached features and can run on CPU. Historical Stage C routes below
-remain deferred until this diagnostic is reviewed.
+Status: **complete; stopped at Gate 1 after 9/9 converged fits**. The
+[study status](#study-status) records pinned results and verification limits.
+The following protocol documents its two gates and original maximum of
+27 fresh linear-classifier fits. Preserve the gate failure; do not force its
+18 conditional fits to run. Stage C below is a separate new investigation.
 
 The questions are:
 
@@ -1015,123 +1037,496 @@ study outcome, not permission to try another intervention.
 The local pinned-input preflight verifies the 34 classes, sampling arrays,
 all three method geometries and all 27 planned weight vectors. Artificial-data
 tests exercise both gates, convergence failures and restoration. The real
-scientific fits and Kaggle publication remain unrun until execution.
+scientific fits and Kaggle publication completed at the Gate-1 stop. See
+the pinned results and verification limits in the study status above.
 
-### Stage C: investigate one remaining limitation
+### Stage C: two bounded follow-up experiments
 
-These routes are deferred pending the controlled-bias diagnostic and its
-results discussion. Choose at most one justified route, then record its
-hypothesis, exact settings, comparisons, and additional run count before running.
+Status: **implemented; scientific training has not run**. The user selected feature-space
+SMOTE first, with actual DeepSMOTE images conditional on a promising result.
+These are two separate experiments. Their common question is whether
+prototype OT adds practical value beyond class balancing and a simpler rule.
+The failed controlled-bias gate remains closed; it does not gate these new
+100-class experiments.
 
-| Evidence | Focused follow-up |
+#### Common inputs, methods, and limits
+
+Reuse the pinned audit inputs above: preparation seed 42, imbalance factor
+0.01, split 43, 8,716 fitting and 2,131 development images, and baseline seeds
+0/1/2. Restore each exact baseline and its own feature coordinates. Neither
+experiment starts from the final model of the other. Existing Stages A/B
+metrics and the 34-class diagnostic cannot substitute for new matched controls.
+
+Share baseline restoration, fitting/development row positions, validated
+real-only geometry, weight rules, evaluation conventions and artifact handling.
+Share a completed fit only when its entire data, initialization, objective,
+training schedule and source identity match. The image and feature controls
+below do not meet that condition, so their scores must remain separate.
+
+Use the original prototype OT, without cubing or a parameter search: two
+spherical prototypes, minimum real cluster size 5, cosine cost, epsilon 0.1,
+row KL strength 0.2, at most 200 Sinkhorn iterations and tolerance 0.001.
+Replay and validate the real-only geometry and weights against the audit.
+Keep the equal 0.5/0.5 prototype target. The solver must relax sample masses;
+ordinary balanced OT with fixed uniform row masses would not learn weights.
+Solver failure is a technical failure, not permission to return uniform weights.
+
+Fit geometry using real fitting features only. Freeze centers, eligibility,
+cost settings and all weights before classifier training. A class without two
+valid real clusters falls back to uniform weights within its current training
+class. Synthetic copies must not activate a class by inflating its apparent
+sample support. Report the original 75/70/73 active classes and which
+augmented classes overlap them. This explicitly limits conclusions about
+OT's direct effect on the smallest Tail classes.
+
+The C1 easy-rank control uses the starting baseline's true-class logit minus its
+largest other-class logit. Within an OT-active class, obtain midranks, scale
+them to [0,1], exponentiate log(4) times that rank, and normalize. Tied constant
+margins yield uniform weights. Preserve uniform fallback classes. This is the
+Stage B factor-4 recipe, not a newly tuned margin rule.
+
+All final weights are positive and finite. Normalize in float64 so each
+class has total mass 1/100 and total weight is 1. Validate with relative
+tolerance 1e-10 and absolute tolerance 1e-12. Save the unshuffled weights
+before making exact-multiset shuffles; do not renormalize shuffled values.
+Use independent local RNGs for geometry, sampling, augmentation and shuffling.
+The same seed numbers do not by themselves establish matched inputs.
+
+Development and official test data cannot enter synthesis, neighbor search,
+prototypes, margins, OT references or fitted weights. Retain all original
+fitting rows; discarded CIFAR images remain outside method inputs. The
+original Head/Medium/Tail groups continue to use real retained counts.
+Synthetic counts describe training exposure, not new independent observations.
+
+#### Experiment C1: OT contribution during image fine-tuning
+
+Question: on the original 100-class task, does fixed prototype OT help when
+both the classifier and backbone parameters can update?
+
+| Condition | Training input | Weight rule |
+|---|---|---|
+| image_cb | Real fitting images | Class-balanced |
+| image_ot | Same images | Original prototype OT |
+| image_easy_rank | Same images | Factor-4 easy rank |
+| image_ot_shuffle0/1/2 | Same images | Three exact within-class shuffles of image_ot |
+
+Six conditions per seed, three seeds: **18 GPU continuations**. The main
+contrasts are image_ot minus image_cb, image_easy_rank, and the mean of its
+three shuffled controls. Also report easy rank minus class balancing and
+shuffle mean minus class balancing. Average shuffles within each baseline
+seed before computing paired seed differences.
+
+For each condition restore the complete corresponding audit baseline,
+including its trained head, then create a fresh optimizer. Compute fixed
+weights from its deterministic fitting cache, before any fine-tuning. Do not
+recompute weights, margins or prototypes during training.
+
+Use ordinary training crop/flip transforms, uniform shuffled sampling without
+replacement, batch size 128, final partial batches, and 40 epochs. At 8,716
+examples this is 69 batches per epoch and **2,760 optimizer updates** per run.
+Use SGD, learning rate 0.002 for all trainable parameters, momentum 0.9,
+Nesterov enabled, weight decay 0.0005 and a constant schedule. For a batch,
+use the mean of N times each example's global weight times its cross-entropy.
+Do not combine this loss with a class-balanced sampler.
+
+Update backbone parameters and the classifier. Keep batch-normalization
+running means, variances and counters frozen in evaluation mode throughout;
+its affine parameters remain trainable. This tests parameter adaptation
+without introducing a separate batch-statistics policy. Restore this mode
+after any call that sets the model to training mode. Final image inference
+must work using the ordinary saved model alone.
+
+Within a seed, give every condition the same batch permutations and
+augmentation RNG schedule. Record unweighted and weighted fitting losses,
+gradient/parameter movement, actual step count and wall time. Verify backbone
+parameters actually change and BN buffers do not. Save the scheduled final
+model; no development-based epoch selection.
+
+Run a small artificial-data integration check before launching the study.
+Nonfinite loss, changed input identities, zero backbone updates or accidental
+BN updates block scientific interpretation. A valid low score does not
+authorize another learning-rate trial. The schedule is a bounded hypothesis
+test, not a claim that all fine-tuning recipes have been exhausted.
+
+Historical frozen-feature studies supply motivation. Because this experiment
+also uses image augmentation and a different update protocol, comparing it
+with historical scores does not isolate backbone updating as the cause of
+any gain. A strict frozen-versus-updating interaction would require another
+matched experiment and is outside these 18 runs.
+
+#### Experiment C2: feature-space SMOTE followed by reweighting
+
+Question: does interpolation of minority fitting features help, and does OT
+add value on the combined real and synthetic features beyond simpler rules?
+
+This first version is feature-space SMOTE on the cached ResNet features. It
+does not train an autoencoder, decode images, reproduce DeepSMOTE, or update
+the backbone. [DeepSMOTE](https://arxiv.org/abs/2105.02340) uses an
+encoder/decoder and its own training objective. The existing OT-guided
+synthesizer is also a different generation method and is not used here.
+
+For a class with n real fitting rows, set the augmented count to n when
+n >= 100, otherwise min(100, 4*n). Retain all real rows and generate only the
+difference. The verified count arithmetic for split 43 is **2,726 added rows
+across 70 classes**, giving **11,442 total rows**. The smallest fitting class
+goes from 4 to 16 rows; the largest remains 400. This reduces count imbalance
+without pretending to recover independent missing examples. One count policy
+is planned; no oversampling-ratio sweep.
+
+For each feature seed and each class with added rows:
+
+1. Compute same-class cosine nearest neighbors on normalized real fitting
+   vectors only, excluding the anchor itself. Use k = min(5, n-1), resolving
+   distance ties by fitting-cache row position.
+2. Draw an anchor uniformly with replacement; choose uniformly among its k
+   neighbors. Draw lambda uniformly in [0,1).
+3. Form the new vector in raw coordinates as
+   z = (1-lambda)*x_anchor + lambda*x_neighbor. Preserve its class label.
+   Do not normalize or rescale vectors used by the classifier.
+4. Save the anchor and neighbor cache-row positions, lambda, class and origin
+   flag. The duplicate control uses the exact same anchor with lambda = 0,
+   rather than another independent resampling draw.
+5. Save one SMOTE bank and one anchor-duplicate bank per representation.
+   Every weighting condition uses these identical saved inputs.
+
+Use CPU local generators with seeds 700 for anchors, 701 for neighbor-rank
+draws, and 702 for lambda. Restart these streams identically for each feature
+seed, traversing classes and new rows in ascending order. Anchor positions
+and interpolation draws are matched across representations; actual nearest
+neighbor identities may differ with their geometry. This does not separately
+estimate generator variability. If fewer than two real rows exist, fail this
+input policy rather than inventing a synthesis fallback; current inputs have
+at least four. Identical real vectors may produce duplicates: retain and
+report them instead of drawing until a desired quality score is obtained.
+
+Do not synthesize from synthetic parents, reject examples using development
+scores, or treat a convex combination as evidence of a new class mode.
+
+Build augmented OT weights against the same real-only centers and equal
+target masses defined above. The source rows are all real plus added rows.
+Compute normalized cosine costs on them and solve the relaxed row-mass
+problem, then normalize each class to 1/100. Geometry/fallback classes remain
+fixed from real data. C2's simple control uses the same real-only centers:
+give a row a score of minus its smallest cosine distance to either center,
+divided by 0.1, then softmax within its class and divide by 100. Preserve
+uniform fallback classes. This is Stage B's prototype-distance rule, extended
+to the combined rows without tuning its temperature. It directly tests
+whether simple proximity explains OT's result on synthesized data. The
+class-balanced baseline gives each combined row weight 1/(100*m_c).
+Because all classes already receive equal total loss mass, increasing row
+counts does not add another class-prior correction. This comparison tests
+whether interpolation changes the useful within-class training distribution,
+and whether OT improves that distribution's weighting.
+
+| Condition | Training features | Weights |
+|---|---|---|
+| feature_real_cb | Real only | Class-balanced |
+| feature_real_ot | Real only | Original prototype OT |
+| feature_duplicate_cb | Real plus saved anchor copies | Class-balanced |
+| feature_duplicate_ot | Same duplicate bank | OT against real-only centers |
+| feature_smote_cb | Real plus saved interpolations | Class-balanced |
+| feature_smote_ot | Same SMOTE bank | OT against real-only centers |
+| feature_smote_prototype_distance | Same SMOTE bank | Simple prototype-distance weights |
+| feature_smote_ot_shuffle0/1/2 | Same SMOTE bank | OT values shuffled within each class and origin |
+
+Ten conditions per feature seed, three seeds: **30 CPU head fits**.
+The three synthesis shuffles use RNG seeds 0/1/2, separately within each
+class's real rows and each class's added rows. This preserves the exact
+weight multiset and total real/synthetic mass in each class. It asks whether
+specific assignments help beyond a class-specific preference for real or
+synthetic examples. Single-valued strata remain unchanged. This is more
+restricted than the real-only within-class shuffles in C1. It does not test
+whether the total synthetic mass itself is optimal.
+
+Train a **fresh zero-initialized 100-output linear head** in each condition.
+Freeze the feature extractor and its BN state. Reuse the controlled-bias
+head's CPU float64 full-batch objective and solver settings: regularization
+0.0005 on weights and bias, L-BFGS learning rate 1, history size 100, strong
+Wolfe line search, maximum 1,000 iterations and 1,250 optimizer objective
+evaluations, gradient tolerance 1e-7, change tolerance 1e-12, and final full
+gradient infinity norm <= 1e-6. Log the final verification evaluation
+separately. A convergence failure is a technical failure; no adaptive solver
+or regularization sweep is included.
+
+Evaluate all heads on the same 2,131 real development features in their own
+representation. Report ordinary 100-class balanced accuracy, not the
+34-class diagnostic score. Save a full model with the head converted for
+ordinary image inference, plus the original float64 head for exact reporting.
+Verify predictions from both; report any differences caused by casting.
+All primary scores use the float64 head consistently. Full-batch convergence
+avoids granting augmented conditions more SGD steps merely because their
+datasets are larger. Compute time and optimizer evaluations can still differ;
+record them. Do not reuse historical 40-epoch classifier scores as controls.
+
+Let A = real CB, B = real OT, C = SMOTE CB, D = SMOTE OT. Report all of:
+
+- C - A: synthesis with class balancing.
+- D - C: OT's added value after synthesis.
+- D - B: synthesis's added value with OT.
+- B - A: OT without synthesis in this same fresh-head protocol.
+- (D - C) - (B - A): interaction of synthesis and OT.
+- D minus SMOTE prototype distance and the mean of its own three shuffles.
+- C minus duplicate CB and D minus duplicate OT: interpolation versus the
+  matched anchor-copy exposure controls.
+- D - A: practical gain of the whole combination.
+
+A positive interaction describes this fixed protocol; it is not required
+for OT to be useful after synthesis. A combined improvement over A alone
+cannot establish a benefit from OT. If interpolation and duplicate controls
+match, do not attribute the effect to useful new synthetic diversity.
+
+#### Measurements and decision rules
+
+The primary endpoint for both experiments is final **100-class development
+balanced accuracy**. Report all three matched-seed differences, their mean
+and sample SD. Report condition means/SD, overall accuracy, macro prediction
+loss, per-class recall and original Head/Medium/Tail groups. Show the
+contribution of classes with one development example and each class's
+contribution to the primary difference. Keep these as sensitivity descriptions;
+do not change the endpoint after inspecting the results.
+
+The independent variations here are three fitted representations/training
+seeds on one fixed population and split. Synthetic rows and shuffled runs
+are not independent replications. Do not claim equivalence, statistical
+significance or generalization to other datasets from these budget gates.
+
+For each required contrast, the screening rule is a mean gain of at least
+**0.5 percentage points** and a positive difference in at least **2/3 seeds**.
+Apply inclusive boundaries with the existing absolute roundoff tolerance
+1e-12. Differences within 1e-12 of zero do not count as positive seeds;
+this avoids counting shuffled-mean roundoff as improvement. Report all
+contrasts, including those that fail:
+
+| Candidate or claim | Required screening contrasts |
 |---|---|
-| Curves suggest incomplete or unstable optimization, or a strength-dependent result | Compare class-balanced, strong OT, three shuffled strong OT conditions, and the candidate at common neighboring rates 0.0002 and 0.02; reuse 0.002 as reference (at most 36 additional continuations, before any candidate-specific shuffles) |
-| A benefit appears in OT-active classes while Tail mostly falls back | Test minimum cluster size 2 versus 5, holding other OT settings fixed; recompute coverage and compare each policy with its own matched shuffles and class-balanced reference |
-| Assignment is ineffective despite substantial classifier learning | Consider whether representation learning is needed; define an image-based experiment comparing class-balanced, OT, shuffled OT, and the candidate under one common backbone fine-tuning schedule |
+| OT useful during image fine-tuning | image_ot minus image_cb, image_easy_rank, and its shuffle mean |
+| Useful synthesis without OT | SMOTE CB minus real CB and duplicate CB |
+| OT adds value after synthesis | SMOTE OT minus SMOTE CB, SMOTE prototype distance, and its origin-preserving shuffle mean |
+| Synthesis plus OT merits confirmation | All preceding OT-after-synthesis contrasts, plus SMOTE OT minus real CB, real OT and duplicate OT |
 
-Lowering minimum cluster size cannot activate every tiny class and may produce
-unstable prototypes. Report changed coverage and fixed original subsets as well
-as aggregate accuracy. The backbone route requires images and changes the
-training setting; cached features cannot establish its result. Neither route is
-an automatic response to an unfavorable score. If the evidence offers no
-specific next hypothesis, stop and record the limitation rather than expand
-the search indefinitely.
+An improvement over SMOTE CB alone is insufficient to promote OT; it must
+also beat the simple weighting and assignment controls. Conversely, weak
+SMOTE CB does not automatically disqualify a useful combination if the full
+combination clears all its contrasts. The two experiments are independent:
+one failing does not prevent completing the other.
 
-Every comparison must use the same optimization and backbone-update protocol.
-When a candidate changes the within-class weight multiset or active-class mask,
-add three shuffles of that candidate's own weights per seed for assignment
-claims. Shuffles of the old strong OT vector cannot control a different weight
-distribution or coverage policy. Record these additions in the stage budget;
-deduplicate conditions that are identical.
+Before reading development scores, validate artifact hashes, weight totals,
+solver checks, exact shuffles, input counts, origin flags, interpolation
+identity and source-only geometry. Technical failure yields an incomplete
+decision, not a negative scientific result. Record retries and preserve
+failed attempts; never rerun a valid seed just because its score is poor.
 
-### Measurements and decision rules
+For C1, report parameter/gradient movement and frozen BN buffers. For C2,
+report unique real parent counts, generated duplicate frequency, neighbor
+distances, class-wise real/synthetic weight mass, weight spread, effective
+sample size and the number of augmented OT-active/fallback classes. ESS is
+a weight concentration diagnostic, not a count of independent synthetic
+observations. A confidence or distance score cannot certify synthetic labels.
 
-Use the common measurements above. In addition, save the baseline fitting
-margins, final weight vectors, ranking/tie seeds, within-class margin/weight
-rank associations, and top-quarter confidence summaries with tie handling.
-Report how much weight goes to baseline mistakes and near-zero margins, using
-within-class absolute-margin rank to describe uncertainty without choosing a
-new score threshold from development outcomes. Record weight spread and effective
-sample size alongside those summaries. Check that the intended reassignment
-actually occurred before interpreting training outcomes.
-
-Primary outcome is final development balanced accuracy. Show paired seed
-differences, their mean and sample SD, the three individual values, and
-Head/Medium/Tail and original OT-active/fallback changes. Average shuffle scores
-within each baseline seed first; show shuffle variation separately. Three seeds
-do not establish equivalence or supply strong evidence from a tiny mean gain.
-Subset gains and training diagnostics cannot replace the primary outcome.
-
-Use **0.5 percentage points of balanced accuracy** as an initial practical
-target for deciding whether a candidate merits confirmation. This is a research
-budget rule, not a significance threshold or a detectable-effect guarantee.
-Advance a prespecified candidate when its mean paired gain meets this target
-against class-balanced, strong OT, and mean shuffled strong OT, with positive
-differences on at least two of three seeds for each comparison. Report all
-contrasts, including unfavorable ones. Treat a smaller or inconsistent effect
-as unresolved; pursue it only with a specific mechanism and a bounded follow-up.
-Record any revision to this target before running the affected experiment.
+Do not add a synthetic-mass cap in this first comparison: an added cap would
+be another weighting method. Diagnose whether OT puts nearly all mass on
+real or on added rows, and disclose this when explaining a gain or failure.
+Changes to that policy require a new hypothesis and budget.
 
 ### Stage D: confirmation and research decision
 
-Freeze one candidate's full recipe and its required controls before generating
-new results. Use a second fixed development split with seed 44 and matched
-training seeds 0, 1, 2. Train three fresh fitting-only baselines; the seed-43
-checkpoints have seen some of the new development images and cannot be reused.
-Run class-balanced, original OT, strong OT, three shuffled strong OT conditions,
-the candidate, and the strongest native simple control identified in Stage B.
-Carry the frozen optimization and backbone-update protocol into every control.
-For a candidate with a different weight multiset or active-class mask, include
-three candidate-specific shuffles per seed as described in Stage C. Deduplicate
-identical conditions. The unchanged Stage A/B protocol needs at most
-**27 continuations plus three baselines**; candidate-specific shuffles can add
-nine continuations. If Stage B was skipped, document the chosen simple control
-before confirmation. Freeze any follow-up schedule too.
+Review the two completed C reports before advancing anything. If no OT
+candidate clears its full screening criteria, **deprioritize the tested
+prototype OT route**. Useful synthesis or easy-rank weighting may still merit
+work independently. Mixed or noisy effects are unresolved scientifically;
+they do not automatically earn another parameter sweep.
 
-This second split checks sensitivity to the held-out partition within the same
-retained pool; it is not an independent dataset replication. Apply the same
-practical target against distinct reference methods, including the native simple
-control and candidate-specific shuffle mean when required. Omit self-comparisons
-if the candidate is itself a reference condition. Report every planned paired
-contrast. Do not tune on this split. A failed confirmation remains a negative or
-inconclusive finding; returning to development starts a new exploratory cycle.
+For each promising route, freeze its complete protocol and controls and
+repeat its matrix on split seed **44**, with matched baseline/training seeds
+0/1/2. Train three new fitting-only baselines using the same original
+200-epoch baseline recipe. Split-43 checkpoints cannot be reused because
+they have seen some split-44 development examples. Restore the same retained
+pool; do not use discarded images. Both routes may share these three new
+baselines when their complete identity matches.
 
-- **Continue OT research:** an OT-based candidate shows a useful, consistent
-  gain over class-balanced, shuffled, and native simple controls in confirmation.
-  Name the supported mechanism and next targeted improvement.
-- **Continue reweighting with a simpler method:** a non-OT rule improves on
-  class balancing while OT has no demonstrated extra value.
-- **Stop or deprioritize current prototype OT:** no reproducible practical gain
-  emerges after the planned comparisons and any justified bounded follow-up.
-  State the tested architecture, data regime, coverage, and training scope.
-- **Unresolved:** effects vary across seeds/splits or uncertainty remains large.
-  Do not describe a small or inconsistent difference as proof of no effect.
+Freeze a new split-44 input manifest, feature caches and real-only geometry
+before any continuation. The split-43 audit hashes and its 75/70/73 active
+class counts are historical references, not expected values for these newly
+trained baselines. Validate each new input against its own preparation receipt.
 
-Only after a frozen recipe survives development confirmation should the final
-evaluation protocol above be used. The current `final` runner carries the old
-condition set; extend it to the frozen candidate and controls before using it
-for this investigation. Do not start official test evaluation automatically.
+For C1 repeat all 18 continuations with the frozen image schedule. For C2
+regenerate the geometry and banks from split-44 fitting rows only and repeat
+all 30 fits with the frozen generation and head rules. Recompute augmented
+counts from the split; do not force the split-43 total. Neither route tunes
+on split 44. Confirm an OT route only if it meets the same full contrast
+criteria. This is sensitivity to a held-out partition of the same population,
+not independent-dataset replication.
+
+| Outcome | Decision |
+|---|---|
+| Image OT passes screening and confirmation | Continue this fixed-weight OT fine-tuning direction; identify its supported regime |
+| SMOTE plus OT passes screening and confirmation | Continue the combined feature-reweighting direction; image synthesis is a possible next question |
+| Synthesis or easy rank helps but OT adds no practical advantage | Prefer the simpler successful method; do not credit OT |
+| Neither route produces a confirmed OT advantage | Stop or deprioritize this prototype OT cycle and record its limits |
+| Technical failures or unstable differences | Report incomplete/unresolved; resolve a specific defect or stop within the budget |
+
+A passing result would support this method and setting, not every OT method
+or every imbalance problem. A negative result would justify a resource
+decision without proving OT can never help.
+
+Actual DeepSMOTE is **deferred**. A feature result cannot establish that
+decoded images will help. Before that extension, write a separate protocol
+and generator/compute budget: train the encoder/decoder only on fitting
+images, pin the source implementation and adaptation, assess reconstructions,
+freeze generation, then compare image synthesis with class balancing, OT,
+simple weighting, duplication and assignment controls under one image
+training schedule. A clear feature-synthesis signal justifies considering
+that investment; it does not authorize automatic execution.
+
+Only after development confirmation freeze the recipe for official-test
+evaluation. Reproduce a full-retained-pool version with matched controls
+rather than treating development-subset scores as final test scores. Full-pool
+baseline training, any generator training and final comparison runs require
+their own recorded budget. Earlier test exposure informed the project and
+must be disclosed; the official test set is not a fresh independent study.
+Do not use it for choosing the winning epoch, method or settings.
 
 ### Implementation and execution checklist
 
-Stage A implementation, publication, Kaggle execution, and result analysis are
-complete. Its runner, input checks, weight invariants, frozen-state checks,
-checkpoint/report publication, and completed-run recovery are implemented and
-locally tested. The [assignment guide](weight_assignment.md) documents that
-completed stage. Stage B's five controls, pinned-reference checks, geometry
-replay, paired reports and Kaggle restoration/publication are implemented;
-the [Stage B guide](weight_simple_controls.md) describes execution. Its Kaggle
-training and read-only result verification are complete, as recorded in the
-study status above. The controlled-bias diagnostic is implemented with a local
-pinned-input preflight; scientific fitting and Kaggle execution remain pending.
+1. Preserve Stages A/B and the completed controlled-bias result, including
+   their source/configuration identities. New stages need new configurations,
+   output roots and result branches. No automatic forced Gate 2, archived
+   framework import, SAVA or learned full-pool OT substitution.
+2. Implement C2 first because it needs only existing audit caches. Add a
+   generation helper for raw-coordinate SMOTE and paired anchor copies,
+   real-only-center augmented weights, prototype-distance weights, and
+   class/origin shuffles. Reuse the existing relaxed solver and fresh-head numerical loop
+   without importing the 34-class experiment's controller or gate assumptions.
+   Extract shared code only when its callers need the shared responsibility.
+3. Add a C2 runner and config that freeze all preparation before fitting,
+   save per-seed banks/weights/parent positions, and run the exact 30-fit
+   matrix. The existing synthesis classifier does not already implement this
+   protocol: its old sampling, initialization and objective cannot substitute.
+4. Add the C1 runner/config and image update loop using shared model/data
+   interfaces. Restore the audit checkpoints and reconstruct/validate the
+   real fitting images in cache row order. Reuse existing OT and factor-4
+   easy-rank weighting builders; keep the current cached classifier path unchanged.
+5. Add focused artificial-data checks for same-class/excluded-self neighbors,
+   k with tiny classes, stable ties, convex interpolation, raw coordinates,
+   exact copied anchors, counts, independent RNG streams, real-only geometry,
+   preserved fallbacks, class/origin mass, exact shuffles, fresh-head
+   convergence, step counts, backbone movement, BN preservation, final partial
+   batches, standalone image inference, tampering and interrupted-run recovery.
+   Check cast-head predictions separately from the float64 primary report.
+6. Extend the Kaggle wrapper with explicit new modes, each with a preflight-only
+   option, separate work folders and result branches. Implemented mode names are
+   ot_contribution and synthetic_reweighting.
+   C1 needs a GPU and CIFAR training images; C2 can run on CPU with caches.
+   Retain existing modes. The script now defaults to synthetic_reweighting,
+   matching the user's choice to run feature-space SMOTE first.
+7. Pin source/config/input/environment identities at first execution, and
+   publish incrementally after every completed fit. Hash banks, weights,
+   geometry and all completed outputs. Publish JSON reports in Git and
+   content-addressed binary assets in GitHub releases. Compatible completed
+   runs may be reused; interrupted runs restart from the original checkpoint
+   or zero head with failed attempts preserved. Do not silently regenerate a
+   different bank, mix source versions or reuse a result from another protocol.
+8. Perform one focused self-review and affected CPU checks. Run pinned-input
+   preflights without scientific fitting. Publish the implementation and give
+   the user exact notebook settings before they execute on Kaggle. Run all C2
+   conditions even if synthesis alone looks weak; its interaction is a planned
+   question. C1 also proceeds regardless of C2's scientific outcome.
+9. Analyze both matrices, publish paired contrasts and plain-language reports,
+   and apply the decision table before any confirmation or DeepSMOTE extension.
 
-Stages A and B completed 42 cached-feature continuations on the existing audit
-baselines. The new diagnostic adds nine fresh-head fits first and at most
-18 after its gate passes, with no new backbone training. Later Stage C routes
-need another recorded budget; Stage D adds fresh baseline training. Nothing
-in this plan automatically launches those later experiments.
+The initial scientific budget is fixed as follows:
+
+| Phase | GPU work | CPU head fits |
+|---|---|---|
+| C2: synthesis and reweighting | None; reuse three audit backbones | 30 |
+| C1: image OT contribution | 18 continuations of 40 epochs | None |
+| Conditional D, if only C1 advances | 3 new 200-epoch baselines plus 18 continuations | None |
+| Conditional D, if only C2 advances | 3 new 200-epoch baselines | 30 |
+| Conditional D, if both advance | The same 3 new baselines plus 18 continuations | 30 |
+
+Thus the initial work is **48 fits/runs** of very different costs. If both
+routes advance, confirmation adds at most **51 fits/runs**, including the
+three shared baselines. These totals exclude artificial-data tests, recorded
+technical retries, and all deferred full-pool/DeepSMOTE work. Neither maximum
+is a GPU-hour estimate. Report measured per-run time before estimating
+notebook-session requirements. Do not expand the matrices after seeing scores.
+
+#### Implemented Stage C commands and Kaggle delivery
+
+[`run_ot_followups.py`](../pipeline/run_ot_followups.py) implements both matrices.
+The frozen settings are [`synthetic_reweighting.json`](../configs/synthetic_reweighting.json)
+and [`ot_contribution.json`](../configs/ot_contribution.json). The generation,
+weight rules, image loop and reporting have separate modules. The CPU head
+objective is shared with the historical diagnostic; its controller and gates
+are not used. No Stage D or DeepSMOTE work runs automatically.
+
+With the checksum-verified audit inputs restored under `outputs/audit_inputs`,
+run from the repository root:
+
+```bash
+python -m pipeline.run_ot_followups --config configs/synthetic_reweighting.json --inputs outputs/audit_inputs --output-dir outputs/synthetic_reweighting --preflight-only
+python -m pipeline.run_ot_followups --config configs/synthetic_reweighting.json --inputs outputs/audit_inputs --output-dir outputs/synthetic_reweighting
+python -m pipeline.run_ot_followups --config configs/ot_contribution.json --inputs outputs/audit_inputs --output-dir outputs/ot_contribution --train-data data/prepared/train.npz --split-dir outputs/image_split43 --preflight-only
+python -m pipeline.run_ot_followups --config configs/ot_contribution.json --inputs outputs/audit_inputs --output-dir outputs/ot_contribution --train-data data/prepared/train.npz --split-dir outputs/image_split43 --device cuda
+```
+
+Preflight prepares and validates all three seeds without fitting or creating a
+study output tree. C1 additionally reconstructs the exact audit image split and
+checks exact array hashes and row labels. Canonical hashes in
+[`followup_images.py`](../pipeline/followup_images.py) bind every pixel and
+label to the checksum-verified official training source and the audit's
+unchanged preparation/split recipe. Historical compressed-NPZ hashes remain
+part of audit provenance; new containers can differ across writing environments
+without changing their arrays. Positions, counts, settings and canonical
+arrays must match exactly. Local reconstructed files also retain their own
+file-hash checks on reuse. It can preflight on CPU before GPU training;
+this does not pin a CPU training environment into the GPU study.
+
+For Kaggle, paste the complete [`kaggle_ablation_study.py`](../scripts/kaggle_ablation_study.py)
+into a fresh notebook. Enable Internet and the `GITHUB_TOKEN` secret with
+repository and release write access. The wrapper downloads pinned baselines
+and caches itself; no old notebook output is required.
+
+| Experiment | Script setting | Accelerator / images | Results branch | Working folder |
+|---|---|---|---|---|
+| C2 first | `STAGES = ("synthetic_reweighting",)` (default) | CPU; no CIFAR attachment | `ablation-synthetic-reweighting-results` | `/kaggle/working/ot-synthetic-reweighting` |
+| C1 | `STAGES = ("ot_contribution",)` | GPU; attach CIFAR-100 at `RAW_CIFAR_ROOT`, or explicitly set `ALLOW_DOWNLOAD = True` | `ablation-ot-contribution-results` | `/kaggle/working/ot-ot-contribution` |
+
+Use a separate fresh notebook for C1. Set `FOLLOWUP_PREFLIGHT_ONLY = True` for
+input/generation/weight checks without fitting or publication. Set it back to
+false for the fixed matrix. Preserve each notebook's working folder in Kaggle
+outputs. The first training execution pins the source commit, complete config,
+environment and preparation identities. Do not change these during recovery.
+
+Every completed fit publishes JSON reports and a checksum-linked release asset.
+`study_status.json` counts 30 C2 or 18 C1 fits. `study_summary.json` contains all
+paired contrasts, class contributions and screening criteria; `readable_report.json`
+expresses differences in percentage points. Each preparation asset contains
+real-only geometry, banks and parent metadata, and the complete fixed weight
+matrix. Each run saves a standalone `final.pt`; C2 also saves the original
+float64 `head.pt`, primary predictions, cast-head predictions and disagreement
+count. Standalone checkpoints retain original real class counts for reporting;
+their configs record fitting counts separately. Synthetic mass, effective
+sample size and coverage are diagnostics.
+
+Restarting the same script restores published JSON and binary assets, verifies
+preparation/output receipts, and reuses complete compatible fits. Incomplete
+fits are archived under `attempts/` and restart from zero/the audit baseline;
+failed attempts and diagnostics are also published. There is no epoch resume
+or retry of a valid low-scoring fit. A solver or integrity failure leaves the
+research decision incomplete.
+
+Artificial-data checks exercise both complete matrices, deterministic generation,
+fallback and weight invariants, exact class/origin shuffles, solver failure,
+partial image batches, backbone updates, BN preservation, image checkpoint
+inference, casting, tamper rejection and recovery. Pinned-input preflight checks
+are recorded in the handoff. These checks establish workflow correctness;
+scientific results and CUDA execution remain unverified until Kaggle training.
 
 ## Running the study
+
+The commands below reproduce the historical study. They do not run C1 or C2;
+use the implemented Stage C commands immediately above for the new experiments.
 
 Run from the repository root with the configured Python environment active.
 Prepare the retained pool first using the README instructions. Settings are in
@@ -1284,8 +1679,9 @@ updated workspace to resume a partially published follow-up.
 
 ### Audit which examples OT favors
 
-The Kaggle runner now defaults to `STAGES = ("controlled_bias",)` for the new
-diagnostic. Use `STAGES = ("simple_controls",)` to reproduce Stage B.
+The Kaggle runner now defaults to `STAGES = ("synthetic_reweighting",)` for C2.
+Use `STAGES = ("controlled_bias",)` for the completed diagnostic, or
+`STAGES = ("simple_controls",)` to reproduce Stage B.
 Set `STAGES = ("rebuild_audit",)` only to reproduce the completed audit when its
 inputs are missing. With CIFAR-100 attached, this audit mode
 recreates the published fitting split and trains only the three fitting

@@ -1,0 +1,16 @@
+{
+  "stage": "synthetic_reweighting",
+  "seeds": [0, 1, 2],
+  "cpu_threads": 2,
+  "practical_gain": 0.005,
+  "head": {
+    "regularization": 0.0005,
+    "learning_rate": 1,
+    "history_size": 100,
+    "max_iterations": 1000,
+    "max_evaluations": 1250,
+    "gradient_tolerance": 1e-7,
+    "change_tolerance": 1e-12,
+    "accepted_gradient_norm": 1e-6
+  }
+}

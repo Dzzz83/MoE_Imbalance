@@ -27,13 +27,20 @@ continuations, respectively. They have not established the planned 0.5-point
 practical improvement over class balancing. See the [research handoff](HANDOFF.md)
 for findings and pinned results.
 
-The next experiment is the
-[controlled-bias diagnostic](PLAN.md#controlled-bias-diagnostic-the-next-experiment):
-34 eligible Head classes, a known within-class sampling intervention, nine
-fresh-head fits to establish recoverable headroom, and at most 18 conditional
-fits to test target specification and transport. It is **implemented; scientific
-fits have not run**. Its fresh 34-class head and full-batch solver are separate
-from the existing 100-class continuation path.
+The [controlled-bias diagnostic](PLAN.md#controlled-bias-diagnostic-the-next-experiment)
+completed nine converged fresh-head fits on 34 eligible Head classes and
+stopped at Gate 1: 0.619 points of damage and 0.064 points of recovery.
+The conditional OT comparisons did not run. Its classifier-only findings
+do not establish whether OT is useful in other training settings.
+
+The next [two Stage C experiments](PLAN.md#stage-c-two-bounded-follow-up-experiments)
+are **implemented; scientific training has not run**. C2 uses feature-space SMOTE and 30 fresh
+CPU classifier fits to separate synthesis, duplication, simple weighting and
+OT assignment effects. C1 uses 18 GPU continuations to compare OT and its
+controls while backbone parameters update with BN running buffers frozen.
+They share audit baselines and split 43 but use separate matched comparisons.
+The user chose feature synthesis first; actual DeepSMOTE image generation
+is deferred. Confirmation on split 44 is conditional on useful results.
 
 ## Project structure
 
@@ -54,6 +61,10 @@ from the existing 100-class continuation path.
 | [`pipeline/run_simple_controls.py`](../pipeline/run_simple_controls.py) | Run Stage B and report paired contrasts, active/fallback contributions, and sensitivity to one-image development classes. |
 | [`pipeline/controlled_bias_data.py`](../pipeline/controlled_bias_data.py) and [`controlled_bias_weights.py`](../pipeline/controlled_bias_weights.py) | Validate the pinned seed-0 controller, select reference/unbiased/biased fitting rows, and construct known, reference-based and shuffled weights with explicit information boundaries. |
 | [`pipeline/controlled_bias_head.py`](../pipeline/controlled_bias_head.py), [`controlled_bias_reporting.py`](../pipeline/controlled_bias_reporting.py), and [`run_controlled_bias.py`](../pipeline/run_controlled_bias.py) | Fit fresh regularized K-class CPU heads, verify convergence, enforce the two gates, report paired results and restore compatible completed fits. |
+| [`pipeline/feature_smote.py`](../pipeline/feature_smote.py) and [`followup_weights.py`](../pipeline/followup_weights.py) | Generate raw-coordinate SMOTE and paired anchor copies; build fixed real-only-center OT/simple controls and exact class/origin shuffles. |
+| [`pipeline/image_reweighting.py`](../pipeline/image_reweighting.py) | Update image backbone/head parameters with matched augmentation streams, fixed sample weights, and frozen BN running buffers. |
+| [`pipeline/followup_images.py`](../pipeline/followup_images.py) | Validate exact retained/fitting/development pixel and label hashes, audit split metadata and cache row order independently of NPZ container serialization. |
+| [`pipeline/run_ot_followups.py`](../pipeline/run_ot_followups.py) and [`followup_reporting.py`](../pipeline/followup_reporting.py) | Run the separate 18-fit C1 / 30-fit C2 matrices, verify/preserve artifacts, and report 100-class paired contrasts and screening decisions. |
 | [`scripts/kaggle_prototype_comparison.py`](../scripts/kaggle_prototype_comparison.py) and [`scripts/kaggle_ablation_study.py`](../scripts/kaggle_ablation_study.py) | Run full-pool method comparisons, development ablations, and weight audits on Kaggle. |
 | [`scripts/check_reweighting_transport.py`](../scripts/check_reweighting_transport.py) and [`scripts/report_results.py`](../scripts/report_results.py) | Check resource use for full-pool OT and regenerate descriptive tables and charts from the archive. |
 | [`configs/`](../configs/) and [`tests/`](../tests/) | JSON experiment recipes and automated checks using artificial data. |
@@ -131,14 +142,18 @@ Study summaries require all expected runs. JSON reports live on results
 branches; checkpoints, features, weights, and geometry use checksum-linked
 release assets. Raw images and binaries stay out of Git history.
 
-The ablation Kaggle script defaults to `STAGES = ("controlled_bias",)` and
-restores the audit inputs and pinned Stage B controller automatically. It uses
-CPU, requires Internet and `GITHUB_TOKEN`, and publishes to the separate
-`ablation-controlled-bias-results` branch. The pinned-input preflight verified
-6,992 eligible fitting rows, 1,372 reference rows, 5,620 unbiased rows and
-3,485 retained biased rows. Scientific fits and Kaggle publication are pending.
-`STAGES = ("simple_controls",)` still reproduces/restores completed Stage B.
-Full image training runs on Kaggle; this small feature-only diagnostic uses CPU.
+The ablation Kaggle script defaults to `STAGES = ("synthetic_reweighting",)`:
+30 CPU fits, automatically restored audit inputs, no CIFAR attachment, and
+the separate `ablation-synthetic-reweighting-results` branch. C1 uses
+`STAGES = ("ot_contribution",)`, a GPU and CIFAR training images, publishing to
+`ablation-ot-contribution-results`. Both require Internet and `GITHUB_TOKEN`;
+`FOLLOWUP_PREFLIGHT_ONLY` validates without scientific fitting or publication.
+Source/config/environment/input identities and saved preparation are checked
+on recovery. Completed fits are reused, interrupted attempts preserved and
+restarted, and JSON/binary assets published separately. See
+[exact settings](PLAN.md#implemented-stage-c-commands-and-kaggle-delivery).
+Historical `controlled_bias` and `simple_controls` modes remain available.
+The diagnostic's nine completed Gate-1 fits and stop are unchanged.
 
 ## Documentation map
 

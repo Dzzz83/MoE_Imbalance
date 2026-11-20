@@ -1,7 +1,6 @@
 """Bounded, gated fresh-head diagnostic on pinned frozen features."""
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -17,7 +16,7 @@ from pipeline.controlled_bias_weights import (
 )
 from pipeline.run_ablation import _completed_run, _finish_run
 from pipeline.run_weight_study import environment
-from pipeline.runtime import atomic_torch_save, atomic_write_json, file_sha256
+from pipeline.runtime import atomic_torch_save, atomic_write_json, content_identity, file_sha256
 
 CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs/controlled_bias.json"
 RUN_FILES = {"config.json", "head.pt", "history.json", "optimization.json", "metrics.json", "predictions.pt"}
@@ -38,18 +37,6 @@ def resolve_config(config):
     if json.dumps(resolved, sort_keys=True) != json.dumps(defaults, sort_keys=True):
         raise ValueError("Controlled-bias settings are frozen to PLAN.md; record a new protocol before changing them")
     return resolved
-
-
-def content_identity(value):
-    """Stable tensor identities independent of torch.save's container metadata."""
-    if isinstance(value, torch.Tensor):
-        return {"sha256": hashlib.sha256(value.detach().cpu().contiguous().numpy().tobytes()).hexdigest(),
-                "shape": list(value.shape), "dtype": str(value.dtype)}
-    if isinstance(value, dict):
-        return {str(k): content_identity(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [content_identity(v) for v in value]
-    return value
 
 
 def prepare_study(config, input_root, controller_root):

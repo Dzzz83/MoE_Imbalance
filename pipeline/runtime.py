@@ -54,6 +54,18 @@ def file_sha256(path):
     return digest.hexdigest()
 
 
+def content_identity(value):
+    """Stable nested tensor identities independent of torch.save container metadata."""
+    if isinstance(value, torch.Tensor):
+        return {"sha256": hashlib.sha256(value.detach().cpu().contiguous().numpy().tobytes()).hexdigest(),
+                "shape": list(value.shape), "dtype": str(value.dtype)}
+    if isinstance(value, dict):
+        return {str(k): content_identity(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [content_identity(v) for v in value]
+    return value
+
+
 def atomic_torch_save(value, path):
     path = Path(path)
     temporary = path.with_name(path.name + ".tmp")

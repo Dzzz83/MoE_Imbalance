@@ -23,10 +23,12 @@ SOURCE_REF = "ablation_study"
 # Optional exact published commit. Otherwise the first run resolves SOURCE_REF,
 # and later sessions reuse the commit recorded on the results branch.
 SOURCE_COMMIT = None
-# Run the controlled-bias diagnostic on CPU from published frozen features.
-# Stage B remains available as ("simple_controls",).
+# Stage C2: 30 CPU fits on cached features. No CIFAR attachment or GPU needed.
+# For C1's 18 image continuations use ("ot_contribution",), a GPU, and CIFAR-100.
+# Historical modes, including ("controlled_bias",), remain available.
 # Use ("audit",) to audit an existing stronger OT run without training.
-STAGES = ("controlled_bias",)
+STAGES = ("synthetic_reweighting",)
+IS_FOLLOWUP = STAGES in (("synthetic_reweighting",), ("ot_contribution",))
 IS_CONTROLLED_BIAS = STAGES == ("controlled_bias",)
 IS_SIMPLE_CONTROLS = STAGES == ("simple_controls",)
 IS_ASSIGNMENT_STUDY = STAGES == ("assignment",)
@@ -35,7 +37,10 @@ IS_AUDIT_REBUILD = STAGES == ("rebuild_audit",)
 IS_STRENGTH_STUDY = STAGES == ("strength",)
 DEVELOPMENT_RESULTS_BRANCH = "ablation-study-results"
 STRENGTH_RESULTS_BRANCH = "ablation-strength-results"
-if IS_CONTROLLED_BIAS:
+if IS_FOLLOWUP:
+    RESULTS_BRANCH = "ablation-" + STAGES[0].replace("_", "-") + "-results"
+    RESULTS_FOLDER = "ot-" + STAGES[0].replace("_", "-") + "-results"
+elif IS_CONTROLLED_BIAS:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-controlled-bias-results", "ot-controlled-bias-results"
 elif IS_SIMPLE_CONTROLS:
     RESULTS_BRANCH, RESULTS_FOLDER = "ablation-simple-controls-results", "ot-simple-controls-results"
@@ -53,6 +58,7 @@ GIT_USER_NAME = "Dzzz83"
 GIT_USER_EMAIL = "phattuan43@gmail.com"
 
 CODE_ROOT = Path("/kaggle/working") / (
+    "ot-" + STAGES[0].replace("_", "-") + "-code" if IS_FOLLOWUP else
     "ot-controlled-bias-code" if IS_CONTROLLED_BIAS else
     "ot-simple-controls-code" if IS_SIMPLE_CONTROLS else
     "ot-assignment-code" if IS_ASSIGNMENT_STUDY else
@@ -60,6 +66,7 @@ CODE_ROOT = Path("/kaggle/working") / (
 )
 RESULTS_ROOT = Path("/kaggle/working") / RESULTS_FOLDER
 WORK_ROOT = Path("/kaggle/working") / (
+    "ot-" + STAGES[0].replace("_", "-") if IS_FOLLOWUP else
     "ot-controlled-bias" if IS_CONTROLLED_BIAS else
     "ot-simple-controls" if IS_SIMPLE_CONTROLS else
     "ot-weight-assignment" if IS_ASSIGNMENT_STUDY else
@@ -85,6 +92,8 @@ ASSIGNMENT_PREFLIGHT_ONLY = False
 SIMPLE_CONTROLS_PREFLIGHT_ONLY = False
 # Freeze and verify preparation without fitting a diagnostic head.
 CONTROLLED_BIAS_PREFLIGHT_ONLY = False
+# Both new modes prepare and validate all inputs/weights without scientific fitting.
+FOLLOWUP_PREFLIGHT_ONLY = False
 
 
 def run(command, cwd=None, env=None, capture=False):
@@ -354,6 +363,9 @@ def publish_reports(study_root, source_commit, message, auth_env):
             report_locations += "Readable report: `reports/readable_report.json`.\n"
             if "gate_one.json" in files:
                 report_locations += "Gate receipt: `reports/gate_one.json`.\n"
+        elif config.get("config", {}).get("stage") in ("synthetic_reweighting", "ot_contribution"):
+            title = "Stage C " + config["config"]["stage"].replace("_", " ") + " results"
+            report_locations += "Readable paired contrasts: `reports/readable_report.json`.\n"
     if "study_summary.json" in files or is_strength_study:
         report_locations += "Development reports: `reports/study_results.json` and `reports/study_summary.json`.\n"
     if not is_assignment and not is_strength_study and "weight_audit.json" not in files:
@@ -942,8 +954,12 @@ def publish_cached_study(study, seed, message, source_commit, auth_env, asset_pr
     """Publish one completed-run snapshot; retrying reuses its content-addressed asset."""
     path = study / "study_assets.json"
     assets = json.loads(path.read_text()) if path.exists() else {"seeds": {}}
-    paths = (controlled_bias_asset_paths(study, seed) if asset_prefix == "ot-controlled-bias"
-             else cached_asset_paths(study, seed, accept_path))
+    if asset_prefix == "ot-controlled-bias":
+        paths = controlled_bias_asset_paths(study, seed)
+    elif asset_prefix in ("ot-synthetic-reweighting", "ot-ot-contribution"):
+        paths = followup_asset_paths(study, seed)
+    else:
+        paths = cached_asset_paths(study, seed, accept_path)
     suffix = f"seed{seed}" if seed is not None else "complete"
     asset = upload_artifacts(study, paths, source_commit, auth_env, f"{asset_prefix}-{suffix}") | {"paths": paths}
     if seed is None:
@@ -1108,14 +1124,69 @@ def execute_controlled_bias(source_commit, auth_env):
     print(json.dumps({k: summary[k] for k in ("status", "sampling_counts") if k in summary}, indent=2), flush=True)
 
 
+def is_followup_asset_path(relative):
+    from pipeline.followup_weights import FEATURE_CONDITIONS, IMAGE_CONDITIONS
+    from pipeline.run_ot_followups import FEATURE_RUN_FILES
+
+    parts = PurePosixPath(relative).parts
+    if PurePosixPath(relative).is_absolute() or ".." in parts:
+        return False
+    if len(parts) == 3 and parts[0] == "diagnostics" and parts[1] in {"seed0", "seed1", "seed2"}:
+        return parts[2] in {"preparation.pt", "preparation_report.json"}
+    if len(parts) == 6 and parts[:2] == ("attempts", "runs") and re.fullmatch(r"attempt[1-9][0-9]*", parts[4]):
+        parts = ("runs", parts[2], parts[3], parts[5])
+    return (len(parts) == 4 and parts[0] == "runs" and parts[1] in {"seed0", "seed1", "seed2"}
+            and parts[2] in FEATURE_CONDITIONS + IMAGE_CONDITIONS
+            and parts[3] in FEATURE_RUN_FILES | {"complete.json", "failure.json"})
+
+
+def followup_asset_paths(study, seed=None):
+    # All three preparations are needed even when only one seed has finished.
+    # Include failed attempts so recovery survives the end of a Kaggle session.
+    paths = []
+    for path in sorted(study.rglob("*")):
+        relative = path.relative_to(study).as_posix()
+        if path.is_file() and is_followup_asset_path(relative):
+            parts = PurePosixPath(relative).parts
+            run_seed = parts[2] if parts[0] == "attempts" else parts[1]
+            if parts[0] == "diagnostics" or seed is None or run_seed == f"seed{seed}":
+                paths.append(relative)
+    return paths
+
+
+def execute_followup(source_commit, auth_env):
+    from pipeline.run_ot_followups import FEATURE_RUN_FILES, resolve_config, run_study
+
+    stage = STAGES[0]
+    config = resolve_config(json.loads((CODE_ROOT / f"configs/{stage}.json").read_text()))
+    inputs = prepare_assignment_inputs(config, auth_env)
+    root = restore_cached_study(RESULTS_ROOT, WORK_ROOT / "study", auth_env,
+                                is_followup_asset_path, run_files=FEATURE_RUN_FILES)
+    image_options = {}
+    if stage == "ot_contribution":
+        retained, _ = prepare_data()
+        image_options = {"retained_path": retained, "split_root": WORK_ROOT / "image_split"}
+
+    def publish(study, seed, message):
+        publish_cached_study(study, seed, message, source_commit, auth_env,
+                             "ot-" + stage.replace("_", "-"), is_followup_asset_path)
+
+    result = run_study(config, inputs, root,
+                       "cuda" if stage == "ot_contribution" and not FOLLOWUP_PREFLIGHT_ONLY else "cpu",
+                       on_progress=publish if not FOLLOWUP_PREFLIGHT_ONLY else None,
+                       preflight_only=FOLLOWUP_PREFLIGHT_ONLY, **image_options)
+    if FOLLOWUP_PREFLIGHT_ONLY:
+        print(json.dumps({k: v for k, v in result.items() if k != "preparation"}, indent=2), flush=True)
+
+
 def main():
     allowed = ("prepare", "pilot", "study", "freeze", "final")
     is_assignment = STAGES == ("assignment",)
     is_simple_controls = STAGES == ("simple_controls",)
     is_controlled_bias = STAGES == ("controlled_bias",)
-    if not (is_controlled_bias or is_simple_controls or is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
+    if not (IS_FOLLOWUP or is_controlled_bias or is_simple_controls or is_assignment or IS_WEIGHT_AUDIT or IS_AUDIT_REBUILD or IS_STRENGTH_STUDY):
         if not STAGES or len(set(STAGES)) != len(STAGES) or any(stage not in allowed for stage in STAGES):
-            raise ValueError('Use ("controlled_bias",), ("simple_controls",), ("assignment",), ("rebuild_audit",), ("audit",), ("strength",), or original stages')
+            raise ValueError('Use ("synthetic_reweighting",), ("ot_contribution",), a historical study mode, or original stages')
         if list(STAGES) != sorted(STAGES, key=allowed.index):
             raise ValueError("STAGES must follow prepare, pilot, study, freeze, final order")
     print(f"Kaggle stages: {', '.join(STAGES)}. Results branch: {RESULTS_BRANCH}.", flush=True)
@@ -1156,10 +1227,14 @@ def main():
         print(f"torch={torch.__version__}, torchvision={torchvision.__version__}", flush=True)
         preflight_only = ((is_assignment and ASSIGNMENT_PREFLIGHT_ONLY)
                           or (is_simple_controls and SIMPLE_CONTROLS_PREFLIGHT_ONLY)
-                          or (is_controlled_bias and CONTROLLED_BIAS_PREFLIGHT_ONLY))
-        if not torch.cuda.is_available() and not preflight_only and not is_controlled_bias:
+                          or (is_controlled_bias and CONTROLLED_BIAS_PREFLIGHT_ONLY)
+                          or (IS_FOLLOWUP and FOLLOWUP_PREFLIGHT_ONLY))
+        needs_gpu = not is_controlled_bias and STAGES != ("synthetic_reweighting",)
+        if not torch.cuda.is_available() and not preflight_only and needs_gpu:
             raise RuntimeError("Enable a GPU accelerator in Kaggle")
-        if is_controlled_bias:
+        if IS_FOLLOWUP:
+            execute_followup(source_commit, auth_env)
+        elif is_controlled_bias:
             execute_controlled_bias(source_commit, auth_env)
         elif is_simple_controls:
             execute_simple_controls(source_commit, auth_env)
