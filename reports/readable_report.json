@@ -1,12 +1,149 @@
 {
-  "status": "incomplete",
-  "completed_runs": 29,
+  "status": "complete",
+  "completed_runs": 30,
   "expected_runs": 30,
   "score_unit": "percentage points for differences",
-  "conclusions": {},
-  "contrasts": {},
+  "conclusions": {
+    "synthesis_without_ot": "Did not clear every required screening contrast. This study does not justify advancing this claim.",
+    "ot_after_synthesis": "Did not clear every required screening contrast. This study does not justify advancing this claim.",
+    "synthesis_plus_ot": "Did not clear every required screening contrast. This study does not justify advancing this claim."
+  },
+  "contrasts": {
+    "synthesis_with_cb": {
+      "mean_gain_pp": -0.12785912354045065,
+      "sample_sd_pp": 0.3032928808013005,
+      "per_seed_gain_pp": [
+        -0.134856376495196,
+        0.17887184023469005,
+        -0.42759283436084594
+      ],
+      "screening_target_met": false
+    },
+    "ot_after_synthesis": {
+      "mean_gain_pp": 0.11360453064297078,
+      "sample_sd_pp": 0.38973356527577213,
+      "per_seed_gain_pp": [
+        -0.08725585838661454,
+        -0.1347253356171585,
+        0.5627947859326854
+      ],
+      "screening_target_met": false
+    },
+    "synthesis_with_ot": {
+      "mean_gain_pp": -0.29137902591536335,
+      "sample_sd_pp": 0.12737655530067338,
+      "per_seed_gain_pp": [
+        -0.4167552453024359,
+        -0.29528963655051643,
+        -0.16209219589313761
+      ],
+      "screening_target_met": false
+    },
+    "ot_without_synthesis": {
+      "mean_gain_pp": 0.2771244330178835,
+      "sample_sd_pp": 0.0744739935384697,
+      "per_seed_gain_pp": [
+        0.19464301042062537,
+        0.339436141168048,
+        0.29729414746497707
+      ],
+      "screening_target_met": false
+    },
+    "interaction": {
+      "mean_gain_pp": -0.1635199023749127,
+      "sample_sd_pp": 0.3837775344588237,
+      "per_seed_gain_pp": [
+        -0.2818988688072399,
+        -0.4741614767852065,
+        0.2655006384677083
+      ],
+      "screening_target_met": false
+    },
+    "ot_minus_prototype_distance": {
+      "mean_gain_pp": -0.0681331267971356,
+      "sample_sd_pp": 0.3048151187516253,
+      "per_seed_gain_pp": [
+        -0.019296496090892568,
+        -0.394418125051027,
+        0.20931524075051278
+      ],
+      "screening_target_met": false
+    },
+    "ot_minus_shuffle_mean": {
+      "mean_gain_pp": -0.137562979391731,
+      "sample_sd_pp": 0.1324775235809217,
+      "per_seed_gain_pp": [
+        -0.29001748235523706,
+        -0.07222207939917846,
+        -0.050449376420777514
+      ],
+      "screening_target_met": false
+    },
+    "synthesis_minus_duplicate_cb": {
+      "mean_gain_pp": -0.27311034047926375,
+      "sample_sd_pp": 0.4017308555291733,
+      "per_seed_gain_pp": [
+        -0.12768478991184162,
+        0.0356558970487697,
+        -0.7273021285747194
+      ],
+      "screening_target_met": false
+    },
+    "synthesis_minus_duplicate_ot": {
+      "mean_gain_pp": -0.2269387432608109,
+      "sample_sd_pp": 0.09095163146341648,
+      "per_seed_gain_pp": [
+        -0.27029171098731375,
+        -0.12242151213007202,
+        -0.28810300666504696
+      ],
+      "screening_target_met": false
+    },
+    "combination_minus_real_cb": {
+      "mean_gain_pp": -0.014254592897479842,
+      "sample_sd_pp": 0.18567814384971873,
+      "per_seed_gain_pp": [
+        -0.22211223488181053,
+        0.04414650461753156,
+        0.13520195157183945
+      ],
+      "screening_target_met": false
+    }
+  },
   "decision": {
-    "status": "incomplete"
+    "status": "review_before_confirmation",
+    "candidates": {
+      "synthesis_without_ot": {
+        "required_contrasts": [
+          "synthesis_with_cb",
+          "synthesis_minus_duplicate_cb"
+        ],
+        "target_met": false
+      },
+      "ot_after_synthesis": {
+        "required_contrasts": [
+          "ot_after_synthesis",
+          "ot_minus_prototype_distance",
+          "ot_minus_shuffle_mean"
+        ],
+        "target_met": false
+      },
+      "synthesis_plus_ot": {
+        "required_contrasts": [
+          "ot_after_synthesis",
+          "ot_minus_prototype_distance",
+          "ot_minus_shuffle_mean",
+          "combination_minus_real_cb",
+          "synthesis_with_ot",
+          "synthesis_minus_duplicate_ot"
+        ],
+        "target_met": false
+      }
+    },
+    "practical_gain": 0.005,
+    "minimum_positive_seeds": 2,
+    "interpretation": "Budget screening only; three matched seeds on one split do not establish significance or equivalence.",
+    "next_stage": "Review both studies before conditional split-44 confirmation. No automatic confirmation or DeepSMOTE."
   },
   "limits": "Development results, not official-test results. Synthetic rows and shuffled controls are not independent replications."
 }
