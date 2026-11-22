@@ -8,3 +8,7 @@ dist/
 /data/
 /AGENTS.md
 /pet/
+
+/outputs/kaggle_seed1_runner/
+/outputs/kaggle_seed2_runner/
+/work/
